@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
@@ -8,7 +8,6 @@
  * @license    EULA
  * @filesource
  */
-
 class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 {
     ////////////////////////////////////////////////////////////////////////////
@@ -51,6 +50,18 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     protected $arrClientInformation;
 
     /**
+     * Extended communication include the basic communication
+     * 
+     * @var SyncCtoProCommunicationClient 
+     */
+    protected $objSyncCtoProCommunicationClient;
+
+    /**
+     * @var SyncCtoHelper
+     */
+    protected $objSyncCtoHelper;
+
+    /**
      * @var SyncCtoStepPagesSelection 
      */
     protected static $objInstance = null;
@@ -62,6 +73,10 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     protected function __construct()
     {
         parent::__construct();
+
+        // Init helper
+        $this->objSyncCtoProCommunicationClient = SyncCtoProCommunicationClient::getInstance();
+        $this->objSyncCtoHelper                 = SyncCtoHelper::getInstance();
     }
 
     /**
@@ -121,13 +136,219 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     // Helper functions
     ////////////////////////////////////////////////////////////////////////////
 
+    protected function init()
+    {
+        // Init Step Counter
+        if ($this->objStepPool->step == null)
+        {
+            $this->objStepPool->step = 1;
+        }
+
+        // Reset state
+        $this->objData->setState(SyncCtoEnum::WORK_OK);
+    }
+
+    protected function showError(Exception $exc)
+    {
+        $objErrTemplate              = new BackendTemplate('be_syncCto_error');
+        $objErrTemplate->strErrorMsg = $exc->getMessage();
+
+        $this->objData->setState(SyncCtoEnum::WORK_ERROR);
+        $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']["step_4"]['description_1']);
+        $this->objData->setHtml($objErrTemplate->parse());
+
+        $this->objSyncCtoClient->setRefresh(false);
+
+        $this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Steps
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Show first step
+     */
     protected function showSubStep1()
     {
         $this->objData->setState(SyncCtoEnum::WORK_WORK);
         $this->objData->setTitle($GLOBALS['TL_LANG']['MSC']['step'] . " %s");
-        $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_1']);
-        
+        $this->objData->setDescription('Einzel Seiten Synchronisieren.');
+
         $this->objStepPool->step++;
+    }
+
+    /**
+     * Choose pages
+     * @return type
+     */
+    protected function showSubStep2()
+    {
+        $arrIds = $this->Input->post('ids');
+
+        if (key_exists("forward", $_POST) && !empty($arrIds))
+        {
+            $this->objStepPool->pageIDs = $this->Input->post('ids');
+
+            // Go to next step
+            $this->objData->setState(SyncCtoEnum::WORK_WORK);
+            $this->objData->setHtml("");
+
+            $this->objStepPool->step++;
+
+            $this->objSyncCtoClient->setRefresh(true);
+
+            return;
+        }
+        else if ((key_exists("forward", $_POST) && empty($arrIds)) || key_exists("skip", $_POST))
+        {
+            // Skip if no tables are selected
+            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
+            $this->objData->setHtml("");
+
+            $this->objSyncCtoClient->setRefresh(true);
+            $this->objSyncCtoClient->addStep();
+
+            return;
+        }
+
+        // Get Pages
+        $arrPages = $this->Database
+                ->prepare('SELECT title, id FROM tl_page ORDER BY pid, id')
+                ->execute()
+                ->fetchAllAssoc();
+
+        // Template
+        $objTemp               = new BackendTemplate('be_syncCtoPro_form');
+        $objTemp->arrPages     = $arrPages;
+        $objTemp->id           = $this->objSyncCtoClient->getClientID();
+        $objTemp->step         = $this->objSyncCtoClient->getStep();
+        $objTemp->direction    = "To";
+        $objTemp->headline     = $GLOBALS['TL_LANG']['MSC']['totalsize'];
+        $objTemp->forwardValue = $GLOBALS['TL_LANG']['MSC']['apply'];
+
+        // Set output
+        $this->objData->setHtml($objTemp->parse());
+        $this->objSyncCtoClient->setRefresh(false);
+    }
+
+    /**
+     * Build Data
+     * @throws Exception
+     */
+    protected function showSubStep3()
+    {
+        $arrPages    = $this->objStepPool->pageIDs;
+        $arrArticles = array();
+        $arrContentElements = array();
+
+        // Article
+
+        $arrResultArticles = $this->Database
+                ->prepare('SELECT id FROM tl_article WHERE pid IN(' . implode(', ', $arrPages) . ')')
+                ->execute()
+                ->fetchAllAssoc();
+
+        foreach ($arrResultArticles as $arrArticle)
+        {
+            $arrArticles[] = $arrArticle['id'];
+        }
+
+        // Content Elements
+
+        $arrResultContentElements = $this->Database
+                ->prepare('SELECT id FROM tl_content WHERE pid IN(' . implode(', ', $arrArticles) . ')')
+                ->execute()
+                ->fetchAllAssoc();
+
+        foreach ($arrResultContentElements as $arrContentElement)
+        {
+            $arrContentElements[] = $arrContentElement['id'];
+        }
+
+        $objSyncCtoDatabasePro = SyncCtoProDatabase::getInstance();
+
+        // Write some tempfiles
+        $strRandomToken = substr(md5(time() . " | " . rand(0, 65535)), 0, 8);
+
+        $strPageFile    = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-page.gzip"), 'tl_page', $arrPages);
+        $strArticleFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-article.gzip"), 'tl_article', $arrArticles);
+        $strContentFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-content.gzip"), 'tl_content', $arrContentElements);
+
+        // Check if we have all files
+        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
+        {
+            throw new Exception('Missing export file for tl_page');
+        }
+
+        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
+        {
+            throw new Exception('Missing export file for tl_content');
+        }
+
+        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
+        {
+            throw new Exception('Missing export file for tl_article');
+        }
+
+        $this->objStepPool->files = array(
+            'tl_page'    => "SyncCto-SE-$strRandomToken-page.gzip",
+            'tl_article' => "SyncCto-SE-$strRandomToken-article.gzip",
+            'tl_content' => "SyncCto-SE-$strRandomToken-content.gzip",
+        );
+
+        // Set output
+        $this->objStepPool->step++;
+    }
+
+    /**
+     * Send files
+     * @throws Exception
+     */
+    protected function showSubStep4()
+    {
+        foreach ($this->objStepPool->files as $strType => $strFile)
+        {
+            $arrResponse = $this->objSyncCtoProCommunicationClient->sendFile($GLOBALS['SYC_PATH']['tmp'], $strFile, SyncCtoEnum::UPLOAD_SQL_TEMP);
+
+            // Check if the file was send and saved.
+            if (!is_array($arrResponse) || count($arrResponse) == 0)
+            {
+                throw new Exception("Empty file list from client. Maybe file sending was not complet for $strType.");
+            }
+        }
+
+        // Set output
+        $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_3']);
+        $this->objStepPool->step++;
+    }
+
+    /**
+     * Import
+     * @throws Exception
+     */
+    protected function showSubStep5()
+    {        
+        foreach ($this->objStepPool->files as $strType => $strFile)
+        {
+            $blnResponse = $this
+                    ->objSyncCtoProCommunicationClient
+                    ->importDatabaseSE($this->objSyncCtoHelper->standardizePath($this->arrClientInformation['folders']['tmp'], 'sql', $strFile));
+
+            // Check if the file was send and saved.
+            if (!$blnResponse)
+            {
+                throw new Exception("Could not import file for $strType.");
+            }
+        }
+
+        // Set output
+        $this->objData->setState(SyncCtoEnum::WORK_OK);
+        $this->objData->setHtml('');
+        $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_3']);
+
+        $this->objSyncCtoClient->addStep();
+        $this->objSyncCtoClient->setRefresh(true);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -141,50 +362,36 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 
     public function syncTo()
     {
-        /* ---------------------------------------------------------------------
-         * Init
-         */
-
-        if ($this->objStepPool->step == null)
-        {
-            $this->objStepPool->step = 1;
-        }
-
-        /* ---------------------------------------------------------------------
-         * Run page
-         */
+        $this->init();
 
         try
         {
             switch ($this->objStepPool->step)
             {
-                /**
-                 * Init
-                 */
                 case 1:
                     $this->showSubStep1();
                     break;
 
                 case 2:
-                    echo"123";
-                    var_dump(SyncCtoProDatabase::getInstance()->readXML('system/tmp/SyncCtoPro-SingleTableExport.614fd2e35c56052d8ee5eaddde13e8a5'));
-                    
-                    exit();
+                    $this->showSubStep2();
+                    break;
+
+                case 3:
+                    $this->showSubStep3();
+                    break;
+
+                case 4:
+                    $this->showSubStep4();
+                    break;
+
+                case 5:
+                    $this->showSubStep5();
                     break;
             }
         }
         catch (Exception $exc)
         {
-            $objErrTemplate              = new BackendTemplate('be_syncCto_error');
-            $objErrTemplate->strErrorMsg = $exc->getMessage();
-
-            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
-            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']["step_4"]['description_1']);
-            $this->objData->setHtml($objErrTemplate->parse());
-            
-            $this->objSyncCtoClient->setRefresh(false);
-           
-            $this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
+            $this->showError($exc);
         }
     }
 

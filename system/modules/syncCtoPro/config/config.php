@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
@@ -8,16 +8,18 @@
  * @license    EULA
  * @filesource
  */
-
-
 /**
  * Blacklists
  */
-
-
 /**
  * CtoCommunication RPC Calls
  */
-
-
+// Database single import/export -----------------------------------------------
+// Import as SE file
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_IMPORT"] = array(
+    "class"     => "SyncCtoProDatabase",
+    "function"  => "setDataForAsFile",
+    "typ"       => "POST",
+    "parameter" => array("path"),
+);
 ?>

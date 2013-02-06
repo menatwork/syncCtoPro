@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
@@ -8,7 +8,6 @@
  * @license    EULA
  * @filesource
  */
-
 class SyncCtoProDatabase extends Backend
 {
 
@@ -64,7 +63,7 @@ class SyncCtoProDatabase extends Backend
      * 
      * @return boolean|string
      */
-    public function getDataForAsFile($strTable, $arrIds = null, $arrFields = null)
+    public function getDataForAsFile($strPath, $strTable, $arrIds = null, $arrFields = null)
     {
         $objData = $this->getDataFor($strTable, $arrIds, $arrFields);
 
@@ -73,7 +72,7 @@ class SyncCtoProDatabase extends Backend
             return false;
         }
 
-        return $this->writeXML($objData, $strTable);
+        return $this->writeXML($strPath, $objData, $strTable);
     }
 
     /**
@@ -115,6 +114,103 @@ class SyncCtoProDatabase extends Backend
         return $objData;
     }
 
+    public function setDataForAsFile($strPath)
+    {
+        // Import
+        $arrData = $this->readXML($strPath);
+
+        // Error
+        if ($arrData === false)
+        {
+            throw new Exception('Error by reading the import file at ' . $strPath);
+        }
+
+        $mixSuccess = $this->setDataFor($arrData['table'], $arrData['data'], array_keys($arrData['fields']));
+
+        // Error
+        if ($mixSuccess === false)
+        {
+            throw new Exception('Error by importing the data into database for file: ' . $strPath);
+        }
+
+        return $mixSuccess;
+    }
+
+    public function setDataFor($strTable, $arrData, $arrInsertFields)
+    {
+        if (empty($strTable) || !$this->Database->tableExists($strTable))
+        {
+            throw new Exception('Error by import data. Unknown or empty tablename: ' . $arrData['table']);
+        }
+
+        if (empty($arrData))
+        {
+            return 'Import/Update 0 Rows';
+        }
+
+        // Check fields
+        $arrKnownFields = $this->Database->getFieldNames($strTable);
+
+        if (($mixKey = array_search('PRIMARY', $arrKnownFields)) !== false)
+        {
+            unset($arrKnownFields[$mixKey]);
+        }
+
+        $arrFieldsMissingInsert   = array_diff($arrKnownFields, $arrInsertFields);
+        $arrFieldsMissingDatabase = array_diff($arrInsertFields, $arrKnownFields);
+
+        if (!empty($arrFieldsMissingInsert) || !empty($arrFieldsMissingInsert))
+        {
+            $strError = 'We have missin missing fields.';
+            $strError .= '|| Database:    ' . implode(", ", $arrFieldsMissingDatabase);
+            $strError .= '|| Insert-File: ' . implode(", ", $arrFieldsMissingInsert);
+
+            throw new Exception($strError);
+        }
+
+        // Import
+        $arrKnownIDs = $this->Database->query("SELECT id FROM $strTable")->fetchEach('id');
+
+        $arrUpdate = array();
+        $arrInsert = array();
+
+        // Split in update/insert
+        foreach ($arrData as $mixKey => $arrValues)
+        {
+            if (in_array($arrValues['id'], $arrKnownIDs))
+            {
+                $arrUpdate[] = $arrValues;
+            }
+            else
+            {
+                $arrInsert[] = $arrValues;
+            }
+
+            unset($arrData[$mixKey]);
+        }
+
+        // Update
+        foreach ($arrUpdate as $key => $arrValues)
+        {
+            $intID = $arrValues['id'];
+            unset($arrValues['id']);
+
+            $this->Database->prepare("UPDATE $strTable %s WHERE id=?")
+                    ->set($arrValues)
+                    ->execute($intID);
+        }
+
+        // Insert
+        foreach ($arrInsert as $key => $arrValues)
+        {
+            $this->Database->prepare("INSERT INTO $strTable %s")
+                    ->set($arrValues)
+                    ->execute();
+        }
+
+        return true;
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // XML Functions
     ////////////////////////////////////////////////////////////////////////////
@@ -127,12 +223,8 @@ class SyncCtoProDatabase extends Backend
      * 
      * @return string
      */
-    protected function writeXML(Database_Result $objData, $strTable)
+    protected function writeXML($strPath, Database_Result $objData, $strTable)
     {
-        // Write some tempfiles
-        $strRandomToken = md5(time() . " | " . rand(0, 65535));
-        $strPath        = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCtoPro-SingleTableExport.$strRandomToken");
-
         // Write gzip xml file
         $objGzFile = new File($strPath);
         $objGzFile->write("");
@@ -177,7 +269,7 @@ class SyncCtoProDatabase extends Backend
                 $objXml->writeCdata($mixvalue);
                 $objXml->endElement(); // End data
             }
-            
+
             $objXml->endElement(); // End row
         }
 
@@ -190,31 +282,39 @@ class SyncCtoProDatabase extends Backend
         return $strPath;
     }
 
-    public function readXML($strFile)
+    /**
+     * Reading a import file for single export
+     * 
+     * @param string $strImportPath path to the file
+     * 
+     * @return array array('table' => [tablename] , 'data' => array([data]))
+     * 
+     * @throws Exception
+     */
+    public function readXML($strImportPath)
     {
-        // Vars
-        $strTableName = "";
-
-        // Write some tempfiles
-        $strRandomToken = md5(time() . " | " . rand(0, 65535));
-        $strPath        = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCtoPro-SingleTableExport-$strRandomToken.xml");
-
-        if (!file_exists(TL_ROOT . "/" . $strFile))
+        // Check we have a file
+        if (!file_exists(TL_ROOT . "/" . $strImportPath))
         {
-            return false;
+            throw new Exception('File not found: ' . $strImportPath);
         }
 
-        // Unzip XML
-        $objGzFile = gzopen(TL_ROOT . "/" . $strFile, "r");
+        // Write some tempfiles
+        $strRandomToken = substr(md5(time() . " | " . rand(0, 65535)), 0, 8);
+        $strTempPath    = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCtoPro-SE-$strRandomToken.xml");
 
-        $objXMLFile = new File($strPath);
+        // Unzip XML
+        $objGzFile = gzopen(TL_ROOT . "/" . $strImportPath, "r");
+
+        // Write xml file
+        $objXMLFile = new File($strTempPath);
         $objXMLFile->write("");
         $objXMLFile->close();
 
         while (true)
         {
             $strConten = gzread($objGzFile, 500000);
-            
+
             if ($strConten == false || empty($strConten))
             {
                 break;
@@ -224,19 +324,71 @@ class SyncCtoProDatabase extends Backend
             $objXMLFile->close();
         }
 
+        $arrData = array(
+            'table' => '',
+            'data'  => array(),
+            'fields' => array()
+        );
+        $strCurrentAttribute = '';
+        $blnInData           = false;
+        $blnInTable          = false;
+        $intI                = 0;
+
         // Read XML
         $objXMLReader = new XMLReader();
-        $objXMLReader->open(TL_ROOT . "/" . $strPath);
+        $objXMLReader->open(TL_ROOT . "/" . $strTempPath);
 
         while ($objXMLReader->read())
         {
             switch ($objXMLReader->nodeType)
             {
-                case XMLReader::ELEMENT:
-                    switch ($this->objXMLReader->localName)
+                // Values
+                case XMLReader::TEXT:
+                case XMLReader::CDATA:
+                    if ($blnInData)
                     {
-                        case "table":
-                            $strTableName = $this->objXMLReader->value;
+                        $arrData['data'][$intI][$strCurrentAttribute] = $objXMLReader->value;
+                    }
+                    else if ($blnInTable)
+                    {
+                        $arrData['table'] = $objXMLReader->value;
+                    }
+                    break;
+
+                // Element
+                case XMLReader::ELEMENT:
+                    switch ($objXMLReader->localName)
+                    {
+                        // Start data
+                        case 'data':
+                            $strCurrentAttribute                                    = $objXMLReader->getAttribute('name');
+                            $arrData['fields'][$objXMLReader->getAttribute('name')] = 1;
+                            $blnInData                                              = true;
+                            break;
+
+                        case 'table':
+                            $blnInTable = true;
+                            break;
+                    }
+                    break;
+
+                // Element end
+                case XMLReader::END_ELEMENT:
+                    switch ($objXMLReader->localName)
+                    {
+                        // End data
+                        case 'data':
+                            $blnInData = false;
+                            break;
+
+                        // End of row
+                        case 'row':
+                            $intI++;
+                            $blnInData = false;
+                            break;
+
+                        case 'table':
+                            $blnInTable = false;
                             break;
                     }
                     break;
@@ -245,8 +397,7 @@ class SyncCtoProDatabase extends Backend
 
         $objXMLFile->delete();
 
-
-        return $arrRestoreTables;
+        return $arrData;
     }
 
 }
