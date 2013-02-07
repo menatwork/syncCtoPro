@@ -88,6 +88,40 @@ class SyncCtoProCommunicationClient
         return $this->runServer('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData);
     }
 
+    /**
+     * Return a xml file with a db dump
+     * 
+     * @param string $strPath Path for saving the file
+     * @param string $strTable Name of table
+     * @param array $arrIds lsit of ids
+     * @param array $arrFields list of field names
+     * 
+     * @return string save name
+     */
+    public function exportDatabaseSE($strPath, $strTable, $arrIds = null, $arrFields = null)
+    {
+        $arrData = array(
+            array(
+                "name"  => "path",
+                "value" => $strPath,
+            ),
+            array(
+                "name"  => "table",
+                "value" => $strTable,
+            ),
+            array(
+                "name"  => "ids",
+                "value" => $arrIds,
+            ),
+            array(
+                "name"  => "fields",
+                "value" => $arrFields,
+            ),
+        );
+
+        return $this->runServer('SYNCCTOPRO_DATABASE_SE_EMPORT', $arrData);
+    }
+
 }
 
 ?>

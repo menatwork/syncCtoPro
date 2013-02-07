@@ -145,7 +145,10 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         }
 
         // Reset state
-        $this->objData->setState(SyncCtoEnum::WORK_OK);
+        $this->objData->setState(SyncCtoEnum::WORK_WORK);
+        $this->objData->setHtml('');
+
+        $this->objSyncCtoClient->setRefresh(true);
     }
 
     protected function showError(Exception $exc)
@@ -162,6 +165,52 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
     }
 
+    public function rebuildArray($arrData)
+    {
+        $arrReturn = array();
+
+        foreach ($arrData as $arrValue)
+        {
+            $arrReturn[$arrValue['pid']][$arrValue['id']] = $arrValue;
+        }
+
+        return $arrReturn;
+    }
+
+    public function parseArray(&$arrData, $intPid, $intLevel)
+    {
+        $arrReturn = array();
+
+        if (!key_exists($intPid, $arrData))
+        {
+            return $arrReturn;
+        }
+
+        // Search rootpages
+        foreach ($arrData[$intPid] as $value)
+        {
+            $arrReturn[] = array_merge($value, array(
+                'level' => $intLevel
+                    ));
+
+            $arrReturn = array_merge($arrReturn, $this->parseArray($arrData, $value['id'], ($intLevel + 1)));
+        }
+
+        return $arrReturn;
+    }
+
+    public function getIDs(&$arrData)
+    {
+        $arrReturn = array();
+
+        foreach ($arrData as $value)
+        {
+            $arrReturn[] = $value['id'];
+        }
+
+        return $arrReturn;
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Steps
     ////////////////////////////////////////////////////////////////////////////
@@ -169,12 +218,85 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     /**
      * Show first step
      */
-    protected function showSubStep1()
+    protected function showBasicStep()
     {
         $this->objData->setState(SyncCtoEnum::WORK_WORK);
         $this->objData->setTitle($GLOBALS['TL_LANG']['MSC']['step'] . " %s");
         $this->objData->setDescription('Einzel Seiten Synchronisieren.');
 
+        // Set output
+        $this->objStepPool->step++;
+    }
+
+    /**
+     * Load a list with id/titles from client
+     */
+    protected function generateDataForPageTree()
+    {
+        $strPageFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_page', null, array('id', 'pid', 'title'));
+        $strArticleFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_article', null, array('id', 'pid', 'title'));
+        $strContentFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_content', null, array('id', 'pid', 'type'));
+
+        // Check if we have all files
+        if ($strPageFile === false)
+        {
+            throw new Exception('Missing export file for tl_page');
+        }
+
+        if ($strArticleFile === false)
+        {
+            throw new Exception('Missing export file for tl_content');
+        }
+
+        if ($strContentFile === false)
+        {
+            throw new Exception('Missing export file for tl_article');
+        }
+
+        // Save for next step
+        $this->objStepPool->files = array(
+            'tl_page'    => $strPageFile,
+            'tl_article' => $strArticleFile,
+            'tl_content' => $strContentFile
+        );
+
+        // Set output
+        $this->objStepPool->step++;
+    }
+
+    /**
+     * Load the se export files from client
+     * 
+     * @throws Exception
+     */
+    protected function loadFilesForPageTree()
+    {
+        // Save for next step
+        $arrFilePathes = $this->objStepPool->files;
+
+        // Check if we have files in list
+        if (empty($arrFilePathes))
+        {
+            throw new Exception('No files for donwnload found.');
+        }
+
+        // Download each file
+        foreach ($arrFilePathes as $strType => $strFilePath)
+        {
+            $strSavePath = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], basename($strFilePath));
+
+            $blnResponse = $this->objSyncCtoProCommunicationClient->getFile($strFilePath, $strSavePath);
+
+            // Check if we have the file
+            if (!$blnResponse)
+            {
+                throw new Exception("Empty file list from client. Maybe file sending was not complet for $strType.");
+            }
+
+            $arrFilePathes[$strType] = $strSavePath;
+        }
+
+        // Set output
         $this->objStepPool->step++;
     }
 
@@ -182,7 +304,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
      * Choose pages
      * @return type
      */
-    protected function showSubStep2()
+    protected function showPageTree()
     {
         $arrIds = $this->Input->post('ids');
 
@@ -212,20 +334,56 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
             return;
         }
 
-        // Get Pages
+        // Get all data / load helper
+        $arrFilePathes         = $this->objStepPool->files;
+        $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
+
+        // Read client pages
+        $arrClientPages = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
+
+        $arrClientPagesIds = $this->getIDs($arrClientPages['data']);
+
+        $arrClientPages = $this->rebuildArray($arrClientPages['data']);
+        $arrClientPages = $this->parseArray($arrClientPages, 0, 0);
+
+        // Get server Pages
         $arrPages = $this->Database
-                ->prepare('SELECT title, id FROM tl_page ORDER BY pid, id')
+                ->prepare('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
                 ->execute()
                 ->fetchAllAssoc();
 
+        $arrPagesIDs = $this->getIDs($arrPages);
+
+        $arrPages = $this->rebuildArray($arrPages);
+        $arrPages = $this->parseArray($arrPages, 0, 0);
+
+
         // Template
-        $objTemp               = new BackendTemplate('be_syncCtoPro_form');
-        $objTemp->arrPages     = $arrPages;
-        $objTemp->id           = $this->objSyncCtoClient->getClientID();
-        $objTemp->step         = $this->objSyncCtoClient->getStep();
-        $objTemp->direction    = "To";
-        $objTemp->headline     = $GLOBALS['TL_LANG']['MSC']['totalsize'];
-        $objTemp->forwardValue = $GLOBALS['TL_LANG']['MSC']['apply'];
+        $objTemp = new BackendTemplate('be_syncCtoPro_form');
+        
+//        echo "<table>";
+//        echo "<tr>";
+//        echo "<td>";
+//        var_dump($arrPages);
+//        echo "</td>";
+//        echo "<td>";
+//        var_dump($arrClientPages);
+//        echo "</td>";        
+//        echo "</tr>";
+//        echo "</table>";
+//        
+//        exit();
+
+        $objTemp->arrPages       = $arrPages;
+        $objTemp->arrClientPages = $arrClientPages;
+        $objTemp->arrPagesIDs    = $arrPagesIDs;
+        $objTemp->arrClientIDs   = $arrClientPagesIds;
+        $objTemp->id             = $this->objSyncCtoClient->getClientID();
+        $objTemp->step           = $this->objSyncCtoClient->getStep();
+        $objTemp->direction      = "To";
+        $objTemp->headline       = $GLOBALS['TL_LANG']['MSC']['totalsize'];
+        $objTemp->forwardValue   = $GLOBALS['TL_LANG']['MSC']['apply'];
+        $objTemp->helperClass    = $this;
 
         // Set output
         $this->objData->setHtml($objTemp->parse());
@@ -309,7 +467,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     {
         foreach ($this->objStepPool->files as $strType => $strFile)
         {
-            $arrResponse = $this->objSyncCtoProCommunicationClient->sendFile($GLOBALS['SYC_PATH']['tmp'], $strFile, SyncCtoEnum::UPLOAD_SQL_TEMP);
+            $arrResponse = $this->objSyncCtoProCommunicationClient->sendFile($GLOBALS['SYC_PATH']['tmp'], $strFile, "", SyncCtoEnum::UPLOAD_SQL_TEMP);
 
             // Check if the file was send and saved.
             if (!is_array($arrResponse) || count($arrResponse) == 0)
@@ -328,7 +486,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
      * @throws Exception
      */
     protected function showSubStep5()
-    {        
+    {
         foreach ($this->objStepPool->files as $strType => $strFile)
         {
             $blnResponse = $this
@@ -364,29 +522,38 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     {
         $this->init();
 
+        $i = 1;
         try
         {
             switch ($this->objStepPool->step)
             {
-                case 1:
-                    $this->showSubStep1();
+                case $i++:
+                    $this->showBasicStep();
                     break;
 
-                case 2:
-                    $this->showSubStep2();
+                case $i++:
+                    $this->generateDataForPageTree();
                     break;
 
-                case 3:
-                    $this->showSubStep3();
+                case $i++:
+                    $this->loadFilesForPageTree();
                     break;
 
-                case 4:
-                    $this->showSubStep4();
+                case $i++:
+                    $this->showPageTree();
                     break;
 
-                case 5:
-                    $this->showSubStep5();
-                    break;
+//                case $i++:
+//                    $this->showSubStep3();
+//                    break;
+//
+//                case $i++:
+//                    $this->showSubStep4();
+//                    break;
+//
+//                case $i++:
+//                    $this->showSubStep5();
+//                    break;
             }
         }
         catch (Exception $exc)

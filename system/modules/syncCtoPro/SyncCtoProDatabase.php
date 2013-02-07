@@ -57,9 +57,10 @@ class SyncCtoProDatabase extends Backend
      * Get data for table x for fields y and id z
      * as gzip file.
      * 
-     * @param string $strTable
-     * @param array $arrIds
-     * @param array $arrFields
+     * @param string $strPath Path for writing the file, if empty a tmp path will be created
+     * @param string $strTable Name of Table
+     * @param array $arrIds List of ids
+     * @param array $arrFields List of fields
      * 
      * @return boolean|string
      */
@@ -70,6 +71,13 @@ class SyncCtoProDatabase extends Backend
         if ($objData === false)
         {
             return false;
+        }
+
+        if (empty($strPath))
+        {
+            // Write some tempfiles
+            $strRandomToken = substr(md5(time() . " | " . rand(0, 65535)), 0, 8);
+            $strPath        = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-" . standardize($strTable) . ".gzip");
         }
 
         return $this->writeXML($strPath, $objData, $strTable);
@@ -223,7 +231,7 @@ class SyncCtoProDatabase extends Backend
      * 
      * @return string
      */
-    protected function writeXML($strPath, Database_Result $objData, $strTable)
+    public function writeXML($strPath, Database_Result $objData, $strTable)
     {
         // Write gzip xml file
         $objGzFile = new File($strPath);

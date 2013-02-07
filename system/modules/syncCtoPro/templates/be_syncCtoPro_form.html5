@@ -7,12 +7,84 @@
             <input class="tl_submit" name="skip" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['skip']; ?>" />
         </div>
 
-        <?php foreach ($this->arrPages as $arrPage): ?>
-            <div>
-                <input type="checkbox" value="<?php echo $arrPage['id']; ?>" name="ids[]" />
-                <span><?php echo $arrPage['title']; ?></span>
-            </div>
-        <?php endforeach; ?>
+        <table>
+            <colgroup>
+                <col width="35" />
+                <col width="40%" />
+                <col width="35" />
+                <col width="35" />
+                <col width="40%" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>&nbsp;</th>
+                    <th>Server</th>
+                    <th> -> </th>
+                    <th>&nbsp;</th>
+                    <th>Client</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php $intIServer = 0; $intIClient = 0; ?>
+                <?php for ($i = 0 ; count($this->arrPages) > $i ||  count($this->arrClientPages) > $i  ; $i++): ?>
+                    <tr>
+                        <?php if ($this->arrPages[$intIServer]['id'] == $this->arrClientPages[$intIClient]['id']): ?>
+                            <td>
+                                <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
+                            </td>
+                            <td>
+                                <span style="margin-left:<?php echo $this->arrPages[$intIServer]['level'] * 25 ?>px;"><?php echo $this->arrPages[$intIServer]['title']; ?></span>
+                            </td>
+                            <td>
+                                &nbsp;
+                            </td>
+                            <td>
 
+                            </td>
+                            <td>
+                                <span style="margin-left:<?php echo $this->arrClientPages[$intIClient]['level'] * 25 ?>px;"><?php echo $this->arrClientPages[$intIClient]['title']; ?></span>
+                            </td>
+                        <?php $intIServer++; $intIClient++; ?>    
+                        <?php elseif ($this->arrPages[$intIServer]['id'] != $this->arrClientPages[$intIClient]['id']): ?>
+                            <?php if (!in_array($this->arrClientPages[$intIClient]['id'], $this->arrPagesIDs)): ?>
+                                <td>
+                                    <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
+                                </td>
+                                <td>
+                                    <span style="margin-left:<?php echo $this->arrPages[$intIServer]['level'] * 25 ?>px;"><?php echo $this->arrPages[$intIServer]['title']; ?></span>
+                                </td>
+                                <td>
+                                    &nbsp;
+                                </td>
+                                 <td>
+                                    <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
+                                </td>
+                                <td>
+                                    <span style="margin-left:<?php echo $this->arrClientPages[$intIClient]['level'] * 25 ?>px;"><?php echo $this->arrClientPages[$intIClient]['title']; ?></span>
+                                </td>
+                            <?php $intIServer++;?>
+                            <?php elseif (!in_array($this->arrPages[$intIServer]['id'], $this->arrClientIDs)): ?>
+                                <td>
+                                    <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
+                                </td>
+                                <td>
+                                    <span style="margin-left:<?php echo $this->arrPages[$intIServer]['level'] * 25 ?>px;"><?php echo $this->arrPages[$intIServer]['title']; ?></span>
+                                </td>
+                                <td>
+                                    &nbsp;
+                                </td>
+                                <td>
+                                    <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
+                                </td>
+                                <td>
+                                    <span style="margin-left:<?php echo $this->arrClientPages[$intIClient]['level'] * 25 ?>px;"><?php echo $this->arrClientPages[$intIClient]['title']; ?></span>
+                                </td>
+                            <?php $intIClient++;?>    
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </tr>
+                <?php endfor; ?>
+            </tbody>
+        </table>
     </div>
 </form>
