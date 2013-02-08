@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 /**
  * Contao Open Source CMS
@@ -8,6 +8,7 @@
  * @license    EULA
  * @filesource
  */
+
 class SyncCtoProDatabase extends Backend
 {
 

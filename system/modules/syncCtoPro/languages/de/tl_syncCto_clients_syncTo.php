@@ -13,6 +13,6 @@
 /**
  * Fields
  */
-$GLOBALS['TL_LANG']['tl_syncCto_clients_syncTo']['database_pages_check'] = array('Einzelne Seiten synchronisieren', 'Wählen Sie diese Option, wenn Sie nur einzelne Seiten synchronisieren wollen.');
+$GLOBALS['TL_LANG']['tl_syncCto_clients_syncTo']['database_pages_check'] = array('Differenzierte Synchronisation', 'Wählen Sie diese Option, wenn Sie nur einzelne Seiten und deren Inhalte synchronisieren wollen.');
 
 ?>
