@@ -342,25 +342,22 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $arrClientPages = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
 
         $arrClientPagesIds = $this->getIDs($arrClientPages['data']);
-
+//
         $arrClientPages = $this->rebuildArray($arrClientPages['data']);
         $arrClientPages = $this->parseArray($arrClientPages, 0, 0);
-
         // Get server Pages
-        $arrPages = $this->Database
+        $arrPages          = $this->Database
                 ->prepare('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
                 ->execute()
                 ->fetchAllAssoc();
 
         $arrPagesIDs = $this->getIDs($arrPages);
-
+//
         $arrPages = $this->rebuildArray($arrPages);
         $arrPages = $this->parseArray($arrPages, 0, 0);
-
-
         // Template
-        $objTemp = new BackendTemplate('be_syncCtoPro_form');
-        
+        $objTemp     = new BackendTemplate('be_syncCtoPro_form');
+
 //        echo "<table>";
 //        echo "<tr>";
 //        echo "<td>";
@@ -373,6 +370,9 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 //        echo "</table>";
 //        
 //        exit();
+
+
+//        $this->buildTree($arrPages, $arrClientPages['data']);
 
         $objTemp->arrPages       = $arrPages;
         $objTemp->arrClientPages = $arrClientPages;
@@ -388,6 +388,95 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         // Set output
         $this->objData->setHtml($objTemp->parse());
         $this->objSyncCtoClient->setRefresh(false);
+    }
+
+    protected function buildTree($arrServer, $arrClient)
+    {
+        $arrNewServer = $this->rebuildArray($arrServer);
+        $arrNewClient = $this->rebuildArray($arrClient);
+
+        $arrServerIds = $this->getIDs($arrServer);
+        $arrClientIds = $this->getIDs($arrClient);
+
+        $arrReturn = $this->foobaa(0, 0, $arrNewServer, $arrNewClient, $arrServerIds, $arrClientIds);
+
+
+        var_dump($arrReturn);
+
+        echo "<table>";
+        echo "<tr>";
+        echo "<td>";
+        var_dump($arrNewServer);
+        echo "</td>";
+        echo "<td>";
+        var_dump($arrNewClient);
+        echo "</td>";
+        echo "</tr>";
+        echo "</table>";
+
+        exit();
+
+        echo "in ";
+        exit();
+    }
+
+    /**
+     * 
+     * @param type $arrServer
+     * @param type $arrClients
+     */
+    protected function foobaa($intLevel, $intPID, &$arrServer, &$arrClients, &$arrServerIds, &$arrClientIds)
+    {
+        $arrReturn = array();
+
+        if(!key_exists($intPID, $arrServer))
+        {
+            return $arrReturn;
+        }
+        
+        // Root page
+        foreach ($arrServer[$intPID] as $intID => $arrValues)
+        {
+            if (key_exists($intID, $arrClientIds) && key_exists($intID, $arrClients[$intPID]))
+            {
+                $arrReturn[] = array(
+                    'levle'  => $intLevel,
+                    'mode'   => 'same',
+                    'server' => $arrValues,
+                    'client' => $arrClients[$intPID][$intID]
+                );
+
+                unset($arrServer[$intPID][$intID]);
+                unset($arrClients[$intPID][$intID]);
+            }
+            else if (key_exists($intID, $arrClientIds))
+            {
+                $arrReturn[] = array(
+                    'levle'  => $intLevel,
+                    'mode'   => 'wrong_position',
+                    'server' => $arrValues,
+                    'client' => $arrClients[$intPID][$intID]
+                );
+
+                unset($arrServer[$intPID][$intID]);
+                unset($arrClients[$intPID][$intID]);
+            }
+            else
+            {
+                $arrReturn[] = array(
+                    'levle'  => 0,
+                    'mode'   => 'missing_right',
+                    'server' => $arrValues,
+                    'client' => null
+                );
+
+                unset($arrServer[$intPID][$intID]);
+            }
+            
+            $arrReturn = array_merge($arrReturn, $this->foobaa($intLevel++, $intID, $arrServer, $arrClients, $arrServerIds, $arrClientIds));
+        }
+
+        return $arrReturn;
     }
 
     /**
