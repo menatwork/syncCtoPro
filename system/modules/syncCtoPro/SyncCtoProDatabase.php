@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
@@ -8,7 +8,6 @@
  * @license    EULA
  * @filesource
  */
-
 class SyncCtoProDatabase extends Backend
 {
 
@@ -407,6 +406,213 @@ class SyncCtoProDatabase extends Backend
         $objXMLFile->delete();
 
         return $arrData;
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////
+    // Hash Functions
+    ////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Get hashes for a table and/or special ids
+     * 
+     * @param string $strTable Name of table
+     * @param array $arrIds List with ids
+     * @return type
+     */
+    protected function getHashValueFor($strTable, $arrIds = array())
+    {
+        // Build Where
+        $strWhere = "WHERE `table` = $strTable";
+
+        if (is_array($arrIds) && !empty($arrIds))
+        {
+            $strWhere.= ' AND `row_id` IN (' . implode(', ', $arrIds) . ')';
+        }
+
+        // DB
+        $arrReturn = $this->Database
+                ->prepare("SELECT * FROM tl_synccto_diff $strWhere")
+                ->execute()
+                ->fetchAllAssoc();
+        
+        return $arrReturn;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Trigger Functions
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Update all trigger
+     * 
+     * @param boolean $blnUpdate
+     */
+    public function updateTrigger($blnUpdate = false)
+    {
+        $this->triggerPage($blnUpdate);
+        $this->triggerArticle($blnUpdate);
+        $this->triggerContent($blnUpdate);
+    }
+
+    /**
+     * Update Trigger for tl_page
+     * 
+     * @param boolean $blnUpdate
+     */
+    protected function triggerPage($blnUpdate = false)
+    {
+        $arrRemove = array(
+            'id',
+            'pid',
+            'PRIMARY'
+        );
+
+        $this->runUpdateTrigger('tl_page', $arrRemove, $blnUpdate);
+        $this->runInsertTrigger('tl_page', $arrRemove);
+        $this->runDeleteTrigger('tl_page');
+    }
+
+    /**
+     * Update Trigger for tl_page
+     * 
+     * @param boolean $blnUpdate
+     */
+    protected function triggerArticle($blnUpdate = false)
+    {
+        $arrRemove = array(
+            'id',
+            'pid',
+            'PRIMARY'
+        );
+
+        $this->runUpdateTrigger('tl_article', $arrRemove, $blnUpdate);
+        $this->runInsertTrigger('tl_article', $arrRemove);
+        $this->runDeleteTrigger('tl_article');
+    }
+
+    /**
+     * Update Trigger for tl_page
+     * 
+     * @param boolean $blnUpdate
+     */
+    protected function triggerContent($blnUpdate = false)
+    {
+        $arrRemove = array(
+            'id',
+            'pid',
+            'PRIMARY'
+        );
+
+        $this->runUpdateTrigger('tl_content', $arrRemove, $blnUpdate);
+        $this->runInsertTrigger('tl_content', $arrRemove);
+        $this->runDeleteTrigger('tl_content');
+    }
+
+    /**
+     * Update the trigger
+     * 
+     * @param string $strTable Name of table
+     * @param array $arrFieldFilter List with ignored fields
+     * @param boolean $blnUpdate Run update after refresh trigger
+     */
+    protected function runUpdateTrigger($strTable, $arrFieldFilter, $blnUpdate = false)
+    {
+        // Get field list
+        $strFields = $this->Database->getFieldNames($strTable);
+        foreach ($arrFieldFilter as $strField)
+        {
+            if (($strKey = array_search($strField, $strFields)) !== false)
+            {
+                unset($strFields[$strKey]);
+            }
+        }
+
+        // Drop
+        $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterUpdateHashRefresh`";
+        $this->Database->query($strQuery);
+
+        // Create
+        $strQuery = "
+            CREATE TRIGGER `" . $strTable . "_AfterUpdateHashRefresh` AFTER UPDATE ON $strTable FOR EACH ROW
+            BEGIN
+            
+            INSERT INTO tl_synccto_diff (`table`,`row_id`,`hash`) 
+            VALUES ('" . $strTable . "', NEW.id, (SELECT md5(CONCAT_WS('|', `" . implode("`,`", $strFields) . "`)) FROM " . $strTable . " WHERE id = NEW.id)) 
+            ON DUPLICATE KEY UPDATE hash = (SELECT md5(CONCAT_WS('|', `" . implode("`,`", $strFields) . "`)) FROM " . $strTable . " WHERE id = NEW.id); 
+
+            END
+            ";
+        $this->Database->query($strQuery);
+
+        // Run overall update :)
+        // To Do add a new field for hash update
+        if ($blnUpdate)
+        {
+            $strQuery = "UPDATE " . $strTable . " SET synccto_hash = 1";
+            $this->Database->query($strQuery);
+        }
+    }
+    
+    /**
+     * Update the trigger
+     * 
+     * @param string $strTable Name of table
+     * @param array $arrFieldFilter List with ignored fields
+     * @param boolean $blnUpdate Run update after refresh trigger
+     */
+    protected function runInsertTrigger($strTable, $arrFieldFilter)
+    {
+        // Get field list
+        $strFields = $this->Database->getFieldNames($strTable);
+        foreach ($arrFieldFilter as $strField)
+        {
+            if (($strKey = array_search($strField, $strFields)) !== false)
+            {
+                unset($strFields[$strKey]);
+            }
+        }
+
+        // Drop
+        $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterInsertHashRefresh`";
+        $this->Database->query($strQuery);
+
+        // Create
+        $strQuery = "
+            CREATE TRIGGER `" . $strTable . "_AfterInsertHashRefresh` AFTER INSERT ON $strTable FOR EACH ROW
+            BEGIN
+            
+            INSERT INTO tl_synccto_diff (`table`,`row_id`,`hash`) 
+            VALUES ('$strTable', NEW.id, (SELECT md5(CONCAT_WS('|', `" . implode("`,`", $strFields) . "`)) FROM " . $strTable . " WHERE id = NEW.id)) 
+            ON DUPLICATE KEY UPDATE hash = (SELECT md5(CONCAT_WS('|', `" . implode("`,`", $strFields) . "`)) FROM " . $strTable . " WHERE id = NEW.id); 
+
+            END
+            ";
+        $this->Database->query($strQuery);
+    }
+    
+    /**
+     * Update the trigger
+     * 
+     * @param string $strTable Name of table
+     * @param array $arrFieldFilter List with ignored fields
+     * @param boolean $blnUpdate Run update after refresh trigger
+     */
+    protected function runDeleteTrigger($strTable)
+    {
+        // Drop
+        $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterDeleteHashRefresh`";
+        $this->Database->query($strQuery);
+
+        // Create
+        $strQuery = "
+            CREATE TRIGGER `" . $strTable . "_AfterDeleteHashRefresh` AFTER DELETE ON $strTable FOR EACH ROW
+            BEGIN
+            
+            DELETE FROM tl_synccto_diff WHERE `row_id` = OLD.id AND `table` =  $strTable;
+            
+            END
+            ";
+        $this->Database->query($strQuery);
     }
 
 }
