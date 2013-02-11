@@ -1,3 +1,10 @@
+<script>    
+    function openMediaBox(strTable, intID)
+    {
+        Mediabox.open('<?php echo $this->Environment->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=' + intID + '&table=' + strTable, '', '850 80%');   
+    }
+</script>
+
 <form id="<?php echo $this->cssId; ?>" action="<?php echo $this->Environment->base; ?>contao/main.php?do=synccto_clients&amp;table=tl_syncCto_clients_sync<?php echo $this->direction; ?>&amp;act=start&amp;step=<?php echo $this->step; ?>&amp;id=<?php echo $this->id; ?>" method="post">
     <div class="formbody">
         <input type="hidden" name="FORM_SUBMIT" value="<?php echo $this->formId; ?>" />        
@@ -10,80 +17,43 @@
         <table>
             <colgroup>
                 <col width="35" />
-                <col width="40%" />
+                <col width="35%" />
                 <col width="35" />
-                <col width="35" />
-                <col width="40%" />
+                <col width="35%" />
+                <col width="100" />
             </colgroup>
             <thead>
                 <tr>
                     <th>&nbsp;</th>
                     <th>Server</th>
                     <th> -> </th>
-                    <th>&nbsp;</th>
                     <th>Client</th>
                 </tr>
             </thead>
             <tbody>
-                <?php $intIServer = 0; $intIClient = 0; ?>
-                <?php for ($i = 0 ; count($this->arrPages) > $i ||  count($this->arrClientPages) > $i  ; $i++): ?>
-                    <tr>
-                        <?php if ($this->arrPages[$intIServer]['id'] == $this->arrClientPages[$intIClient]['id']): ?>
-                            <td>
-                                <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
-                            </td>
-                            <td>
-                                <span style="margin-left:<?php echo $this->arrPages[$intIServer]['level'] * 25 ?>px;"><?php echo $this->arrPages[$intIServer]['title']; ?></span>
-                            </td>
-                            <td>
-                                &nbsp;
-                            </td>
-                            <td>
-
-                            </td>
-                            <td>
-                                <span style="margin-left:<?php echo $this->arrClientPages[$intIClient]['level'] * 25 ?>px;"><?php echo $this->arrClientPages[$intIClient]['title']; ?></span>
-                            </td>
-                        <?php $intIServer++; $intIClient++; ?>    
-                        <?php elseif ($this->arrPages[$intIServer]['id'] != $this->arrClientPages[$intIClient]['id']): ?>
-                            <?php if (!in_array($this->arrClientPages[$intIClient]['id'], $this->arrPagesIDs)): ?>
-                                <td>
-                                    <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
-                                </td>
-                                <td>
-                                    <span style="margin-left:<?php echo $this->arrPages[$intIServer]['level'] * 25 ?>px;"><?php echo $this->arrPages[$intIServer]['title']; ?></span>
-                                </td>
-                                <td>
-                                    &nbsp;
-                                </td>
-                                 <td>
-                                    <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
-                                </td>
-                                <td>
-                                    <span style="margin-left:<?php echo $this->arrClientPages[$intIClient]['level'] * 25 ?>px;"><?php echo $this->arrClientPages[$intIClient]['title']; ?></span>
-                                </td>
-                            <?php $intIServer++;?>
-                            <?php elseif (!in_array($this->arrPages[$intIServer]['id'], $this->arrClientIDs)): ?>
-                                <td>
-                                    <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
-                                </td>
-                                <td>
-                                    <span style="margin-left:<?php echo $this->arrPages[$intIServer]['level'] * 25 ?>px;"><?php echo $this->arrPages[$intIServer]['title']; ?></span>
-                                </td>
-                                <td>
-                                    &nbsp;
-                                </td>
-                                <td>
-                                    <input type="checkbox" value="<?php echo $this->arrPages[$intIServer]['id']; ?>" name="ids[]" />
-                                </td>
-                                <td>
-                                    <span style="margin-left:<?php echo $this->arrClientPages[$intIClient]['level'] * 25 ?>px;"><?php echo $this->arrClientPages[$intIClient]['title']; ?></span>
-                                </td>
-                            <?php $intIClient++;?>    
-                            <?php endif; ?>
+                <?php foreach ($this->arrAllPageValues as $mixKey => $arrValues): ?>
+                 <tr>
+                    <td>
+                        <input type="checkbox" name="ids[]" value="<?php echo $arrValues['id']; ?>" />
+                    </td>
+                    <td title="<?php echo $arrValues['source']['hash']; ?>">
+                        <?php echo $arrValues['source']['title']; ?>
+                    </td>
+                    <td>
+                        <?php if($arrValues['source']['hash'] ==  $arrValues['target']['hash']): ?>
+                            =
+                        <?php else: ?>
+                            !!
                         <?php endif; ?>
-                    </tr>
-                <?php endfor; ?>
+                    </td>
+                    <td>
+                       <?php echo $arrValues['target']['title']; ?>
+                    </td>
+                    <td>
+                        <input type="button" class="tl_submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['popup']; ?>" onClick="openMediaBox('tl_page', <?php echo $arrValues['id']; ?>); return false;"/>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
             </tbody>
         </table>
     </div>

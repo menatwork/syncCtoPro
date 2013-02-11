@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
@@ -10,8 +10,24 @@
  */
 
 /**
+ * Hooks
+ */
+$GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
+
+/**
+ * Ignored fields for trigger 
+ */
+$GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge((array) $GLOBALS['SYC_CONFIG']['trigger_blacklist'], array(
+    'id',
+    'tstamp',
+    'synccto_hash',
+    'PRIMARY'
+));
+
+/**
  * CtoCommunication RPC Calls
  */
+
 // Import as SE file
 $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_IMPORT"] = array(
     "class"     => "SyncCtoProDatabase",
@@ -21,6 +37,7 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_IMPORT"] = array(
         "path"
     ),
 );
+
 // Export as SE file
 $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EMPORT"] = array(
     "class"     => "SyncCtoProDatabase",
@@ -31,6 +48,17 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EMPORT"] = array(
         "table",
         "ids",
         "fields",
+    ),
+);
+
+// Get hashes
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_GET_HASHES"] = array(
+    "class"     => "SyncCtoProDatabase",
+    "function"  => "getHashValueFor",
+    "typ"       => "POST",
+    "parameter" => array(
+        "table",
+        "ids",
     ),
 );
 ?>

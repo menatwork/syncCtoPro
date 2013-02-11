@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
@@ -120,6 +120,30 @@ class SyncCtoProCommunicationClient
         );
 
         return $this->runServer('SYNCCTOPRO_DATABASE_SE_EMPORT', $arrData);
+    }
+
+    /**
+     * Get hashes for a special tablenmae and/or special ids
+     * 
+     * @param string $strTable Name of Table
+     * @param array $arrIds List with IDs
+     * 
+     * @return array List with hashes
+     */
+    public function getHashValueFor($strTable, $arrIds = array())
+    {
+        $arrData = array(
+            array(
+                "name"  => "table",
+                "value" => $strTable,
+            ),
+            array(
+                "name"  => "ids",
+                "value" => $arrIds,
+            )
+        );
+
+        return $this->runServer('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData);
     }
 
 }

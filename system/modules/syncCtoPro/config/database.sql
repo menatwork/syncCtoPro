@@ -38,10 +38,10 @@ CREATE TABLE `tl_content` (
 -- Table `tl_synccto_diff`
 --
 CREATE TABLE `tl_synccto_diff` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `table` varchar(255) NOT NULL,
-  `row_id` int(11) NOT NULL,
-  `hash` text,
-  PRIMARY KEY (`id`),
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `table` varchar(255) NOT NULL default '',
+  `row_id` int(10) unsigned NOT NULL default '0',
+  `hash` text NULL,
+  PRIMARY KEY  (`id`),
   UNIQUE KEY `keys` (`table`,`row_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;

@@ -171,41 +171,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 
         foreach ($arrData as $arrValue)
         {
-            $arrReturn[$arrValue['pid']][$arrValue['id']] = $arrValue;
-        }
-
-        return $arrReturn;
-    }
-
-    public function parseArray(&$arrData, $intPid, $intLevel)
-    {
-        $arrReturn = array();
-
-        if (!key_exists($intPid, $arrData))
-        {
-            return $arrReturn;
-        }
-
-        // Search rootpages
-        foreach ($arrData[$intPid] as $value)
-        {
-            $arrReturn[] = array_merge($value, array(
-                'level' => $intLevel
-                    ));
-
-            $arrReturn = array_merge($arrReturn, $this->parseArray($arrData, $value['id'], ($intLevel + 1)));
-        }
-
-        return $arrReturn;
-    }
-
-    public function getIDs(&$arrData)
-    {
-        $arrReturn = array();
-
-        foreach ($arrData as $value)
-        {
-            $arrReturn[] = $value['id'];
+            $arrReturn[$arrValue['id']] = $arrValue;
         }
 
         return $arrReturn;
@@ -339,141 +305,92 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
 
         // Read client pages
-        $arrClientPages = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
+        $arrClientPages      = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
+        $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
 
-        $arrClientPagesIds = $this->getIDs($arrClientPages['data']);
-//
-        $arrClientPages = $this->rebuildArray($arrClientPages['data']);
-        $arrClientPages = $this->parseArray($arrClientPages, 0, 0);
         // Get server Pages
-        $arrPages          = $this->Database
+        $arrPages = $this->Database
                 ->prepare('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
                 ->execute()
                 ->fetchAllAssoc();
 
-        $arrPagesIDs = $this->getIDs($arrPages);
-//
-        $arrPages = $this->rebuildArray($arrPages);
-        $arrPages = $this->parseArray($arrPages, 0, 0);
+        $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());
+
+        $arrAllPageValues = $this->buildTree($arrPages, $arrPageHashes, $arrClientPages['data'], $arrClientPageHashes);
+        
         // Template
-        $objTemp     = new BackendTemplate('be_syncCtoPro_form');
+        $objTemp = new BackendTemplate('be_syncCtoPro_form');
 
-//        echo "<table>";
-//        echo "<tr>";
-//        echo "<td>";
-//        var_dump($arrPages);
-//        echo "</td>";
-//        echo "<td>";
-//        var_dump($arrClientPages);
-//        echo "</td>";        
-//        echo "</tr>";
-//        echo "</table>";
-//        
-//        exit();
-
-
-//        $this->buildTree($arrPages, $arrClientPages['data']);
-
-        $objTemp->arrPages       = $arrPages;
-        $objTemp->arrClientPages = $arrClientPages;
-        $objTemp->arrPagesIDs    = $arrPagesIDs;
-        $objTemp->arrClientIDs   = $arrClientPagesIds;
-        $objTemp->id             = $this->objSyncCtoClient->getClientID();
-        $objTemp->step           = $this->objSyncCtoClient->getStep();
-        $objTemp->direction      = "To";
-        $objTemp->headline       = $GLOBALS['TL_LANG']['MSC']['totalsize'];
-        $objTemp->forwardValue   = $GLOBALS['TL_LANG']['MSC']['apply'];
-        $objTemp->helperClass    = $this;
+//        $objTemp->arrPages            = $this->rebuildArray($arrPages);
+//        $objTemp->arrPageHashes       = $arrPageHashes;        
+//        $objTemp->arrClientPages      = $this->rebuildArray($arrClientPages['data']);
+//        $objTemp->arrClientPageHashes = $arrClientPageHashes;
+        $objTemp->arrAllPageValues = $arrAllPageValues;
+        $objTemp->id               = $this->objSyncCtoClient->getClientID();
+        $objTemp->step             = $this->objSyncCtoClient->getStep();
+        $objTemp->direction        = "To";
+        $objTemp->headline         = $GLOBALS['TL_LANG']['MSC']['totalsize'];
+        $objTemp->forwardValue     = $GLOBALS['TL_LANG']['MSC']['apply'];
+        $objTemp->helperClass      = $this;
 
         // Set output
         $this->objData->setHtml($objTemp->parse());
         $this->objSyncCtoClient->setRefresh(false);
     }
 
-    protected function buildTree($arrServer, $arrClient)
-    {
-        $arrNewServer = $this->rebuildArray($arrServer);
-        $arrNewClient = $this->rebuildArray($arrClient);
-
-        $arrServerIds = $this->getIDs($arrServer);
-        $arrClientIds = $this->getIDs($arrClient);
-
-        $arrReturn = $this->foobaa(0, 0, $arrNewServer, $arrNewClient, $arrServerIds, $arrClientIds);
-
-
-        var_dump($arrReturn);
-
-        echo "<table>";
-        echo "<tr>";
-        echo "<td>";
-        var_dump($arrNewServer);
-        echo "</td>";
-        echo "<td>";
-        var_dump($arrNewClient);
-        echo "</td>";
-        echo "</tr>";
-        echo "</table>";
-
-        exit();
-
-        echo "in ";
-        exit();
-    }
-
     /**
      * 
-     * @param type $arrServer
-     * @param type $arrClients
+     * @param array $arrSourcePages
+     * @param array $arrSourceHashes
+     * @param array $arrTargetPages
+     * @param array $arrTargetHashes
      */
-    protected function foobaa($intLevel, $intPID, &$arrServer, &$arrClients, &$arrServerIds, &$arrClientIds)
+    protected function buildTree($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes)
     {
+        // Set id as key
+        $arrSourcePages = $this->rebuildArray($arrSourcePages);
+        $arrTargetPages = $this->rebuildArray($arrTargetPages);
+
+        // Search for missing entries
+        $arrKeysSource = array_keys($arrSourcePages);
+        $arrKeysTarget = array_keys($arrTargetPages);
+
+        $arrMissingClient = array_diff($arrKeysSource, $arrKeysTarget);
+        $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
+
         $arrReturn = array();
 
-        if(!key_exists($intPID, $arrServer))
+        foreach ($arrSourcePages as $intID => $mixValues)
         {
-            return $arrReturn;
+            $arrReturn[$intID] = array(
+                'id'     => $intID,
+                'source' => array(
+                    'title'  => $mixValues['title'],
+                    'id'     => $mixValues['id'],
+                    'pid'    => $mixValues['pid'],
+                    'hash'   => $arrSourceHashes[$intID]['hash']
+                ),
+                'target' => array(
+                    'title' => $arrTargetPages[$intID]['title'],
+                    'id'    => $arrTargetPages[$intID]['id'],
+                    'pid'   => $arrTargetPages[$intID]['pid'],
+                    'hash'  => $arrTargetHashes[$intID]['hash']
+                ),
+            );
         }
-        
-        // Root page
-        foreach ($arrServer[$intPID] as $intID => $arrValues)
+
+        foreach ($arrMissingServer as $intID)
         {
-            if (key_exists($intID, $arrClientIds) && key_exists($intID, $arrClients[$intPID]))
-            {
-                $arrReturn[] = array(
-                    'levle'  => $intLevel,
-                    'mode'   => 'same',
-                    'server' => $arrValues,
-                    'client' => $arrClients[$intPID][$intID]
-                );
-
-                unset($arrServer[$intPID][$intID]);
-                unset($arrClients[$intPID][$intID]);
-            }
-            else if (key_exists($intID, $arrClientIds))
-            {
-                $arrReturn[] = array(
-                    'levle'  => $intLevel,
-                    'mode'   => 'wrong_position',
-                    'server' => $arrValues,
-                    'client' => $arrClients[$intPID][$intID]
-                );
-
-                unset($arrServer[$intPID][$intID]);
-                unset($arrClients[$intPID][$intID]);
-            }
-            else
-            {
-                $arrReturn[] = array(
-                    'levle'  => 0,
-                    'mode'   => 'missing_right',
-                    'server' => $arrValues,
-                    'client' => null
-                );
-
-                unset($arrServer[$intPID][$intID]);
-            }
-            
-            $arrReturn = array_merge($arrReturn, $this->foobaa($intLevel++, $intID, $arrServer, $arrClients, $arrServerIds, $arrClientIds));
+            $arrReturn[$intID] = array(
+                'id'     => $intID,
+                'source' => array(),
+                'target' => array(
+                    'title' => $arrTargetPages[$intID]['title'],
+                    'id'    => $arrTargetPages[$intID]['id'],
+                    'pid'   => $arrTargetPages[$intID]['pid'],
+                    'hash'  => $arrTargetHashes[$intID]['hash']
+                ),
+            );
         }
 
         return $arrReturn;

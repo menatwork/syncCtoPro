@@ -34,6 +34,9 @@ class SyncCtoProDatabase extends Backend
         // Get Max mem usages
         $this->intMaxMemoryUsage = intval(str_replace(array("m", "M", "k", "K"), array("000000", "000000", "000", "000"), ini_get('memory_limit')));
         $this->intMaxMemoryUsage = $this->intMaxMemoryUsage / 100 * 80;
+
+        // Load languages
+        $this->loadLanguageFile('default_syncCtoPro');
     }
 
     /**
@@ -407,11 +410,11 @@ class SyncCtoProDatabase extends Backend
 
         return $arrData;
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Hash Functions
     ////////////////////////////////////////////////////////////////////////////
-    
+
     /**
      * Get hashes for a table and/or special ids
      * 
@@ -419,10 +422,10 @@ class SyncCtoProDatabase extends Backend
      * @param array $arrIds List with ids
      * @return type
      */
-    protected function getHashValueFor($strTable, $arrIds = array())
+    public function getHashValueFor($strTable, $arrIds = array())
     {
         // Build Where
-        $strWhere = "WHERE `table` = $strTable";
+        $strWhere = "WHERE `table` = '$strTable'";
 
         if (is_array($arrIds) && !empty($arrIds))
         {
@@ -430,17 +433,44 @@ class SyncCtoProDatabase extends Backend
         }
 
         // DB
-        $arrReturn = $this->Database
+        $arrResult = $this->Database
                 ->prepare("SELECT * FROM tl_synccto_diff $strWhere")
                 ->execute()
                 ->fetchAllAssoc();
         
+        $arrReturn = array();
+        
+        foreach ($arrResult as $arrValues)
+        {
+            $arrReturn[$arrValues['row_id']] = $arrValues;
+        }
+
         return $arrReturn;
     }
+    
+    
 
     ////////////////////////////////////////////////////////////////////////////
     // Trigger Functions
     ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Call this for hooks
+     */
+    public function updateTriggerFromHook($arrCommand)
+    {
+        try
+        {
+            $this->updateTrigger(true);
+        }
+        catch (Exception $exc)
+        {
+            $this->addErrorMessage($GLOBALS['TL_LANG']['ERR']['triggerUpdate'] . '<br/>' . $GLOBALS['TL_LANG']['MSC']['moreInformations']);
+            $this->log('There was an error by updating the triggers for SyncCtoPro. Error: ' . $exc->getMessage(), __CLASS__ . " | " . __FUNCTION__, TL_ERROR);
+        }
+
+        return $arrCommand;
+    }
 
     /**
      * Update all trigger
@@ -461,14 +491,8 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerPage($blnUpdate = false)
     {
-        $arrRemove = array(
-            'id',
-            'pid',
-            'PRIMARY'
-        );
-
-        $this->runUpdateTrigger('tl_page', $arrRemove, $blnUpdate);
-        $this->runInsertTrigger('tl_page', $arrRemove);
+        $this->runUpdateTrigger('tl_page', $GLOBALS['SYC_CONFIG']['trigger_blacklist'], $blnUpdate);
+        $this->runInsertTrigger('tl_page', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runDeleteTrigger('tl_page');
     }
 
@@ -479,14 +503,8 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerArticle($blnUpdate = false)
     {
-        $arrRemove = array(
-            'id',
-            'pid',
-            'PRIMARY'
-        );
-
-        $this->runUpdateTrigger('tl_article', $arrRemove, $blnUpdate);
-        $this->runInsertTrigger('tl_article', $arrRemove);
+        $this->runUpdateTrigger('tl_article', $GLOBALS['SYC_CONFIG']['trigger_blacklist'], $blnUpdate);
+        $this->runInsertTrigger('tl_article', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runDeleteTrigger('tl_article');
     }
 
@@ -497,14 +515,8 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerContent($blnUpdate = false)
     {
-        $arrRemove = array(
-            'id',
-            'pid',
-            'PRIMARY'
-        );
-
-        $this->runUpdateTrigger('tl_content', $arrRemove, $blnUpdate);
-        $this->runInsertTrigger('tl_content', $arrRemove);
+        $this->runUpdateTrigger('tl_content', $GLOBALS['SYC_CONFIG']['trigger_blacklist'], $blnUpdate);
+        $this->runInsertTrigger('tl_content', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runDeleteTrigger('tl_content');
     }
 
@@ -552,7 +564,7 @@ class SyncCtoProDatabase extends Backend
             $this->Database->query($strQuery);
         }
     }
-    
+
     /**
      * Update the trigger
      * 
@@ -589,7 +601,7 @@ class SyncCtoProDatabase extends Backend
             ";
         $this->Database->query($strQuery);
     }
-    
+
     /**
      * Update the trigger
      * 
