@@ -13,6 +13,7 @@
  * Hooks
  */
 $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
+$GLOBALS['TL_HOOKS']['syncExecuteFinalOperations'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
 
 /**
  * Ignored fields for trigger 

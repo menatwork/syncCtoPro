@@ -620,7 +620,7 @@ class SyncCtoProDatabase extends Backend
             CREATE TRIGGER `" . $strTable . "_AfterDeleteHashRefresh` AFTER DELETE ON $strTable FOR EACH ROW
             BEGIN
             
-            DELETE FROM tl_synccto_diff WHERE `row_id` = OLD.id AND `table` =  $strTable;
+            DELETE FROM tl_synccto_diff WHERE `row_id` = OLD.id AND `table` = '$strTable';
             
             END
             ";

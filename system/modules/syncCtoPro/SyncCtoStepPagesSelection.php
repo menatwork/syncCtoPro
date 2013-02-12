@@ -226,6 +226,15 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
             'tl_content' => $strContentFile
         );
 
+        // Save on Session for popup
+        $this->arrSyncSettings['syncCtoPro_ExternFile'] = array(
+            'tl_page'    => $strPageFile,
+            'tl_article' => $strArticleFile,
+            'tl_content' => $strContentFile
+        );
+        
+        $this->objSyncCtoClient->setSyncSettings($this->arrSyncSettings);
+
         // Set output
         $this->objStepPool->step++;
     }
@@ -300,41 +309,15 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
             return;
         }
 
-        // Get all data / load helper
-        $arrFilePathes         = $this->objStepPool->files;
-        $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
-
-        // Read client pages
-        $arrClientPages      = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
-        $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
-
-        // Get server Pages
-        $arrPages = $this->Database
-                ->prepare('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
-                ->execute()
-                ->fetchAllAssoc();
-
-        $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());
-
-        $arrAllPageValues = $this->buildTree($arrPages, $arrPageHashes, $arrClientPages['data'], $arrClientPageHashes);
-        
         // Template
         $objTemp = new BackendTemplate('be_syncCtoPro_form');
-
-//        $objTemp->arrPages            = $this->rebuildArray($arrPages);
-//        $objTemp->arrPageHashes       = $arrPageHashes;        
-//        $objTemp->arrClientPages      = $this->rebuildArray($arrClientPages['data']);
-//        $objTemp->arrClientPageHashes = $arrClientPageHashes;
-        $objTemp->arrAllPageValues = $arrAllPageValues;
         $objTemp->id               = $this->objSyncCtoClient->getClientID();
         $objTemp->step             = $this->objSyncCtoClient->getStep();
         $objTemp->direction        = "To";
-        $objTemp->headline         = $GLOBALS['TL_LANG']['MSC']['totalsize'];
-        $objTemp->forwardValue     = $GLOBALS['TL_LANG']['MSC']['apply'];
         $objTemp->helperClass      = $this;
 
         // Set output
-        $this->objData->setHtml($objTemp->parse());
+        $this->objData->setHtml($this->replaceInsertTags($objTemp->parse()));
         $this->objSyncCtoClient->setRefresh(false);
     }
 
@@ -400,7 +383,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
      * Build Data
      * @throws Exception
      */
-    protected function showSubStep3()
+    protected function generateUpdateFiles()
     {
         $arrPages    = $this->objStepPool->pageIDs;
         $arrArticles = array();
@@ -469,7 +452,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
      * Send files
      * @throws Exception
      */
-    protected function showSubStep4()
+    protected function sendUpdateFiles()
     {
         foreach ($this->objStepPool->files as $strType => $strFile)
         {
@@ -491,7 +474,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
      * Import
      * @throws Exception
      */
-    protected function showSubStep5()
+    protected function importExtern()
     {
         foreach ($this->objStepPool->files as $strType => $strFile)
         {
@@ -549,17 +532,17 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
                     $this->showPageTree();
                     break;
 
-//                case $i++:
-//                    $this->showSubStep3();
-//                    break;
-//
-//                case $i++:
-//                    $this->showSubStep4();
-//                    break;
-//
-//                case $i++:
-//                    $this->showSubStep5();
-//                    break;
+                case $i++:
+                    $this->generateUpdateFiles();
+                    break;
+
+                case $i++:
+                    $this->sendUpdateFiles();
+                    break;
+
+                case $i++:
+                    $this->importExtern();
+                    break;
             }
         }
         catch (Exception $exc)

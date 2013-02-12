@@ -15,15 +15,20 @@ define('TL_MODE', 'BE');
 require_once('../system/initialize.php');
 
 require_once TL_ROOT . '/plugins/php-diff/Diff.php';
-require_once TL_ROOT . '/plugins/php-diff/Diff/Renderer/Html/Array.php';
-require_once TL_ROOT . '/plugins/php-diff/Diff/Renderer/Html/Inline.php';
-require_once TL_ROOT . '/plugins/php-diff/Diff/Renderer/Html/SideBySide.php';
+require_once TL_ROOT . '/plugins/php-diff/Diff/Renderer/Html/Contao.php';
 
 /**
  * Class SyncCtoPopup
  */
 class PopupSyncDiff extends Backend
 {
+    ////////////////////////////////////////////////////////////////////////////
+    // Const
+    ////////////////////////////////////////////////////////////////////////////
+
+    const VIEWMODE_OVERVIEW = 'overview';
+    const VIEWMODE_DETAIL   = 'detail';
+
     ////////////////////////////////////////////////////////////////////////////
     // Objects
     ////////////////////////////////////////////////////////////////////////////
@@ -42,6 +47,11 @@ class PopupSyncDiff extends Backend
      * @var SyncCtoProDatabase 
      */
     protected $objSyncCtoProDatabase;
+
+    /**
+     * @var BackendTemplate
+     */
+    protected $objPopupTemplate;
 
     ////////////////////////////////////////////////////////////////////////////
     // Vars
@@ -76,6 +86,20 @@ class PopupSyncDiff extends Backend
     protected $intRowId;
 
     /**
+     * Viewmode, overview or detail view
+     * 
+     * @var string 
+     */
+    protected $strViewMode = self::VIEWMODE_OVERVIEW;
+
+    /**
+     * Cleint settings
+     * 
+     * @var array 
+     */
+    protected $arrSyncSettings = array();
+
+    /**
      * A list with all extern data
      * 
      * @var array 
@@ -92,7 +116,21 @@ class PopupSyncDiff extends Backend
     /**
      * @var array 
      */
-    protected $arrDiffData;
+    protected $strContentData;
+
+    /**
+     * Flag to show if we have an error
+     * 
+     * @var boolean 
+     */
+    protected $blnError = false;
+
+    /**
+     * A list with all errors
+     * 
+     * @var array 
+     */
+    protected $arrError = array();
 
     ////////////////////////////////////////////////////////////////////////////
     // System
@@ -122,9 +160,6 @@ class PopupSyncDiff extends Backend
             $GLOBALS['TL_LANGUAGE'] = $this->User->language;
         }
 
-        // Load language
-        $this->loadLanguageFile('default');
-
         // Init Helper
         $this->objSyncCtoHelper                 = SyncCtoHelper::getInstance();
         $this->objSyncCtoCommunicationClient    = SyncCtoCommunicationClient::getInstance();
@@ -133,6 +168,13 @@ class PopupSyncDiff extends Backend
 
         // Load all values from get param
         $this->initGetParams();
+
+        // Load language files
+        $this->loadLanguageFile('default');
+        $this->loadLanguageFile($this->strTable);
+
+        // Basic Template
+        $this->objPopupTemplate = new BackendTemplate('be_syncCtoPro_popup');
     }
 
     /**
@@ -142,37 +184,151 @@ class PopupSyncDiff extends Backend
     {
         try
         {
+            // Basic functions
+            $this->loadSyncSettings();
             $this->initConnetcion();
-            $this->loadExternDataFor($this->strTable, $this->intRowId);
-            $this->loadLocalDataFor($this->strTable, $this->intRowId);
 
-            $this->runDiff();
+            // Choose viewmode
+            switch ($this->strViewMode)
+            {
+                // Overview page
+                case self::VIEWMODE_OVERVIEW:
+                    $this->renderOverview();
+                    break;
 
-            $this->output();
+                // Detail diff
+                case self::VIEWMODE_DETAIL:
+                    $this->loadExternDataFor($this->strTable, $this->intRowId);
+                    $this->loadLocalDataFor($this->strTable, $this->intRowId);
+                    $this->runDiff();
+                    break;
+
+                default:
+                    $this->blnError   = true;
+                    $this->arrError[] = 'Unknown viewmode.';
+                    break;
+            }
         }
         catch (Exception $exc)
         {
-            // TODO show error
-            var_dump($exc->getMessage());
+            $this->blnError   = true;
+            $this->arrError[] = $exc->getMessage();
         }
+
+        $this->output();
     }
 
     ////////////////////////////////////////////////////////////////////////////
     // Core
     ////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Read get values
+     */
     protected function initGetParams()
     {
         $this->intClientID  = $this->Input->get('id');
         $this->strDirection = $this->Input->get('direction');
         $this->strTable     = $this->Input->get('table');
         $this->intRowId     = $this->Input->get('row_id');
+        $this->strViewMode  = $this->Input->get('view');
     }
 
+    /**
+     * Init connection
+     */
     protected function initConnetcion()
     {
         $this->objSyncCtoCommunicationClient->setClientBy($this->intClientID);
     }
+
+    /**
+     * Init connection
+     */
+    protected function output()
+    {
+        // Set stylesheets
+        $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/themes/' . $this->getTheme() . '/main.css';
+        $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/themes/' . $this->getTheme() . '/basic.css';
+        $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/themes/' . $this->getTheme() . '/popup.css';
+        $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/modules/syncCtoPro/html/css/diff.css';
+
+        // Set javascript
+        $GLOBALS['TL_JAVASCRIPT'][] = TL_PLUGINS_URL . 'plugins/mootools/' . MOOTOOLS_CORE . '/mootools-core.js';
+        $GLOBALS['TL_JAVASCRIPT'][] = 'contao/contao.js';
+
+        // Template work
+        $this->objPopupTemplate->theme    = $this->getTheme();
+        $this->objPopupTemplate->base     = $this->Environment->base;
+        $this->objPopupTemplate->path     = $this->Environment->path;
+        $this->objPopupTemplate->language = $GLOBALS['TL_LANGUAGE'];
+        $this->objPopupTemplate->title    = $GLOBALS['TL_CONFIG']['websiteTitle'];
+        $this->objPopupTemplate->charset  = $GLOBALS['TL_CONFIG']['characterSet'];
+        $this->objPopupTemplate->headline = basename(utf8_convert_encoding($this->strFile, $GLOBALS['TL_CONFIG']['characterSet']));
+
+        $this->objPopupTemplate->error    = $this->blnError;
+        $this->objPopupTemplate->arrError = $this->arrError;
+
+        $this->objPopupTemplate->content = $this->strContentData;
+
+        $this->objPopupTemplate->output();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // View - Overview
+    ////////////////////////////////////////////////////////////////////////////
+
+    protected function renderOverview()
+    {
+        $arrIds = $this->Input->post('ids');
+
+        if (key_exists("forward", $_POST) && !empty($arrIds))
+        {
+            echo "Write forward";
+            die();
+        }
+        else if ((key_exists("forward", $_POST) && empty($arrIds)) || key_exists("skip", $_POST))
+        {
+            echo "Write forward";
+            die();
+        }
+
+        // Get all data / load helper
+        $arrFilePathes         = $this->arrSyncSettings['syncCtoPro_ExternFile'];
+        $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
+
+        // Read client pages
+        $arrClientPages      = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
+        $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
+
+        // Get server Pages
+        $arrPages = $this->Database
+                ->prepare('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
+                ->execute()
+                ->fetchAllAssoc();
+
+        $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());
+
+        $arrAllPageValues = $this->buildTree($arrPages, $arrPageHashes, $arrClientPages['data'], $arrClientPageHashes);
+
+        // Template
+        $objOverviewTemplate = new BackendTemplate('be_syncCtoPro_popup_overview');
+
+        $objOverviewTemplate->arrAllPageValues = $arrAllPageValues;
+        $objOverviewTemplate->base             = $this->Environment->base;
+        $objOverviewTemplate->path             = $this->Environment->path;
+        $objOverviewTemplate->id               = $this->intClientID;
+        $objOverviewTemplate->direction        = "To";
+        $objOverviewTemplate->headline         = $GLOBALS['TL_LANG']['MSC']['totalsize'];
+        $objOverviewTemplate->forwardValue     = $GLOBALS['TL_LANG']['MSC']['apply'];
+        $objOverviewTemplate->helperClass      = $this;
+
+        $this->strContentData = $objOverviewTemplate->parse();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // View - Detail
+    ////////////////////////////////////////////////////////////////////////////
 
     /**
      * Load a list with id/titles from client
@@ -202,57 +358,261 @@ class PopupSyncDiff extends Backend
         $this->arrExternData = $this->objSyncCtoProDatabase->readXML($strSavePath);
     }
 
+    /**
+     * Load local data
+     * 
+     * @param string $strTable
+     * @param integer $intID
+     */
     protected function loadLocalDataFor($strTable, $intID)
     {
         $this->arrLocalData = $this->Database->prepare("SELECT * FROM $strTable WHERE id = ?")
-                ->execute($intID)
+                ->executeUncached($intID)
                 ->fetchAllAssoc();
     }
 
     protected function runDiff()
     {
-        $options = array(
+        $strContent = "";
+
+        // Diff Options
+        $arrDiffOptions = array(
                 //'ignoreWhitespace' => true,
                 //'ignoreCase' => true,
         );
 
+        // Load fields
+        $this->loadDataContainer($this->strTable);
+        $arrDcaFields = $GLOBALS['TL_DCA'][$this->strTable]['fields'];
+
         foreach ($this->arrLocalData[0] as $strField => $mixValue)
         {
-            $objDiff = new Diff(array($this->arrExternData['data'][0][$strField]), array($mixValue), $options);
-            $renderer = new Diff_Renderer_Html_Array();
+            // Get current values
+            $strCurrentFieldSettings = $arrDcaFields[$strField];
 
-            $arrResult = $objDiff->Render($renderer);
+            $mixValuesServer = $mixValue;
+            $mixValuesClient = $this->arrExternData['data'][0][$strField];
 
-            if (empty($arrResult))
+            // Check if we have a difference
+            if ($mixValuesServer == $mixValuesClient)
             {
                 continue;
             }
 
-            $this->arrDiffData[$strField] = $arrResult;
+            // Hidden conditions
+            if ($strCurrentFieldSettings['inputType'] == 'password' || $strCurrentFieldSettings['eval']['doNotShow'] || $strCurrentFieldSettings['eval']['hideInput'])
+            {
+                continue;
+            }
+
+            // Convert serialized arrays into strings
+            if (is_array(($tmp = deserialize($mixValuesServer))) && !is_array($mixValuesServer))
+            {
+                $mixValuesServer = $this->implode($tmp);
+            }
+            if (is_array(($tmp             = deserialize($mixValuesClient))) && !is_array($mixValuesClient))
+            {
+                $mixValuesClient = $this->implode($tmp);
+            }
+            unset($tmp);
+
+            // Convert date fields
+            if ($strCurrentFieldSettings['eval']['rgxp'] == 'date')
+            {
+                $mixValuesServer = $this->parseDate($GLOBALS['TL_CONFIG']['dateFormat'], $mixValuesServer ? : '');
+                $mixValuesClient = $this->parseDate($GLOBALS['TL_CONFIG']['dateFormat'], $mixValuesClient ? : '');
+            }
+            elseif ($strCurrentFieldSettings['eval']['rgxp'] == 'time')
+            {
+                $mixValuesServer = $this->parseDate($GLOBALS['TL_CONFIG']['timeFormat'], $mixValuesServer ? : '');
+                $mixValuesClient = $this->parseDate($GLOBALS['TL_CONFIG']['timeFormat'], $mixValuesClient ? : '');
+            }
+            elseif ($strCurrentFieldSettings['eval']['rgxp'] == 'datim')
+            {
+                $mixValuesServer = $this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesServer ? : '');
+                $mixValuesClient = $this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesClient ? : '');
+            }
+
+            // Convert strings into arrays
+            if (!is_array($mixValuesServer))
+            {
+                $mixValuesServer = explode("\n", $mixValuesServer);
+            }
+            if (!is_array($mixValuesClient))
+            {
+                $mixValuesClient = explode("\n", $mixValuesClient);
+            }
+
+            // Get field name
+            if (empty($GLOBALS['TL_LANG'][$this->strTable][$strField]))
+            {
+                $strHumanReadableField = $strField;
+            }
+            else if (is_array($GLOBALS['TL_LANG'][$this->strTable][$strField]))
+            {
+                $strHumanReadableField = $GLOBALS['TL_LANG'][$this->strTable][$strField][0];
+            }
+            else
+            {
+                $strHumanReadableField = $GLOBALS['TL_LANG'][$this->strTable][$strField];
+            }
+
+            // Run php-diff
+            $objDiff = new Diff($mixValuesClient, $mixValuesServer, $arrDiffOptions);
+
+            $objRenderer = new Diff_Renderer_Html_Contao();
+            $objRenderer->setOptions(array('field' => $strHumanReadableField));
+
+            $mixResult = $objDiff->Render($objRenderer);
+
+            $strContent .= $mixResult;
         }
+
+        // Set wrapper template information
+        $objDetailsTemplate = new BackendTemplate("be_syncCtoPro_popup_detail");
+
+        $objDetailsTemplate->base      = $this->Environment->base;
+        $objDetailsTemplate->path      = $this->Environment->path;
+        $objDetailsTemplate->id        = $this->intClientID;
+        $objDetailsTemplate->direction = "To";
+
+        $objDetailsTemplate->content = $strContent;
+
+        $this->strContentData = $objDetailsTemplate->parse();
     }
 
-    protected function output()
+    ////////////////////////////////////////////////////////////////////////////
+    // Helper
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Implode a multi-dimensional array recursively
+     * @author Leo Feyer https://contao.org
+     * @param mixed
+     * @return string
+     */
+    protected function implode($var)
     {
-        if (!is_array($this->arrDiffData) || empty($this->arrDiffData))
+        if (!is_array($var))
         {
-            echo "<div>empty</div>";
+            return $var;
+        }
+        elseif (!is_array(next($var)))
+        {
+            return implode(', ', $var);
         }
         else
         {
-            foreach ($this->arrDiffData as $strField => $arrDiff)
+            $buffer = '';
+
+            foreach ($var as $k => $v)
             {
-                echo "<div><h2>" . $strField . "</h2></div>";
-                echo "<div>";
-                echo "<h3>Server</h3>";
-                echo implode("<br />", $arrDiff[0][0]['base']['lines']);
-                echo "</div>";
-                echo "<div>";
-                echo "<h3>Client</h3>";
-                echo implode("<br />", $arrDiff[0][0]['changed']['lines']);
-                echo "</div> <hr />";
+                $buffer .= $k . ": " . $this->implode($v) . "\n";
             }
+
+            return trim($buffer);
         }
+    }
+
+    /**
+     * Load the sync settings for a client
+     */
+    protected function loadSyncSettings()
+    {
+        $this->arrSyncSettings = $this->Session->get("syncCto_SyncSettings_" . $this->intClientID);
+
+        if (!is_array($this->arrSyncSettings))
+        {
+            $this->arrSyncSettings = array();
+        }
+    }
+
+    /**
+     * Save the sync settings for a client
+     */
+    protected function saveSyncSettings()
+    {
+        if (!is_array($this->arrSyncSettings))
+        {
+            $this->arrSyncSettings = array();
+        }
+
+        $this->Session->set("syncCto_SyncSettings_" . $this->intClientID, $this->arrSyncSettings);
+    }
+
+    public function rebuildArray($arrData)
+    {
+        $arrReturn = array();
+
+        foreach ($arrData as $arrValue)
+        {
+            $arrReturn[$arrValue['id']] = $arrValue;
+        }
+
+        return $arrReturn;
+    }
+
+    /**
+     * 
+     * @param array $arrSourcePages
+     * @param array $arrSourceHashes
+     * @param array $arrTargetPages
+     * @param array $arrTargetHashes
+     */
+    protected function buildTree($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes)
+    {
+        // Set id as key
+        $arrSourcePages = $this->rebuildArray($arrSourcePages);
+        $arrTargetPages = $this->rebuildArray($arrTargetPages);
+
+        // Search for missing entries
+        $arrKeysSource = array_keys($arrSourcePages);
+        $arrKeysTarget = array_keys($arrTargetPages);
+
+        $arrMissingClient = array_diff($arrKeysSource, $arrKeysTarget);
+        $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
+
+        $arrReturn = array();
+
+        foreach ($arrSourcePages as $intID => $mixValues)
+        {
+            if($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
+            {
+                continue;
+            }
+            
+            $arrReturn[$intID] = array(
+                'id'     => $intID,
+                'source' => array(
+                    'title'  => $mixValues['title'],
+                    'id'     => $mixValues['id'],
+                    'pid'    => $mixValues['pid'],
+                    'hash'   => $arrSourceHashes[$intID]['hash']
+                ),
+                'target' => array(
+                    'title' => $arrTargetPages[$intID]['title'],
+                    'id'    => $arrTargetPages[$intID]['id'],
+                    'pid'   => $arrTargetPages[$intID]['pid'],
+                    'hash'  => $arrTargetHashes[$intID]['hash']
+                ),
+            );
+        }
+
+        foreach ($arrMissingServer as $intID)
+        {
+            $arrReturn[$intID] = array(
+                'id'     => $intID,
+                'source' => array(),
+                'target' => array(
+                    'title' => $arrTargetPages[$intID]['title'],
+                    'id'    => $arrTargetPages[$intID]['id'],
+                    'pid'   => $arrTargetPages[$intID]['pid'],
+                    'hash'  => $arrTargetHashes[$intID]['hash']
+                ),
+            );
+        }
+
+        return $arrReturn;
     }
 
 }

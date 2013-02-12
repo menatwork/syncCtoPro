@@ -1,60 +1,23 @@
 <script>    
     function openMediaBox(strTable, intID)
     {
-        Mediabox.open('<?php echo $this->Environment->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=' + intID + '&table=' + strTable, '', '850 80%');   
+        Mediabox.open('<?php echo $this->Environment->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview', '', '850 80%');   
     }
+    
+    window.addEvent("domready",function(){
+        openMediaBox();
+    });
 </script>
 
 <form id="<?php echo $this->cssId; ?>" action="<?php echo $this->Environment->base; ?>contao/main.php?do=synccto_clients&amp;table=tl_syncCto_clients_sync<?php echo $this->direction; ?>&amp;act=start&amp;step=<?php echo $this->step; ?>&amp;id=<?php echo $this->id; ?>" method="post">
     <div class="formbody">
         <input type="hidden" name="FORM_SUBMIT" value="<?php echo $this->formId; ?>" />        
         <input type="hidden" name="REQUEST_TOKEN" value="<?php echo REQUEST_TOKEN; ?>">
-        <div class="m12 submit_container">
-            <input class="tl_submit" name="forward" type="submit" value="<?php echo $this->forwardValue; ?>" />
-            <input class="tl_submit" name="skip" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['skip']; ?>" />
-        </div>
 
-        <table>
-            <colgroup>
-                <col width="35" />
-                <col width="35%" />
-                <col width="35" />
-                <col width="35%" />
-                <col width="100" />
-            </colgroup>
-            <thead>
-                <tr>
-                    <th>&nbsp;</th>
-                    <th>Server</th>
-                    <th> -> </th>
-                    <th>Client</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($this->arrAllPageValues as $mixKey => $arrValues): ?>
-                 <tr>
-                    <td>
-                        <input type="checkbox" name="ids[]" value="<?php echo $arrValues['id']; ?>" />
-                    </td>
-                    <td title="<?php echo $arrValues['source']['hash']; ?>">
-                        <?php echo $arrValues['source']['title']; ?>
-                    </td>
-                    <td>
-                        <?php if($arrValues['source']['hash'] ==  $arrValues['target']['hash']): ?>
-                            =
-                        <?php else: ?>
-                            !!
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                       <?php echo $arrValues['target']['title']; ?>
-                    </td>
-                    <td>
-                        <input type="button" class="tl_submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['popup']; ?>" onClick="openMediaBox('tl_page', <?php echo $arrValues['id']; ?>); return false;"/>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <div class="m12 submit_container">
+            <input class="tl_submit invisible" name="forward" type="submit" value="<?php echo $this->forwardValue; ?>" />
+            <input class="tl_submit" name="skip" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['skip']; ?>" />
+            <input type="button" class="tl_submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['popup']; ?>" onClick="openMediaBox(); return false;"/>
+        </div>
     </div>
 </form>
