@@ -133,9 +133,114 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    // Helper functions
+    // Sync functions
     ////////////////////////////////////////////////////////////////////////////
 
+    public function syncFrom()
+    {
+        $this->init();
+
+        $i = 1;
+        try
+        {
+            switch ($this->objStepPool->step)
+            {
+                case $i++:
+                    $this->showBasicStep();
+                    break;
+
+                case $i++:
+                    $this->generateDataForPageTree();
+                    break;
+
+                case $i++:
+                    $this->loadFilesForPageTree();
+                    break;
+                
+//                case $i++:
+//                    $this->checkRun();
+//                    break;
+
+                case $i++:
+                    $this->showPopup('From');
+                    break;
+
+                case $i++:
+                    var_dump('in');
+                    die();
+                    $this->generateExternUpdateFiles();
+                    break;
+
+                case $i++:
+                    $this->getUpdateFiles();
+                    break;
+
+                case $i++:
+                    $this->importExtern();
+                    break;
+            }
+        }
+        catch (Exception $exc)
+        {
+            $this->showError($exc);
+        }
+    }
+
+    public function syncTo()
+    {
+        $this->init();
+
+        $i = 1;
+        try
+        {
+            switch ($this->objStepPool->step)
+            {
+                case $i++:
+                    $this->showBasicStep();
+                    break;
+
+                case $i++:
+                    $this->generateDataForPageTree();
+                    break;
+
+                case $i++:
+                    $this->loadFilesForPageTree();
+                    break;
+
+//                case $i++:
+//                    $this->checkRun();
+//                    break;
+
+                case $i++:
+                    $this->showPopup('To');
+                    break;
+
+                case $i++:
+                    $this->generateLocalUpdateFiles();
+                    break;
+
+                case $i++:
+                    $this->sendUpdateFiles();
+                    break;
+
+                case $i++:
+                    $this->importExtern();
+                    break;
+            }
+        }
+        catch (Exception $exc)
+        {
+            $this->showError($exc);
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Steps
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Init cache etc
+     */
     protected function init()
     {
         // Init Step Counter
@@ -151,6 +256,11 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $this->objSyncCtoClient->setRefresh(true);
     }
 
+    /**
+     * Show Error
+     * 
+     * @param Exception $exc
+     */
     protected function showError(Exception $exc)
     {
         $objErrTemplate              = new BackendTemplate('be_syncCto_error');
@@ -165,37 +275,21 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
     }
 
-    public function rebuildArray($arrData)
-    {
-        $arrReturn = array();
-
-        foreach ($arrData as $arrValue)
-        {
-            $arrReturn[$arrValue['id']] = $arrValue;
-        }
-
-        return $arrReturn;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    // Steps
-    ////////////////////////////////////////////////////////////////////////////
-
     /**
-     * Show first step
+     * Step 1 - Show first step
      */
     protected function showBasicStep()
     {
         $this->objData->setState(SyncCtoEnum::WORK_WORK);
         $this->objData->setTitle($GLOBALS['TL_LANG']['MSC']['step'] . " %s");
-        $this->objData->setDescription('Einzel Seiten Synchronisieren.');
+        $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_1']);
 
         // Set output
         $this->objStepPool->step++;
     }
 
     /**
-     * Load a list with id/titles from client
+     * Step 2 - Load a list with id/titles from client
      */
     protected function generateDataForPageTree()
     {
@@ -232,7 +326,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
             'tl_article' => $strArticleFile,
             'tl_content' => $strContentFile
         );
-        
+
         $this->objSyncCtoClient->setSyncSettings($this->arrSyncSettings);
 
         // Set output
@@ -240,7 +334,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     }
 
     /**
-     * Load the se export files from client
+     * Step 3 - Load the se export files from client
      * 
      * @throws Exception
      */
@@ -276,16 +370,62 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     }
 
     /**
-     * Choose pages
+     * Step 4 - Check if we have to show the popup
+     */
+    protected function checkRun()
+    {
+        // Get all data / load helper
+        $arrFilePathes         = $this->arrSyncSettings['syncCtoPro_ExternFile'];
+        $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
+
+        // Read client pages
+        $arrClientPages      = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
+        $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
+
+        // Get server Pages
+        $arrPages = $this->Database
+                ->query('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
+                ->fetchAllAssoc();
+
+        $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());
+
+        $intDiffFounds = $this->countDiffs($arrPages, $arrPageHashes, $arrClientPages['data'], $arrClientPageHashes);
+
+        // If we have no diffs skipp this step
+        if ($intDiffFounds == 0)
+        {
+            // Skip if no tables are selected
+            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
+            $this->objData->setHtml("");
+
+            $this->objSyncCtoClient->setRefresh(true);
+            $this->objSyncCtoClient->addStep();
+
+            return;
+        }
+    }
+
+    /**
+     * Step 5 - Show popup for pages
+     * 
      * @return type
      */
-    protected function showPageTree()
+    protected function showPopup($strDirection)
     {
-        $arrIds = $this->Input->post('ids');
-
-        if (key_exists("forward", $_POST) && !empty($arrIds))
+        if (key_exists("forward", $_POST))
         {
-            $this->objStepPool->pageIDs = $this->Input->post('ids');
+            // Check if we have some data
+            if (empty($this->arrSyncSettings['syncCtoPro_transfer']))
+            {
+                // Skip if no tables are selected
+                $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
+                $this->objData->setHtml("");
+
+                $this->objSyncCtoClient->setRefresh(true);
+                $this->objSyncCtoClient->addStep();
+
+                return;
+            }
 
             // Go to next step
             $this->objData->setState(SyncCtoEnum::WORK_WORK);
@@ -297,24 +437,13 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 
             return;
         }
-        else if ((key_exists("forward", $_POST) && empty($arrIds)) || key_exists("skip", $_POST))
-        {
-            // Skip if no tables are selected
-            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
-            $this->objData->setHtml("");
-
-            $this->objSyncCtoClient->setRefresh(true);
-            $this->objSyncCtoClient->addStep();
-
-            return;
-        }
 
         // Template
-        $objTemp = new BackendTemplate('be_syncCtoPro_form');
-        $objTemp->id               = $this->objSyncCtoClient->getClientID();
-        $objTemp->step             = $this->objSyncCtoClient->getStep();
-        $objTemp->direction        = "To";
-        $objTemp->helperClass      = $this;
+        $objTemp              = new BackendTemplate('be_syncCtoPro_form');
+        $objTemp->id          = $this->objSyncCtoClient->getClientID();
+        $objTemp->step        = $this->objSyncCtoClient->getStep();
+        $objTemp->direction   = $strDirection;
+        $objTemp->helperClass = $this;
 
         // Set output
         $this->objData->setHtml($this->replaceInsertTags($objTemp->parse()));
@@ -322,70 +451,13 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     }
 
     /**
+     * Step 6 - Build update files for extern
      * 
-     * @param array $arrSourcePages
-     * @param array $arrSourceHashes
-     * @param array $arrTargetPages
-     * @param array $arrTargetHashes
-     */
-    protected function buildTree($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes)
-    {
-        // Set id as key
-        $arrSourcePages = $this->rebuildArray($arrSourcePages);
-        $arrTargetPages = $this->rebuildArray($arrTargetPages);
-
-        // Search for missing entries
-        $arrKeysSource = array_keys($arrSourcePages);
-        $arrKeysTarget = array_keys($arrTargetPages);
-
-        $arrMissingClient = array_diff($arrKeysSource, $arrKeysTarget);
-        $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
-
-        $arrReturn = array();
-
-        foreach ($arrSourcePages as $intID => $mixValues)
-        {
-            $arrReturn[$intID] = array(
-                'id'     => $intID,
-                'source' => array(
-                    'title'  => $mixValues['title'],
-                    'id'     => $mixValues['id'],
-                    'pid'    => $mixValues['pid'],
-                    'hash'   => $arrSourceHashes[$intID]['hash']
-                ),
-                'target' => array(
-                    'title' => $arrTargetPages[$intID]['title'],
-                    'id'    => $arrTargetPages[$intID]['id'],
-                    'pid'   => $arrTargetPages[$intID]['pid'],
-                    'hash'  => $arrTargetHashes[$intID]['hash']
-                ),
-            );
-        }
-
-        foreach ($arrMissingServer as $intID)
-        {
-            $arrReturn[$intID] = array(
-                'id'     => $intID,
-                'source' => array(),
-                'target' => array(
-                    'title' => $arrTargetPages[$intID]['title'],
-                    'id'    => $arrTargetPages[$intID]['id'],
-                    'pid'   => $arrTargetPages[$intID]['pid'],
-                    'hash'  => $arrTargetHashes[$intID]['hash']
-                ),
-            );
-        }
-
-        return $arrReturn;
-    }
-
-    /**
-     * Build Data
      * @throws Exception
      */
-    protected function generateUpdateFiles()
+    protected function generateLocalUpdateFiles()
     {
-        $arrPages    = $this->objStepPool->pageIDs;
+        $arrPages    = $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
         $arrArticles = array();
         $arrContentElements = array();
 
@@ -449,7 +521,77 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
     }
 
     /**
-     * Send files
+     * Step 6 - Build update files for local
+     * 
+     * @throws Exception
+     */
+    protected function generateExternUpdateFiles()
+    {
+        $arrPages    = $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
+        $arrArticles = array();
+        $arrContentElements = array();
+
+        // Article
+
+        $arrResultArticles = $this->Database
+                ->prepare('SELECT id FROM tl_article WHERE pid IN(' . implode(', ', $arrPages) . ')')
+                ->execute()
+                ->fetchAllAssoc();
+
+        foreach ($arrResultArticles as $arrArticle)
+        {
+            $arrArticles[] = $arrArticle['id'];
+        }
+
+        // Content Elements
+
+        $arrResultContentElements = $this->Database
+                ->prepare('SELECT id FROM tl_content WHERE pid IN(' . implode(', ', $arrArticles) . ')')
+                ->execute()
+                ->fetchAllAssoc();
+
+        foreach ($arrResultContentElements as $arrContentElement)
+        {
+            $arrContentElements[] = $arrContentElement['id'];
+        }
+
+        $objSyncCtoDatabasePro = SyncCtoProDatabase::getInstance();
+
+        // Write some tempfiles
+        $strRandomToken = substr(md5(time() . " | " . rand(0, 65535)), 0, 8);
+
+        $strPageFile    = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-page.gzip"), 'tl_page', $arrPages);
+        $strArticleFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-article.gzip"), 'tl_article', $arrArticles);
+        $strContentFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-content.gzip"), 'tl_content', $arrContentElements);
+
+        // Check if we have all files
+        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
+        {
+            throw new Exception('Missing export file for tl_page');
+        }
+
+        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
+        {
+            throw new Exception('Missing export file for tl_content');
+        }
+
+        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
+        {
+            throw new Exception('Missing export file for tl_article');
+        }
+
+        $this->objStepPool->files = array(
+            'tl_page'    => "SyncCto-SE-$strRandomToken-page.gzip",
+            'tl_article' => "SyncCto-SE-$strRandomToken-article.gzip",
+            'tl_content' => "SyncCto-SE-$strRandomToken-content.gzip",
+        );
+
+        // Set output
+        $this->objStepPool->step++;
+    }
+
+    /**
+     * Step 7 - Send files
      * @throws Exception
      */
     protected function sendUpdateFiles()
@@ -469,9 +611,31 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_3']);
         $this->objStepPool->step++;
     }
+    
+     /**
+     * Step 7 - Get files
+     * @throws Exception
+     */
+    protected function getUpdateFiles()
+    {
+        foreach ($this->objStepPool->files as $strType => $strFile)
+        {
+            $arrResponse = $this->objSyncCtoProCommunicationClient->getFile($strFile, $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], $strFile));
+
+            // Check if the file was send and saved.
+            if (!is_array($arrResponse) || count($arrResponse) == 0)
+            {
+                throw new Exception("Empty file list from client. Maybe file sending was not complet for $strType.");
+            }
+        }
+
+        // Set output
+        $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_3']);
+        $this->objStepPool->step++;
+    }
 
     /**
-     * Import
+     * Step 8 - Import on client
      * @throws Exception
      */
     protected function importExtern()
@@ -497,58 +661,94 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $this->objSyncCtoClient->addStep();
         $this->objSyncCtoClient->setRefresh(true);
     }
-
-    ////////////////////////////////////////////////////////////////////////////
-    // Sync functions
-    ////////////////////////////////////////////////////////////////////////////
-
-    public function syncFrom()
+    
+    /**
+     * Step 8 - Import on server
+     * @throws Exception
+     */
+    protected function importLocal()
     {
-        
-    }
-
-    public function syncTo()
-    {
-        $this->init();
-
-        $i = 1;
-        try
+        foreach ($this->objStepPool->files as $strType => $strFile)
         {
-            switch ($this->objStepPool->step)
+            $blnResponse = $this
+                    ->objSyncCtoProCommunicationClient
+                    ->importDatabaseSE($this->objSyncCtoHelper->standardizePath($this->arrClientInformation['folders']['tmp'], 'sql', $strFile));
+
+            // Check if the file was send and saved.
+            if (!$blnResponse)
             {
-                case $i++:
-                    $this->showBasicStep();
-                    break;
-
-                case $i++:
-                    $this->generateDataForPageTree();
-                    break;
-
-                case $i++:
-                    $this->loadFilesForPageTree();
-                    break;
-
-                case $i++:
-                    $this->showPageTree();
-                    break;
-
-                case $i++:
-                    $this->generateUpdateFiles();
-                    break;
-
-                case $i++:
-                    $this->sendUpdateFiles();
-                    break;
-
-                case $i++:
-                    $this->importExtern();
-                    break;
+                throw new Exception("Could not import file for $strType.");
             }
         }
-        catch (Exception $exc)
+
+        // Set output
+        $this->objData->setState(SyncCtoEnum::WORK_OK);
+        $this->objData->setHtml('');
+        $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_3']);
+
+        $this->objSyncCtoClient->addStep();
+        $this->objSyncCtoClient->setRefresh(true);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Helper functions
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * count the diffs
+     * 
+     * @param array $arrSourcePages
+     * @param array $arrSourceHashes
+     * @param array $arrTargetPages
+     * @param array $arrTargetHashes
+     */
+    protected function countDiffs($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes)
+    {
+        // Set id as key
+        $arrSourcePages = $this->rebuildArray($arrSourcePages);
+        $arrTargetPages = $this->rebuildArray($arrTargetPages);
+
+        // Search for missing entries
+        $arrKeysSource = array_keys($arrSourcePages);
+        $arrKeysTarget = array_keys($arrTargetPages);
+
+        $arrMissingClient = array_diff($arrKeysSource, $arrKeysTarget);
+        $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
+
+        $arrReturn = array();
+        $intDiffFounds = 0;
+
+        foreach ($arrSourcePages as $intID => $mixValues)
         {
-            $this->showError($exc);
+            if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
+            {
+                continue;
+            }
+
+            $intDiffFounds++;
         }
+
+        $intDiffFounds = $intDiffFounds + count($arrMissingServer);
+
+        return $intDiffFounds;
+    }
+
+    /**
+     * Search the id and set it as key 
+     * 
+     * @param array $arrData
+     * @return array
+     */
+    public function rebuildArray($arrData)
+    {
+        $arrReturn = array();
+
+        foreach ($arrData as $arrValue)
+        {
+            $arrReturn[$arrValue['id']] = $arrValue;
+        }
+
+        return $arrReturn;
     }
 
 }

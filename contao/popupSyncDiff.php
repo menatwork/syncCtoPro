@@ -12,7 +12,7 @@
  * Initialize the system
  */
 define('TL_MODE', 'BE');
-require_once('../system/initialize.php');
+require_once('/var/www/entwicklung/_stefanheimes/2.11.9/system/initialize.php');
 
 require_once TL_ROOT . '/plugins/php-diff/Diff.php';
 require_once TL_ROOT . '/plugins/php-diff/Diff/Renderer/Html/Contao.php';
@@ -51,7 +51,7 @@ class PopupSyncDiff extends Backend
     /**
      * @var BackendTemplate
      */
-    protected $objPopupTemplate;
+    protected $popupTemplate;
 
     ////////////////////////////////////////////////////////////////////////////
     // Vars
@@ -126,6 +126,13 @@ class PopupSyncDiff extends Backend
     protected $blnError = false;
 
     /**
+     * State for closing the lightbox/mediabox
+     * 
+     * @var boolean
+     */
+    protected $blnClose = false;
+
+    /**
      * A list with all errors
      * 
      * @var array 
@@ -171,10 +178,13 @@ class PopupSyncDiff extends Backend
 
         // Load language files
         $this->loadLanguageFile('default');
+        $this->loadLanguageFile('tl_page');
+        $this->loadLanguageFile('tl_article');
+        $this->loadLanguageFile('tl_content');
         $this->loadLanguageFile($this->strTable);
 
         // Basic Template
-        $this->objPopupTemplate = new BackendTemplate('be_syncCtoPro_popup');
+        $this->popupTemplate = new BackendTemplate('be_syncCtoPro_popup');
     }
 
     /**
@@ -208,6 +218,8 @@ class PopupSyncDiff extends Backend
                     $this->arrError[] = 'Unknown viewmode.';
                     break;
             }
+
+            $this->saveSyncSettings();
         }
         catch (Exception $exc)
         {
@@ -251,46 +263,59 @@ class PopupSyncDiff extends Backend
         $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/themes/' . $this->getTheme() . '/main.css';
         $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/themes/' . $this->getTheme() . '/basic.css';
         $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/themes/' . $this->getTheme() . '/popup.css';
+        $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/modules/syncCto/html/css/compare.css';
         $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/modules/syncCtoPro/html/css/diff.css';
 
         // Set javascript
         $GLOBALS['TL_JAVASCRIPT'][] = TL_PLUGINS_URL . 'plugins/mootools/' . MOOTOOLS_CORE . '/mootools-core.js';
         $GLOBALS['TL_JAVASCRIPT'][] = 'contao/contao.js';
-
+      
         // Template work
-        $this->objPopupTemplate->theme    = $this->getTheme();
-        $this->objPopupTemplate->base     = $this->Environment->base;
-        $this->objPopupTemplate->path     = $this->Environment->path;
-        $this->objPopupTemplate->language = $GLOBALS['TL_LANGUAGE'];
-        $this->objPopupTemplate->title    = $GLOBALS['TL_CONFIG']['websiteTitle'];
-        $this->objPopupTemplate->charset  = $GLOBALS['TL_CONFIG']['characterSet'];
-        $this->objPopupTemplate->headline = basename(utf8_convert_encoding($this->strFile, $GLOBALS['TL_CONFIG']['characterSet']));
+        $this->popupTemplate->theme    = $this->getTheme();
+        $this->popupTemplate->base     = $this->Environment->base;
+        $this->popupTemplate->path     = $this->Environment->path;
+        $this->popupTemplate->language = $GLOBALS['TL_LANGUAGE'];
+        $this->popupTemplate->title    = $GLOBALS['TL_CONFIG']['websiteTitle'];
+        $this->popupTemplate->charset  = $GLOBALS['TL_CONFIG']['characterSet'];
+        $this->popupTemplate->headline = basename(utf8_convert_encoding($this->strFile, $GLOBALS['TL_CONFIG']['characterSet']));
 
-        $this->objPopupTemplate->error    = $this->blnError;
-        $this->objPopupTemplate->arrError = $this->arrError;
+        $this->popupTemplate->close    = $this->blnClose;
+        $this->popupTemplate->error    = $this->blnError;
+        $this->popupTemplate->arrError = $this->arrError;
 
-        $this->objPopupTemplate->content = $this->strContentData;
+        $this->popupTemplate->content = $this->strContentData;
 
-        $this->objPopupTemplate->output();
+        $this->popupTemplate->output();
     }
 
     ////////////////////////////////////////////////////////////////////////////
     // View - Overview
     ////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Create the overview
+     * 
+     * @return void
+     */
     protected function renderOverview()
     {
+        // Get IDs
         $arrIds = $this->Input->post('ids');
 
+        // Check if we have a submit
         if (key_exists("forward", $_POST) && !empty($arrIds))
         {
-            echo "Write forward";
-            die();
+            $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'] = $arrIds;
+
+            $this->blnClose = true;
+            return;
         }
         else if ((key_exists("forward", $_POST) && empty($arrIds)) || key_exists("skip", $_POST))
         {
-            echo "Write forward";
-            die();
+            $this->arrSyncSettings['syncCtoPro_transfer'] = array();
+
+            $this->blnClose = true;
+            return;
         }
 
         // Get all data / load helper
@@ -303,8 +328,7 @@ class PopupSyncDiff extends Backend
 
         // Get server Pages
         $arrPages = $this->Database
-                ->prepare('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
-                ->execute()
+                ->query('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
                 ->fetchAllAssoc();
 
         $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());
@@ -318,8 +342,8 @@ class PopupSyncDiff extends Backend
         $objOverviewTemplate->base             = $this->Environment->base;
         $objOverviewTemplate->path             = $this->Environment->path;
         $objOverviewTemplate->id               = $this->intClientID;
-        $objOverviewTemplate->direction        = "To";
-        $objOverviewTemplate->headline         = $GLOBALS['TL_LANG']['MSC']['totalsize'];
+        $objOverviewTemplate->direction        = $this->strDirection;
+        $objOverviewTemplate->headline         = $GLOBALS['TL_LANG']['MSC']['show_differences'];
         $objOverviewTemplate->forwardValue     = $GLOBALS['TL_LANG']['MSC']['apply'];
         $objOverviewTemplate->helperClass      = $this;
 
@@ -467,6 +491,9 @@ class PopupSyncDiff extends Backend
 
             $strContent .= $mixResult;
         }
+        
+        // Load CSS
+        $GLOBALS['TL_JAVASCRIPT'][] = TL_SCRIPT_URL . 'system/modules/syncCtoPro/html/css/diff.css';
 
         // Set wrapper template information
         $objDetailsTemplate = new BackendTemplate("be_syncCtoPro_popup_detail");
@@ -474,7 +501,7 @@ class PopupSyncDiff extends Backend
         $objDetailsTemplate->base      = $this->Environment->base;
         $objDetailsTemplate->path      = $this->Environment->path;
         $objDetailsTemplate->id        = $this->intClientID;
-        $objDetailsTemplate->direction = "To";
+        $objDetailsTemplate->direction = $this->strDirection;
 
         $objDetailsTemplate->content = $strContent;
 
@@ -576,11 +603,11 @@ class PopupSyncDiff extends Backend
 
         foreach ($arrSourcePages as $intID => $mixValues)
         {
-            if($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
+            if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
             {
                 continue;
             }
-            
+
             $arrReturn[$intID] = array(
                 'id'     => $intID,
                 'source' => array(

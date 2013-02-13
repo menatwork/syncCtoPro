@@ -36,7 +36,8 @@ class SyncCtoProDatabase extends Backend
         $this->intMaxMemoryUsage = $this->intMaxMemoryUsage / 100 * 80;
 
         // Load languages
-        $this->loadLanguageFile('default_syncCtoPro');
+        $this->loadLanguageFile('default');
+        $this->loadLanguageFile('tl_syncCto_check');
     }
 
     /**
@@ -52,6 +53,36 @@ class SyncCtoProDatabase extends Backend
         return self::$objInstance;
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Export Functions
+    ////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * 
+     * @param array $arrComments
+     * @return array
+     */
+    public function clearDbInstaller($arrComments)
+    {
+        if(count($arrComments['ALTER_CHANGE']))
+        {
+            foreach ($arrComments['ALTER_CHANGE'] as $key => $value)
+            {
+                if($value == "ALTER TABLE `tl_synccto_diff` DROP INDEX `keys`, ADD UNIQUE KEY `keys` (`table`,`row_id`);")
+                {
+                    unset($arrComments['ALTER_CHANGE'][$key]);
+                }
+            }
+            
+            if(count($arrComments['ALTER_CHANGE']) == 0)
+            {
+                unset($arrComments['ALTER_CHANGE']);
+            }
+        }
+        
+        return $arrComments;
+    }
+    
     ////////////////////////////////////////////////////////////////////////////
     // Export Functions
     ////////////////////////////////////////////////////////////////////////////
@@ -465,7 +496,7 @@ class SyncCtoProDatabase extends Backend
         }
         catch (Exception $exc)
         {
-            $this->addErrorMessage($GLOBALS['TL_LANG']['ERR']['triggerUpdate'] . '<br/>' . $GLOBALS['TL_LANG']['MSC']['moreInformations']);
+            $this->addErrorMessage($GLOBALS['TL_LANG']['ERR']['trigger_update'] . '<br/>' . $GLOBALS['TL_LANG']['tl_syncCto_check']['trigger_information']);
             $this->log('There was an error by updating the triggers for SyncCtoPro. Error: ' . $exc->getMessage(), __CLASS__ . " | " . __FUNCTION__, TL_ERROR);
         }
 

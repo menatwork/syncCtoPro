@@ -12,6 +12,7 @@
 /**
  * Hooks
  */
+$GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'clearDbInstaller');
 $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
 $GLOBALS['TL_HOOKS']['syncExecuteFinalOperations'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
 
@@ -23,6 +24,13 @@ $GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge((array) $GLOBALS['SYC_
     'tstamp',
     'synccto_hash',
     'PRIMARY'
+));
+
+/**
+ * Ignored tables 
+ */
+$GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge( (array) $GLOBALS['SYC_CONFIG']['table_hidden'], array(
+    'tl_synccto_diff'
 ));
 
 /**

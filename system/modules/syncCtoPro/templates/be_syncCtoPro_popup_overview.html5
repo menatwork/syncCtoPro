@@ -1,55 +1,59 @@
-<form id="<?php echo $this->cssId; ?>" action="<?php echo $this->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>" method="post">
+<?php $this->import('String'); ?>
+
+<h1 class="file"><strong><?php echo $this->headline; ?></strong></h1>
+
+<div id="tl_listing" class="tl_listing_container">
+
+<form id="db_form" action="<?php echo $this->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=<?php echo PopupSyncDiff::VIEWMODE_OVERVIEW; ?>" method="post">
     <div class="formbody">
         <input type="hidden" name="FORM_SUBMIT" value="<?php echo $this->formId; ?>" />        
         <input type="hidden" name="REQUEST_TOKEN" value="<?php echo REQUEST_TOKEN; ?>">
-        <div class="m12 submit_container">
+
+        <div class="submit_container">
             <input class="tl_submit" name="forward" type="submit" value="<?php echo $this->forwardValue; ?>" />
+        </div>
+        <div class="submit_container">         
             <input class="tl_submit" name="skip" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['skip']; ?>" />
         </div>
 
-        <table>
+        <table class="comparelist">
             <colgroup>
-                <col width="35" />
-                <col width="35%" />
-                <col width="35" />
-                <col width="35%" />
-                <col width="100" />
+                <col width="20px" />
+                <col width="44%" />
+                <col width="30px" />
+                <col width="44%" />
+                <col width="*" />
             </colgroup>
             <thead>
                 <tr>
-                    <th>&nbsp;</th>
-                    <th>Server</th>
-                    <th> -> </th>
-                    <th>Client</th>
+                    <th class="checkbox"><input class="tl_checkbox" onclick="Backend.toggleCheckboxGroup(this, '<?php echo ($strState == 'recommended') ? 'recommended' : 'nonrecommended'; ?>')" type="checkbox" /></th>
+                    <th class="server"><?php echo $GLOBALS['TL_LANG']['tl_page']['title']['0']; ?></th>
+                    <th class="direction"><img src="<?php echo $this->Environment->base; ?>system/modules/syncCto/html/icons/steps/iconSync<?php echo $this->direction; ?>.png" alt="" /></th>
+                    <th class="client"><?php echo $GLOBALS['TL_LANG']['tl_page']['title']['0']; ?></th>
+                    <th class="diff">&nbsp;</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($this->arrAllPageValues as $mixKey => $arrValues): ?>
                     <tr>
-                        <td>
-                            <input type="checkbox" name="ids[]" value="<?php echo $arrValues['id']; ?>" />
-                        </td>
-                        <td title="<?php echo $arrValues['source']['hash']; ?>">
-                            <?php echo $arrValues['source']['title']; ?>
-                        </td>
-                        <td>
-                            <?php if ($arrValues['source']['hash'] == $arrValues['target']['hash']): ?>
-                                =
-                            <?php else: ?>
-                                !!
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php echo $arrValues['target']['title']; ?>
-                        </td>
-                        <td>
-                            <a href="<?php echo $this->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrValues['id']; ?>&table=tl_page&view=<?php echo PopupSyncDiff::VIEWMODE_DETAIL; ?>">
-                                <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/diff.gif" alt="diff" />
-                            </a>
-                        </td>
+                        <td class="col_0 checkbox"><input type="checkbox" name="ids[]" value="<?php echo $arrValues['id']; ?>" /></td>
+                        <td><?php echo $arrValues['source']['title']; ?></td>
+                        <td></td>
+                        <td><?php echo $arrValues['target']['title']; ?></td>
+                        <td align="center" class="col_4 diff"><a href="<?php echo $this->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrValues['id']; ?>&table=tl_page&view=<?php echo PopupSyncDiff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/diff.gif" alt="" /></a></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+
+        <div class="bottom submit_container">
+            <input class="tl_submit" name="forward" type="submit" value="<?php echo $this->forwardValue; ?>" />
+        </div>
+        <div class="bottom submit_container">         
+            <input class="tl_submit" name="skip" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['skip']; ?>" />
+        </div>
+
     </div>
 </form>
+
+</div>
