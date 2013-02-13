@@ -13,7 +13,7 @@
             <input class="tl_submit" name="forward" type="submit" value="<?php echo $this->forwardValue; ?>" />
         </div>
         <div class="submit_container">         
-            <input class="tl_submit" name="skip" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['skip']; ?>" />
+            <input class="tl_submit" name="delete" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['updateRemove']; ?>" />
         </div>
 
         <table class="comparelist">
@@ -50,7 +50,7 @@
             <input class="tl_submit" name="forward" type="submit" value="<?php echo $this->forwardValue; ?>" />
         </div>
         <div class="bottom submit_container">         
-            <input class="tl_submit" name="skip" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['skip']; ?>" />
+            <input class="tl_submit" name="delete" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['updateRemove']; ?>" />
         </div>
 
     </div>
