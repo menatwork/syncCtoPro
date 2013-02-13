@@ -274,7 +274,7 @@ class SyncCtoProDatabase extends Backend
 
         // Compression
         $objGzFile = gzopen(TL_ROOT . "/" . $strPath, "wb");
-
+
         // Create XML File
         $objXml = new XMLWriter();
         $objXml->openMemory();
