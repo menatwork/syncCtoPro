@@ -16,6 +16,8 @@ $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'clea
 $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
 $GLOBALS['TL_HOOKS']['syncExecuteFinalOperations'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
 
+$GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncCtoPro/html/icons/iconClients.png';
+
 /**
  * Ignored fields for trigger 
  */
@@ -70,4 +72,5 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_GET_HASHES"] = array(
         "ids",
     ),
 );
+
 ?>
