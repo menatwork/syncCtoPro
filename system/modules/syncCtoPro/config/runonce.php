@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
@@ -25,9 +25,9 @@ class SyncCtoProRunOnce extends Backend
 
     public function run()
     {
-        $blnFirstRun = !$this->Database->tableExists('tl_synccto_diff');
-        
-        if($blnFirstRun)
+        $blnTableExists = $this->Database->tableExists('tl_synccto_diff');
+
+        if ($blnTableExists == false)
         {
             $strCreate = "
                CREATE TABLE `tl_synccto_diff` (
@@ -38,13 +38,16 @@ class SyncCtoProRunOnce extends Backend
                   PRIMARY KEY  (`id`),
                   UNIQUE KEY `keys` (`table`,`row_id`)
                 ) ENGINE=MyISAM DEFAULT CHARSET=utf8";
-            
+
             $this->Database->query($strCreate);
         }
-        
-       $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
-       $objSyncCtoProDatabase->updateTrigger(!$blnFirstRun);
+
+        $blnFieldExists = $this->Database->fieldExists('syncCto_hash', 'tl_page') && $this->Database->fieldExists('syncCto_hash', 'tl_article') && $this->Database->fieldExists('syncCto_hash', 'tl_content');
+
+        $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
+        $objSyncCtoProDatabase->updateTrigger($blnFieldExists);
     }
+
 }
 
 $SyncCtoProRunOnce = new SyncCtoProRunOnce();
