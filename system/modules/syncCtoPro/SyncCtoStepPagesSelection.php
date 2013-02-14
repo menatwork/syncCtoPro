@@ -77,6 +77,8 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         // Init helper
         $this->objSyncCtoProCommunicationClient = SyncCtoProCommunicationClient::getInstance();
         $this->objSyncCtoHelper                 = SyncCtoHelper::getInstance();
+
+        $this->loadLanguageFile('tl_syncCtoPro_steps');
     }
 
     /**
@@ -138,52 +140,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 
     public function syncFrom()
     {
-        $this->init();
-
-        $i = 1;
-        try
-        {
-            switch ($this->objStepPool->step)
-            {
-                case $i++:
-                    $this->showBasicStep();
-                    break;
-
-                case $i++:
-                    $this->generateDataForPageTree();
-                    break;
-
-                case $i++:
-                    $this->loadFilesForPageTree();
-                    break;
-                
-//                case $i++:
-//                    $this->checkRun();
-//                    break;
-
-                case $i++:
-                    $this->showPopup('From');
-                    break;
-
-                case $i++:
-                    var_dump('in');
-                    die();
-                    $this->generateExternUpdateFiles();
-                    break;
-
-                case $i++:
-                    $this->getUpdateFiles();
-                    break;
-
-                case $i++:
-                    $this->importExtern();
-                    break;
-            }
-        }
-        catch (Exception $exc)
-        {
-            $this->showError($exc);
-        }
+        throw new Exception('Not impl. now.');
     }
 
     public function syncTo()
@@ -207,9 +164,9 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
                     $this->loadFilesForPageTree();
                     break;
 
-//                case $i++:
-//                    $this->checkRun();
-//                    break;
+                case $i++:
+                    $this->checkRun();
+                    break;
 
                 case $i++:
                     $this->showPopup('To');
@@ -403,6 +360,16 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 
             return;
         }
+
+        // Go to next step
+        $this->objData->setState(SyncCtoEnum::WORK_WORK);
+        $this->objData->setHtml("");
+
+        $this->objStepPool->step++;
+
+        $this->objSyncCtoClient->setRefresh(true);
+
+        return;
     }
 
     /**
@@ -611,8 +578,8 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_3']);
         $this->objStepPool->step++;
     }
-    
-     /**
+
+    /**
      * Step 7 - Get files
      * @throws Exception
      */
@@ -661,7 +628,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $this->objSyncCtoClient->addStep();
         $this->objSyncCtoClient->setRefresh(true);
     }
-    
+
     /**
      * Step 8 - Import on server
      * @throws Exception
