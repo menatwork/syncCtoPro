@@ -10,13 +10,16 @@
  */
 
 /**
+ * Backend
+ */
+$GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncCtoPro/html/icons/iconClients.png';
+
+/**
  * Hooks
  */
 $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'clearDbInstaller');
 $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
 $GLOBALS['TL_HOOKS']['syncExecuteFinalOperations'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
-
-$GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncCtoPro/html/icons/iconClients.png';
 
 /**
  * Ignored fields for trigger 
@@ -24,12 +27,12 @@ $GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncC
 $GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge((array) $GLOBALS['SYC_CONFIG']['trigger_blacklist'], array(
     'id',
     'tstamp',
-    'synccto_hash',
+    'syncCto_hash',
     'PRIMARY'
 ));
 
 /**
- * Ignored tables 
+ * Ignored tables for sync database
  */
 $GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge( (array) $GLOBALS['SYC_CONFIG']['table_hidden'], array(
     'tl_synccto_diff'

@@ -56,7 +56,7 @@ class SyncCtoProDatabase extends Backend
     ////////////////////////////////////////////////////////////////////////////
     // Export Functions
     ////////////////////////////////////////////////////////////////////////////
-    
+
     /**
      * 
      * @param array $arrComments
@@ -64,25 +64,25 @@ class SyncCtoProDatabase extends Backend
      */
     public function clearDbInstaller($arrComments)
     {
-        if(count($arrComments['ALTER_CHANGE']))
+        if (count($arrComments['ALTER_CHANGE']))
         {
             foreach ($arrComments['ALTER_CHANGE'] as $key => $value)
             {
-                if($value == "ALTER TABLE `tl_synccto_diff` DROP INDEX `keys`, ADD UNIQUE KEY `keys` (`table`,`row_id`);")
+                if ($value == "ALTER TABLE `tl_synccto_diff` DROP INDEX `keys`, ADD UNIQUE KEY `keys` (`table`,`row_id`);")
                 {
                     unset($arrComments['ALTER_CHANGE'][$key]);
                 }
             }
-            
-            if(count($arrComments['ALTER_CHANGE']) == 0)
+
+            if (count($arrComments['ALTER_CHANGE']) == 0)
             {
                 unset($arrComments['ALTER_CHANGE']);
             }
         }
-        
+
         return $arrComments;
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Export Functions
     ////////////////////////////////////////////////////////////////////////////
@@ -274,7 +274,8 @@ class SyncCtoProDatabase extends Backend
 
         // Compression
         $objGzFile = gzopen(TL_ROOT . "/" . $strPath, "wb");
-
+
+
         // Create XML File
         $objXml = new XMLWriter();
         $objXml->openMemory();
@@ -468,9 +469,9 @@ class SyncCtoProDatabase extends Backend
                 ->prepare("SELECT * FROM tl_synccto_diff $strWhere")
                 ->execute()
                 ->fetchAllAssoc();
-        
+
         $arrReturn = array();
-        
+
         foreach ($arrResult as $arrValues)
         {
             $arrReturn[$arrValues['row_id']] = $arrValues;
@@ -478,8 +479,6 @@ class SyncCtoProDatabase extends Backend
 
         return $arrReturn;
     }
-    
-    
 
     ////////////////////////////////////////////////////////////////////////////
     // Trigger Functions
@@ -522,9 +521,14 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerPage($blnUpdate = false)
     {
-        $this->runUpdateTrigger('tl_page', $GLOBALS['SYC_CONFIG']['trigger_blacklist'], $blnUpdate);
+        $this->runUpdateTrigger('tl_page', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runInsertTrigger('tl_page', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runDeleteTrigger('tl_page');
+
+        if ($blnUpdate)
+        {
+            $this->runUpdateHashes('tl_page');
+        }
     }
 
     /**
@@ -534,9 +538,14 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerArticle($blnUpdate = false)
     {
-        $this->runUpdateTrigger('tl_article', $GLOBALS['SYC_CONFIG']['trigger_blacklist'], $blnUpdate);
+        $this->runUpdateTrigger('tl_article', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runInsertTrigger('tl_article', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runDeleteTrigger('tl_article');
+
+        if ($blnUpdate)
+        {
+            $this->runUpdateHashes('tl_article');
+        }
     }
 
     /**
@@ -546,9 +555,30 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerContent($blnUpdate = false)
     {
-        $this->runUpdateTrigger('tl_content', $GLOBALS['SYC_CONFIG']['trigger_blacklist'], $blnUpdate);
+        $this->runUpdateTrigger('tl_content', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runInsertTrigger('tl_content', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
         $this->runDeleteTrigger('tl_content');
+
+        if ($blnUpdate)
+        {
+            $this->runUpdateHashes('tl_content');
+        }
+    }
+
+    /**
+     * Run a update for each row in page/article/content
+     * 
+     * @param string $strTable
+     */
+    protected function runUpdateHashes($strTable)
+    {
+        if(!$this->Database->fieldExists('syncCto_hash', $strTable))
+        {
+            return;
+        }
+        
+        $strQuery = "UPDATE " . $strTable . " SET syncCto_hash = 1";
+        $this->Database->query($strQuery);
     }
 
     /**
@@ -558,7 +588,7 @@ class SyncCtoProDatabase extends Backend
      * @param array $arrFieldFilter List with ignored fields
      * @param boolean $blnUpdate Run update after refresh trigger
      */
-    protected function runUpdateTrigger($strTable, $arrFieldFilter, $blnUpdate = false)
+    protected function runUpdateTrigger($strTable, $arrFieldFilter)
     {
         // Get field list
         $strFields = $this->Database->getFieldNames($strTable);
@@ -586,14 +616,6 @@ class SyncCtoProDatabase extends Backend
             END
             ";
         $this->Database->query($strQuery);
-
-        // Run overall update :)
-        // To Do add a new field for hash update
-        if ($blnUpdate)
-        {
-            $strQuery = "UPDATE " . $strTable . " SET synccto_hash = 1";
-            $this->Database->query($strQuery);
-        }
     }
 
     /**
