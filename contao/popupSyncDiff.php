@@ -181,6 +181,7 @@ class PopupSyncDiff extends Backend
         $this->loadLanguageFile('tl_page');
         $this->loadLanguageFile('tl_article');
         $this->loadLanguageFile('tl_content');
+        $this->loadLanguageFile('tl_syncCtoPro_steps');
         $this->loadLanguageFile($this->strTable);
 
         // Basic Template
@@ -512,6 +513,7 @@ class PopupSyncDiff extends Backend
         $objDetailsTemplate->direction = $this->strDirection;
 
         $objDetailsTemplate->content = $strContent;
+        $objDetailsTemplate->headline = vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail'], array($this->strTable, $this->intRowId));
 
         $this->strContentData = $objDetailsTemplate->parse();
     }
