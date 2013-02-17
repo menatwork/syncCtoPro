@@ -335,6 +335,9 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $arrFilePathes         = $this->arrSyncSettings['syncCtoPro_ExternFile'];
         $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
 
+        $intDiffFounds = 0;
+
+        // Pages -----------
         // Read client pages
         $arrClientPages      = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
         $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
@@ -346,7 +349,33 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 
         $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());
 
-        $intDiffFounds = $this->countDiffs($arrPages, $arrPageHashes, $arrClientPages['data'], $arrClientPageHashes);
+        $intDiffFounds += $this->countDiffs($arrPages, $arrPageHashes, $arrClientPages['data'], $arrClientPageHashes);
+
+        // Article ---------
+        $arrClientArticle       = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_article']);
+        $arrClientArticleHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_article');
+
+        // Get server article
+        $arrArticle = $this->Database
+                ->query('SELECT title, id, pid FROM tl_article ORDER BY pid, id')
+                ->fetchAllAssoc();
+
+        $arrArticleHashes = $objSyncCtoProDatabase->getHashValueFor('tl_article', array());
+
+        $intDiffFounds += $this->countDiffs($arrArticle, $arrArticleHashes, $arrClientArticle['data'], $arrClientArticleHashes);
+
+        // Content ---------
+        $arrClientContent       = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_article']);
+        $arrClientContentHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_article');
+
+        // Get server article
+        $arrContent = $this->Database
+                ->query('SELECT title, id, pid FROM tl_article ORDER BY pid, id')
+                ->fetchAllAssoc();
+
+        $arrContentHashes = $objSyncCtoProDatabase->getHashValueFor('tl_article', array());
+
+        $intDiffFounds += $this->countDiffs($arrContent, $arrContentHashes, $arrClientContent['data'], $arrClientContentHashes);
 
         // If we have no diffs skipp this step
         if ($intDiffFounds == 0)
@@ -424,33 +453,33 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
      */
     protected function generateLocalUpdateFiles()
     {
-        $arrPages    = $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
-        $arrArticles = array();
-        $arrContentElements = array();
+        $arrPages           = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
+        $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
+        $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
 
-        // Article
-
-        $arrResultArticles = $this->Database
-                ->prepare('SELECT id FROM tl_article WHERE pid IN(' . implode(', ', $arrPages) . ')')
-                ->execute()
-                ->fetchAllAssoc();
-
-        foreach ($arrResultArticles as $arrArticle)
-        {
-            $arrArticles[] = $arrArticle['id'];
-        }
-
-        // Content Elements
-
-        $arrResultContentElements = $this->Database
-                ->prepare('SELECT id FROM tl_content WHERE pid IN(' . implode(', ', $arrArticles) . ')')
-                ->execute()
-                ->fetchAllAssoc();
-
-        foreach ($arrResultContentElements as $arrContentElement)
-        {
-            $arrContentElements[] = $arrContentElement['id'];
-        }
+//        // Article
+//
+//        $arrResultArticles = $this->Database
+//                ->prepare('SELECT id FROM tl_article WHERE pid IN(' . implode(', ', $arrPages) . ')')
+//                ->execute()
+//                ->fetchAllAssoc();
+//
+//        foreach ($arrResultArticles as $arrArticle)
+//        {
+//            $arrArticles[] = $arrArticle['id'];
+//        }
+//
+//        // Content Elements
+//
+//        $arrResultContentElements = $this->Database
+//                ->prepare('SELECT id FROM tl_content WHERE pid IN(' . implode(', ', $arrArticles) . ')')
+//                ->execute()
+//                ->fetchAllAssoc();
+//
+//        foreach ($arrResultContentElements as $arrContentElement)
+//        {
+//            $arrContentElements[] = $arrContentElement['id'];
+//        }
 
         $objSyncCtoDatabasePro = SyncCtoProDatabase::getInstance();
 
@@ -460,22 +489,6 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $strPageFile    = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-page.gzip"), 'tl_page', $arrPages);
         $strArticleFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-article.gzip"), 'tl_article', $arrArticles);
         $strContentFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-content.gzip"), 'tl_content', $arrContentElements);
-
-        // Check if we have all files
-        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
-        {
-            throw new Exception('Missing export file for tl_page');
-        }
-
-        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
-        {
-            throw new Exception('Missing export file for tl_content');
-        }
-
-        if ($strPageFile === false || $strArticleFile === false || $strContentFile === false)
-        {
-            throw new Exception('Missing export file for tl_article');
-        }
 
         $this->objStepPool->files = array(
             'tl_page'    => "SyncCto-SE-$strRandomToken-page.gzip",
