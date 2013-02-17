@@ -12,10 +12,10 @@
  * Initialize the system
  */
 define('TL_MODE', 'BE');
-require_once('/var/www/entwicklung/_stefanheimes/2.11.9/system/initialize.php');
+require_once('../system/initialize.php');
 
-require_once TL_ROOT . '/plugins/php-diff/Diff.php';
-require_once TL_ROOT . '/plugins/php-diff/Diff/Renderer/Html/Contao.php';
+require_once TL_ROOT . '/plugins/phpdiff/Diff.php';
+require_once TL_ROOT . '/plugins/phpdiff/Diff/Renderer/Html/Contao.php';
 
 /**
  * Class SyncCtoPopup
@@ -269,7 +269,7 @@ class PopupSyncDiff extends Backend
         // Set javascript
         $GLOBALS['TL_JAVASCRIPT'][] = TL_PLUGINS_URL . 'plugins/mootools/' . MOOTOOLS_CORE . '/mootools-core.js';
         $GLOBALS['TL_JAVASCRIPT'][] = 'contao/contao.js';
-      
+
         // Template work
         $this->popupTemplate->theme    = $this->getTheme();
         $this->popupTemplate->base     = $this->Environment->base;
@@ -318,36 +318,44 @@ class PopupSyncDiff extends Backend
             return;
         }
 
-        // Get all data / load helper
-        $arrFilePathes         = $this->arrSyncSettings['syncCtoPro_ExternFile'];
-        $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
-
-        // Read client pages
-        $arrClientPages      = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
-        $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
-
-        // Get server Pages
-        $arrPages = $this->Database
-                ->query('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
-                ->fetchAllAssoc();
-
-        $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());
-
-        $arrAllPageValues = $this->buildTree($arrPages, $arrPageHashes, $arrClientPages['data'], $arrClientPageHashes);
-
+        $arrAllPageValues = $this->renderEmelemtsPart('tl_page', array('title', 'id', 'pid'));
+        $arrAllArticleValues = $this->renderEmelemtsPart('tl_article', array('title', 'id', 'pid'));
+        $arrAllContentValues = $this->renderEmelemtsPart('tl_content', array('type', 'id', 'pid'));
+        
         // Template
         $objOverviewTemplate = new BackendTemplate('be_syncCtoPro_popup_overview');
 
-        $objOverviewTemplate->arrAllPageValues = $arrAllPageValues;
-        $objOverviewTemplate->base             = $this->Environment->base;
-        $objOverviewTemplate->path             = $this->Environment->path;
-        $objOverviewTemplate->id               = $this->intClientID;
-        $objOverviewTemplate->direction        = $this->strDirection;
-        $objOverviewTemplate->headline         = $GLOBALS['TL_LANG']['MSC']['show_differences'];
-        $objOverviewTemplate->forwardValue     = $GLOBALS['TL_LANG']['MSC']['apply'];
-        $objOverviewTemplate->helperClass      = $this;
+        $objOverviewTemplate->arrAllPageValues    = $arrAllPageValues;
+        $objOverviewTemplate->arrAllArticleValues = $arrAllArticleValues;
+        $objOverviewTemplate->arrAllContentValues = $arrAllContentValues;
+        $objOverviewTemplate->base                = $this->Environment->base;
+        $objOverviewTemplate->path                = $this->Environment->path;
+        $objOverviewTemplate->id                  = $this->intClientID;
+        $objOverviewTemplate->direction           = $this->strDirection;
+        $objOverviewTemplate->headline            = $GLOBALS['TL_LANG']['MSC']['show_differences'];
+        $objOverviewTemplate->forwardValue        = $GLOBALS['TL_LANG']['MSC']['apply'];
+        $objOverviewTemplate->helperClass         = $this;
 
         $this->strContentData = $objOverviewTemplate->parse();
+    }
+
+    protected function renderEmelemtsPart($strTable, $arrFields)
+    {
+        // Get all data / load helper
+        $arrFilePathes = $this->arrSyncSettings['syncCtoPro_ExternFile'];
+
+        // Read client pages
+        $arrClientElement       = $this->objSyncCtoProDatabase->readXML($arrFilePathes[$strTable]);
+        $arrClientElementHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor($strTable);
+        
+        // Get server Pages
+        $arrtElement = $this->Database
+                ->query('SELECT ' . implode(", ", $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
+                ->fetchAllAssoc();
+
+        $arrtElementHashes = $this->objSyncCtoProDatabase->getHashValueFor($strTable, array());
+        
+        return $this->buildTree($arrtElement, $arrtElementHashes, $arrClientElement['data'], $arrClientElementHashes);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -491,7 +499,7 @@ class PopupSyncDiff extends Backend
 
             $strContent .= $mixResult;
         }
-        
+
         // Load CSS
         $GLOBALS['TL_JAVASCRIPT'][] = TL_SCRIPT_URL . 'system/modules/syncCtoPro/html/css/diff.css';
 
@@ -610,18 +618,8 @@ class PopupSyncDiff extends Backend
 
             $arrReturn[$intID] = array(
                 'id'     => $intID,
-                'source' => array(
-                    'title'  => $mixValues['title'],
-                    'id'     => $mixValues['id'],
-                    'pid'    => $mixValues['pid'],
-                    'hash'   => $arrSourceHashes[$intID]['hash']
-                ),
-                'target' => array(
-                    'title' => $arrTargetPages[$intID]['title'],
-                    'id'    => $arrTargetPages[$intID]['id'],
-                    'pid'   => $arrTargetPages[$intID]['pid'],
-                    'hash'  => $arrTargetHashes[$intID]['hash']
-                ),
+                'source' => array_merge($mixValues, $arrSourceHashes[$intID]),
+                'target' => array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID])
             );
         }
 
@@ -630,12 +628,7 @@ class PopupSyncDiff extends Backend
             $arrReturn[$intID] = array(
                 'id'     => $intID,
                 'source' => array(),
-                'target' => array(
-                    'title' => $arrTargetPages[$intID]['title'],
-                    'id'    => $arrTargetPages[$intID]['id'],
-                    'pid'   => $arrTargetPages[$intID]['pid'],
-                    'hash'  => $arrTargetHashes[$intID]['hash']
-                ),
+                'target' => array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID])
             );
         }
 
