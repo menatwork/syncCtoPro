@@ -301,28 +301,55 @@ class PopupSyncDiff extends Backend
     protected function renderOverview()
     {
         // Get IDs
-        $arrIds = $this->Input->post('ids');
+        $arrTransferIds = $this->Input->post('transfer_ids');
+        $arrDeleteIds   = $this->Input->post('delete_ids');
 
-        // Check if we have a submit
-        if (key_exists("forward", $_POST) && !empty($arrIds))
+        // Submit with fields
+        if (key_exists("forward", $_POST) && !empty($arrTransferIds))
         {
-            $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'] = $arrIds;
+            // Run each field            
+            foreach ($arrTransferIds as $mixTransferId)
+            {
+                $arrTransferId = trimsplit("::", $mixTransferId);
+
+                $this->arrSyncSettings['syncCtoPro_transfer'][$arrTransferId[0]][$arrTransferId[1]] = $arrTransferId[1];
+            }
 
             $this->blnClose = true;
             return;
         }
-        else if ((key_exists("forward", $_POST) && empty($arrIds)) || key_exists("skip", $_POST))
+        // Submit without values
+        else if (key_exists("forward", $_POST) && empty($arrTransferIds))
         {
             $this->arrSyncSettings['syncCtoPro_transfer'] = array();
 
             $this->blnClose = true;
             return;
         }
+        // Submit for delete
+        else if (key_exists("delete", $_POST) && !empty($arrDeleteIds))
+        {
+            // Run each field            
+            foreach ($arrDeleteIds as $mixDeleteId)
+            {
+                $mixDeleteId = trimsplit("::", $mixDeleteId);
 
+                $this->arrSyncSettings['syncCtoPro_delete'][$mixDeleteId[0]][$mixDeleteId[1]] = $mixDeleteId[1];
+            }
+        }
+
+        // Get all data
         $arrAllPageValues = $this->renderEmelemtsPart('tl_page', array('title', 'id', 'pid'));
         $arrAllArticleValues = $this->renderEmelemtsPart('tl_article', array('title', 'id', 'pid'));
         $arrAllContentValues = $this->renderEmelemtsPart('tl_content', array('type', 'id', 'pid'));
-        
+
+        // No data so skip
+        if (empty($arrAllPageValues) && empty($arrAllArticleValues) && empty($arrAllContentValues))
+        {
+            $this->blnClose = true;
+            return;
+        }
+
         // Template
         $objOverviewTemplate = new BackendTemplate('be_syncCtoPro_popup_overview');
 
@@ -348,7 +375,7 @@ class PopupSyncDiff extends Backend
         // Read client pages
         $arrClientElement       = $this->objSyncCtoProDatabase->readXML($arrFilePathes[$strTable]);
         $arrClientElementHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor($strTable);
-        
+
         // Get server Pages
         $arrtElement = $this->Database
                 ->query('SELECT ' . implode(", ", $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
@@ -356,7 +383,14 @@ class PopupSyncDiff extends Backend
 
         $arrtElementHashes = $this->objSyncCtoProDatabase->getHashValueFor($strTable, array());
         
-        return $this->buildTree($arrtElement, $arrtElementHashes, $arrClientElement['data'], $arrClientElementHashes);
+        if (key_exists($strTable, (array) $this->arrSyncSettings['syncCtoPro_delete']))
+        {
+            return $this->buildTree($arrtElement, $arrtElementHashes, $arrClientElement['data'], $arrClientElementHashes, (array) $this->arrSyncSettings['syncCtoPro_delete'][$strTable]);
+        }
+        else
+        {
+            return $this->buildTree($arrtElement, $arrtElementHashes, $arrClientElement['data'], $arrClientElementHashes, array());
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -404,6 +438,10 @@ class PopupSyncDiff extends Backend
                 ->fetchAllAssoc();
     }
 
+    /**
+     * Search for differences and generate the 
+     * detail page.
+     */
     protected function runDiff()
     {
         $strContent = "";
@@ -512,7 +550,7 @@ class PopupSyncDiff extends Backend
         $objDetailsTemplate->id        = $this->intClientID;
         $objDetailsTemplate->direction = $this->strDirection;
 
-        $objDetailsTemplate->content = $strContent;
+        $objDetailsTemplate->content  = $strContent;
         $objDetailsTemplate->headline = vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail'], array($this->strTable, $this->intRowId));
 
         $this->strContentData = $objDetailsTemplate->parse();
@@ -596,7 +634,7 @@ class PopupSyncDiff extends Backend
      * @param array $arrTargetPages
      * @param array $arrTargetHashes
      */
-    protected function buildTree($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes)
+    protected function buildTree($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes, $arrIgnoredIds)
     {
         // Set id as key
         $arrSourcePages = $this->rebuildArray($arrSourcePages);
@@ -613,7 +651,14 @@ class PopupSyncDiff extends Backend
 
         foreach ($arrSourcePages as $intID => $mixValues)
         {
+            // Check Hash
             if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
+            {
+                continue;
+            }
+
+            // Check ignored list
+            if (in_array($intID, (array) $arrIgnoredIds))
             {
                 continue;
             }
