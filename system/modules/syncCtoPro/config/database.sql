@@ -11,7 +11,7 @@
 -- Table `tl_page`
 --
 CREATE TABLE `tl_page` (
-  `syncCto_hash` char(1) NOT NULL default ''
+  `syncCto_hash` char(32) NOT NULL default ''
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -20,7 +20,7 @@ CREATE TABLE `tl_page` (
 -- Table `tl_article`
 --
 CREATE TABLE `tl_article` (
-  `syncCto_hash` char(1) NOT NULL default ''
+  `syncCto_hash` char(32) NOT NULL default ''
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -29,7 +29,7 @@ CREATE TABLE `tl_article` (
 -- Table `tl_content`
 --
 CREATE TABLE `tl_content` (
-  `syncCto_hash` char(1) NOT NULL default ''
+  `syncCto_hash` char(32) NOT NULL default ''
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------

@@ -22,19 +22,46 @@ $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'upda
 $GLOBALS['TL_HOOKS']['syncExecuteFinalOperations'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
 
 /**
- * Ignored fields for trigger 
+ * Ignored fields for trigger / hash 
  */
-$GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge((array) $GLOBALS['SYC_CONFIG']['trigger_blacklist'], array(
-    'id',
-    'tstamp',
-    'syncCto_hash',
-    'PRIMARY'
+$GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['trigger_blacklist'], array(
+    'all' => array(
+        'id',
+        'pid',
+        'sorting',
+        'tstamp',
+        'syncCto_hash',
+        'PRIMARY'
+    ),
 ));
+
+/**
+ * Ignored fields for sync 
+ */
+$GLOBALS['SYC_CONFIG']['sync_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['sync_blacklist'], array(
+    'all' => array(        
+        'PRIMARY',
+    ),
+    'tl_page' => array(
+        'dns',
+    ),
+));
+
+/**
+ * @ToDo: Remove
+ */
+$GLOBALS['SYC_CONFIG']['diff_blacklist'] = array(
+    'all' => array(
+        'tstamp',
+        'syncCto_hash',
+        'PRIMARY'
+    ),
+);
 
 /**
  * Ignored tables for sync database
  */
-$GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge( (array) $GLOBALS['SYC_CONFIG']['table_hidden'], array(
+$GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge((array) $GLOBALS['SYC_CONFIG']['table_hidden'], array(
     'tl_synccto_diff'
 ));
 
