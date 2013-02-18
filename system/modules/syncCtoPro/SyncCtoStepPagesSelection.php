@@ -457,30 +457,6 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
         $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
 
-//        // Article
-//
-//        $arrResultArticles = $this->Database
-//                ->prepare('SELECT id FROM tl_article WHERE pid IN(' . implode(', ', $arrPages) . ')')
-//                ->execute()
-//                ->fetchAllAssoc();
-//
-//        foreach ($arrResultArticles as $arrArticle)
-//        {
-//            $arrArticles[] = $arrArticle['id'];
-//        }
-//
-//        // Content Elements
-//
-//        $arrResultContentElements = $this->Database
-//                ->prepare('SELECT id FROM tl_content WHERE pid IN(' . implode(', ', $arrArticles) . ')')
-//                ->execute()
-//                ->fetchAllAssoc();
-//
-//        foreach ($arrResultContentElements as $arrContentElement)
-//        {
-//            $arrContentElements[] = $arrContentElement['id'];
-//        }
-
         $objSyncCtoDatabasePro = SyncCtoProDatabase::getInstance();
 
         // Write some tempfiles
@@ -695,11 +671,10 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $arrMissingClient = array_diff($arrKeysSource, $arrKeysTarget);
         $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
 
-        $arrReturn = array();
         $intDiffFounds = 0;
 
         foreach ($arrSourcePages as $intID => $mixValues)
-        {
+        {            
             if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
             {
                 continue;
