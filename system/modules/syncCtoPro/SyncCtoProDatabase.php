@@ -521,8 +521,12 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerPage($blnUpdate = false)
     {
-        $this->runUpdateTrigger('tl_page', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
-        $this->runInsertTrigger('tl_page', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
+        // Get a list for ignored fields
+        $arrIgnoredFields = $this->getIgnoredFieldsFor('tl_page');
+        
+        // Update trigger
+        $this->runUpdateTrigger('tl_page', $arrIgnoredFields);
+        $this->runInsertTrigger('tl_page', $arrIgnoredFields);
         $this->runDeleteTrigger('tl_page');
 
         if ($blnUpdate)
@@ -538,8 +542,12 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerArticle($blnUpdate = false)
     {
-        $this->runUpdateTrigger('tl_article', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
-        $this->runInsertTrigger('tl_article', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
+        // Get a list for ignored fields
+        $arrIgnoredFields = $this->getIgnoredFieldsFor('tl_article');
+        
+        // Update trigger
+        $this->runUpdateTrigger('tl_article', $arrIgnoredFields);
+        $this->runInsertTrigger('tl_article', $arrIgnoredFields);
         $this->runDeleteTrigger('tl_article');
 
         if ($blnUpdate)
@@ -555,8 +563,12 @@ class SyncCtoProDatabase extends Backend
      */
     protected function triggerContent($blnUpdate = false)
     {
-        $this->runUpdateTrigger('tl_content', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
-        $this->runInsertTrigger('tl_content', $GLOBALS['SYC_CONFIG']['trigger_blacklist']);
+        // Get a list for ignored fields
+        $arrIgnoredFields = $this->getIgnoredFieldsFor('tl_content');
+        
+        // Update trigger
+        $this->runUpdateTrigger('tl_content', $arrIgnoredFields);
+        $this->runInsertTrigger('tl_content', $arrIgnoredFields);
         $this->runDeleteTrigger('tl_content');
 
         if ($blnUpdate)
@@ -572,12 +584,12 @@ class SyncCtoProDatabase extends Backend
      */
     protected function runUpdateHashes($strTable)
     {
-        if(!$this->Database->fieldExists('syncCto_hash', $strTable))
+        if (!$this->Database->fieldExists('syncCto_hash', $strTable))
         {
             return;
         }
-        
-        $strQuery = "UPDATE " . $strTable . " SET syncCto_hash = 1";
+
+        $strQuery = "UPDATE " . $strTable . " SET syncCto_hash = now()";
         $this->Database->query($strQuery);
     }
 
@@ -591,13 +603,20 @@ class SyncCtoProDatabase extends Backend
     protected function runUpdateTrigger($strTable, $arrFieldFilter)
     {
         // Get field list
-        $strFields = $this->Database->getFieldNames($strTable);
+        $arrFields = $this->Database->getFieldNames($strTable);
         foreach ($arrFieldFilter as $strField)
         {
-            if (($strKey = array_search($strField, $strFields)) !== false)
+            if (($strKey = array_search($strField, $arrFields)) !== false)
             {
-                unset($strFields[$strKey]);
+                unset($arrFields[$strKey]);
             }
+        }
+
+        // Build array with 'IFNULL'
+        $arrExtendetFields = array();
+        foreach ($arrFields as $strField)
+        {
+            $arrExtendetFields[] = "IFNULL(`$strField`, '')";
         }
 
         // Drop
@@ -610,8 +629,8 @@ class SyncCtoProDatabase extends Backend
             BEGIN
             
             INSERT INTO tl_synccto_diff (`table`,`row_id`,`hash`) 
-            VALUES ('" . $strTable . "', NEW.id, (SELECT md5(CONCAT_WS('|', `" . implode("`,`", $strFields) . "`)) FROM " . $strTable . " WHERE id = NEW.id)) 
-            ON DUPLICATE KEY UPDATE hash = (SELECT md5(CONCAT_WS('|', `" . implode("`,`", $strFields) . "`)) FROM " . $strTable . " WHERE id = NEW.id); 
+            VALUES ('" . $strTable . "', NEW.id, (SELECT md5(CONCAT_WS('|', " . implode(", ", $arrExtendetFields) . ")) FROM " . $strTable . " WHERE id = NEW.id)) 
+            ON DUPLICATE KEY UPDATE hash = (SELECT md5(CONCAT_WS('|', " . implode(", ", $arrExtendetFields) . ")) FROM " . $strTable . " WHERE id = NEW.id); 
 
             END
             ";
@@ -628,13 +647,20 @@ class SyncCtoProDatabase extends Backend
     protected function runInsertTrigger($strTable, $arrFieldFilter)
     {
         // Get field list
-        $strFields = $this->Database->getFieldNames($strTable);
+        $arrFields = $this->Database->getFieldNames($strTable);
         foreach ($arrFieldFilter as $strField)
         {
-            if (($strKey = array_search($strField, $strFields)) !== false)
+            if (($strKey = array_search($strField, $arrFields)) !== false)
             {
-                unset($strFields[$strKey]);
+                unset($arrFields[$strKey]);
             }
+        }
+
+        // Build array with 'IFNULL'
+        $arrExtendetFields = array();
+        foreach ($arrFields as $strField)
+        {
+            $arrExtendetFields[] = "IFNULL(`$strField`, '')";
         }
 
         // Drop
@@ -647,8 +673,8 @@ class SyncCtoProDatabase extends Backend
             BEGIN
             
             INSERT INTO tl_synccto_diff (`table`,`row_id`,`hash`) 
-            VALUES ('$strTable', NEW.id, (SELECT md5(CONCAT_WS('|', `" . implode("`,`", $strFields) . "`)) FROM " . $strTable . " WHERE id = NEW.id)) 
-            ON DUPLICATE KEY UPDATE hash = (SELECT md5(CONCAT_WS('|', `" . implode("`,`", $strFields) . "`)) FROM " . $strTable . " WHERE id = NEW.id); 
+            VALUES ('$strTable', NEW.id, (SELECT md5(CONCAT_WS('|', " . implode(", ", $arrExtendetFields) . ")) FROM " . $strTable . " WHERE id = NEW.id)) 
+            ON DUPLICATE KEY UPDATE hash = (SELECT md5(CONCAT_WS('|', " . implode(", ", $arrExtendetFields) . ")) FROM " . $strTable . " WHERE id = NEW.id); 
 
             END
             ";
@@ -678,6 +704,53 @@ class SyncCtoProDatabase extends Backend
             END
             ";
         $this->Database->query($strQuery);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Helper Functions
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Get a list with ignored fields for the hashes
+     * 
+     * @param string $strTable Name of table
+     * @return array
+     */
+    protected function getIgnoredFieldsFor($strTable)
+    {
+        $arrReturn = array();
+
+        // Get all Values
+        if (key_exists('all', $GLOBALS['SYC_CONFIG']['trigger_blacklist']))
+        {
+            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['trigger_blacklist']['all']);
+        }
+
+        // Get special Values
+        if (key_exists($strTable, $GLOBALS['SYC_CONFIG']['trigger_blacklist']))
+        {
+            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['trigger_blacklist'][$strTable]);
+        }
+
+        $arrUserSettings = array();
+        foreach ( (array) deserialize($GLOBALS['TL_CONFIG']['syncCto_hash_blacklist']) as $key => $value)
+        {
+            $arrUserSettings[$value['table']][] = $value['entry'];
+        }
+        
+        // Get all Values
+        if (key_exists('all', $arrUserSettings))
+        {
+            $arrReturn = array_merge($arrReturn, $arrUserSettings['all']);
+        }
+
+        // Get special Values
+        if (key_exists($strTable, $arrUserSettings))
+        {
+            $arrReturn = array_merge($arrReturn, $arrUserSettings[$strTable]);
+        }
+
+        return array_unique($arrReturn);
     }
 
 }
