@@ -270,6 +270,7 @@ class PopupSyncDiff extends Backend
         // Set javascript
         $GLOBALS['TL_JAVASCRIPT'][] = TL_PLUGINS_URL . 'plugins/mootools/' . MOOTOOLS_CORE . '/mootools-core.js';
         $GLOBALS['TL_JAVASCRIPT'][] = 'contao/contao.js';
+        $GLOBALS['TL_JAVASCRIPT'][] = TL_SCRIPT_URL . 'system/modules/syncCto/html/js/compare_src.js';
 
         // Template work
         $this->popupTemplate->theme    = $this->getTheme();
@@ -337,11 +338,53 @@ class PopupSyncDiff extends Backend
                 $this->arrSyncSettings['syncCtoPro_delete'][$mixDeleteId[0]][$mixDeleteId[1]] = $mixDeleteId[1];
             }
         }
-
+        
         // Get all data
-        $arrAllPageValues = $this->renderEmelemtsPart('tl_page', array('title', 'id', 'pid'));
-        $arrAllArticleValues = $this->renderEmelemtsPart('tl_article', array('title', 'id', 'pid'));
-        $arrAllContentValues = $this->renderEmelemtsPart('tl_content', array('type', 'id', 'pid'));
+        $arrAllPageValues = $this->renderEmelemtsPart('tl_page', array('title', 'id', 'pid', 'sorting'));
+        $arrAllArticleValues = $this->renderEmelemtsPart('tl_article', array('title', 'id', 'sorting', 'pid'));
+        $arrAllContentValues = $this->renderEmelemtsPart('tl_content', array('type', 'id', 'sorting', 'pid'));
+
+        // Sorting 
+        uasort($arrAllPageValues, array($this, 'sortByPid'));
+        uasort($arrAllArticleValues, array($this, 'sortByPid'));
+        uasort($arrAllContentValues, array($this, 'sortByPid'));
+
+        $arrArticleNeeded = array();
+        $arrPageNeeded = array();
+
+        // Clean up content
+        foreach ($arrAllContentValues as $key => $value)
+        {
+            if ($value['state'] == 'same')
+            {
+                unset($arrAllContentValues[$key]);
+                continue;
+            }
+
+            $arrArticleNeeded[$value['pid']] = true;
+        }
+
+        // Clean up article
+        foreach ($arrAllArticleValues as $key => $value)
+        {
+            if ($value['state'] == 'same' && !key_exists($value['id'], $arrArticleNeeded))
+            {
+                unset($arrAllArticleValues[$key]);
+                continue;
+            }
+
+            $arrPageNeeded[$value['pid']] = true;
+        }
+
+        // Clean up pages
+        foreach ($arrAllPageValues as $key => $value)
+        {
+            if ($value['state'] == 'same' && !key_exists($value['id'], $arrPageNeeded))
+            {
+                unset($arrAllPageValues[$key]);
+                continue;
+            }
+        }
 
         // No data so skip
         if (empty($arrAllPageValues) && empty($arrAllArticleValues) && empty($arrAllContentValues))
@@ -382,9 +425,9 @@ class PopupSyncDiff extends Backend
                 ->fetchAllAssoc();
 
         $arrtElementHashes = $this->objSyncCtoProDatabase->getHashValueFor($strTable, array());
-        
+
         if (key_exists($strTable, (array) $this->arrSyncSettings['syncCtoPro_delete']))
-        {
+        {            
             return $this->buildTree($arrtElement, $arrtElementHashes, $arrClientElement['data'], $arrClientElementHashes, (array) $this->arrSyncSettings['syncCtoPro_delete'][$strTable]);
         }
         else
@@ -452,12 +495,21 @@ class PopupSyncDiff extends Backend
                 //'ignoreCase' => true,
         );
 
+        // Get ignored fields
+        $arrFilterFields = $this->getIgnoredFieldsFor($this->strTable);
+        
         // Load fields
         $this->loadDataContainer($this->strTable);
         $arrDcaFields = $GLOBALS['TL_DCA'][$this->strTable]['fields'];
 
         foreach ($this->arrLocalData[0] as $strField => $mixValue)
         {
+            // Check if the field is in diff blacklist for all
+            if (in_array($strField, $arrFilterFields))
+            {
+                continue;
+            }
+
             // Get current values
             $strCurrentFieldSettings = $arrDcaFields[$strField];
 
@@ -648,38 +700,159 @@ class PopupSyncDiff extends Backend
         $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
 
         $arrReturn = array();
-
+        
         foreach ($arrSourcePages as $intID => $mixValues)
         {
-            // Check Hash
-            if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
-            {
-                continue;
-            }
-
             // Check ignored list
             if (in_array($intID, (array) $arrIgnoredIds))
             {
                 continue;
             }
 
-            $arrReturn[$intID] = array(
-                'id'     => $intID,
-                'source' => array_merge($mixValues, $arrSourceHashes[$intID]),
-                'target' => array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID])
-            );
+            // Set ID
+            $arrReturn[$intID]['id'] = $intID;
+
+            // Set pid
+            if (key_exists('pid', $mixValues))
+            {
+                $arrReturn[$intID]['pid'] = $mixValues['pid'];
+            }
+
+            // Set sorting
+            if (key_exists('sorting', $mixValues))
+            {
+                $arrReturn[$intID]['sorting'] = $mixValues['sorting'];
+            }
+
+            // Check Hash
+            if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
+            {
+                $arrReturn[$intID]['state'] = 'same';
+            }
+            else
+            {
+                $arrReturn[$intID]['state'] = 'diff';
+            }
+
+            // Set all other informations
+            if (key_exists($intID, $arrTargetPages))
+            {
+                $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
+                $arrReturn[$intID]['target'] = array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID]);
+            }
+            else
+            {
+                $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
+                $arrReturn[$intID]['target'] = array();
+            }
         }
 
         foreach ($arrMissingServer as $intID)
         {
             $arrReturn[$intID] = array(
                 'id'     => $intID,
+                'pid'    => $arrTargetPages[$intID]['pid'],
+                'state'  => 'missing',
                 'source' => array(),
                 'target' => array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID])
             );
         }
 
         return $arrReturn;
+    }
+
+    /**
+     * Get a list with ignored fields for the diff
+     * 
+     * @param string $strTable Name of table
+     * @return array
+     */
+    protected function getIgnoredFieldsFor($strTable)
+    {
+        $arrReturn = array();
+
+        // Get all Values
+        if (key_exists('all', $GLOBALS['SYC_CONFIG']['diff_blacklist']))
+        {
+            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['diff_blacklist']['all']);
+        }
+
+        // Get special Values
+        if (key_exists($strTable, $GLOBALS['SYC_CONFIG']['diff_blacklist']))
+        {
+            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['diff_blacklist'][$strTable]);
+        }
+
+        $arrUserSettings = array();
+        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value)
+        {
+            $arrUserSettings[$value['table']][] = $value['entry'];
+        }
+
+        // Get all Values
+        if (key_exists('all', $arrUserSettings))
+        {
+            $arrReturn = array_merge($arrReturn, $arrUserSettings['all']);
+        }
+
+        // Get special Values
+        if (key_exists($strTable, $arrUserSettings))
+        {
+            $arrReturn = array_merge($arrReturn, $arrUserSettings[$strTable]);
+        }
+
+        return array_unique($arrReturn);
+    }
+
+    /**
+     * Sorting array
+     * 
+     * @param array $a
+     * @param array $b
+     * @return int
+     */
+    public function sortByPid($a, $b)
+    {
+        // Pid + Sorting support
+        if (key_exists('sorting', $a) && key_exists('sorting', $b) && key_exists('pid', $a) && key_exists('pid', $b))
+        {
+            if ($a['pid'] == $b['pid'])
+            {
+                if ($a['sorting'] == $b['sorting'])
+                {
+                    return 0;
+                }
+
+                return ($a['sorting'] < $b['sorting']) ? -1 : 1;
+            }
+
+            return ($a['pid'] < $b['pid']) ? -1 : 1;
+        }
+        // Pid support
+        else if (key_exists('pid', $a) && key_exists('pid', $b))
+        {
+            if ($a['pid'] == $b['pid'])
+            {
+                if ($a['id'] == $b['id'])
+                {
+                    return 0;
+                }
+
+                return ($a['id'] < $b['id']) ? -1 : 1;
+            }
+
+            return ($a['pid'] < $b['pid']) ? -1 : 1;
+        }
+        // ID only
+        else
+        {
+            if ($a['id'] == $b['id'])
+            {
+                return 0;
+            }
+
+            return ($a['id'] < $b['id']) ? -1 : 1;
+        }
     }
 
 }
