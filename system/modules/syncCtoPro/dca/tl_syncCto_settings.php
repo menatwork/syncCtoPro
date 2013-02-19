@@ -79,6 +79,7 @@ $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_sync_blacklist'] = 
  */
 class tl_syncCto_settings_pro extends Backend
 {
+    // Diff / Trigger ----------------------------------------------------------
 
     /**
      * Return a list with default values and 
@@ -94,52 +95,7 @@ class tl_syncCto_settings_pro extends Backend
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['diff_blacklist'] as $strTableName => $arrValues)
-        {
-            foreach ($arrValues as $strField)
-            {
-                $arrReturn[] = array(
-                    'table' => $strTableName,
-                    'entry' => $strField
-                );
-
-                $arrKnownValues[] = $strTableName . '::' . $strField;
-            }
-        }
-
-        // Unset basic settings
-        foreach ($mixValues as $key => $arrValues)
-        {
-            $strCheckValue = $arrValues['table'] . '::' . $arrValues['entry'];
-
-            if (in_array($strCheckValue, $arrKnownValues))
-            {
-                unset($mixValues[$key]);
-            }
-        }
-
-        // Merge
-        $arrReturn = array_merge($arrReturn, $mixValues);
-
-        // Return
-        return $arrReturn;
-    }
-
-    /**
-     * Return a list with default values and 
-     * user values.
-     * 
-     * @param array $mixValues
-     * @return array
-     */
-    public function loadSyncBlacklist($mixValues)
-    {
-        $mixValues = (array) deserialize($mixValues);
-        $arrReturn = array();
-        $arrKnownValues = array();
-        
-        // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] as $strTableName => $arrValues)
+        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] as $strTableName => $arrValues)
         {
             foreach ($arrValues as $strField)
             {
@@ -183,7 +139,7 @@ class tl_syncCto_settings_pro extends Backend
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['diff_blacklist'] as $strTableName => $arrValues)
+        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] as $strTableName => $arrValues)
         {
             foreach ($arrValues as $strField)
             {
@@ -204,6 +160,53 @@ class tl_syncCto_settings_pro extends Backend
 
         // Return
         return serialize($mixValues);
+    }
+
+    // Sync --------------------------------------------------------------------
+
+    /**
+     * Return a list with default values and 
+     * user values.
+     * 
+     * @param array $mixValues
+     * @return array
+     */
+    public function loadSyncBlacklist($mixValues)
+    {
+        $mixValues = (array) deserialize($mixValues);
+        $arrReturn = array();
+        $arrKnownValues = array();
+
+        // Get basic settings
+        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] as $strTableName => $arrValues)
+        {
+            foreach ($arrValues as $strField)
+            {
+                $arrReturn[] = array(
+                    'table' => $strTableName,
+                    'entry' => $strField
+                );
+
+                $arrKnownValues[] = $strTableName . '::' . $strField;
+            }
+        }
+
+        // Unset basic settings
+        foreach ($mixValues as $key => $arrValues)
+        {
+            $strCheckValue = $arrValues['table'] . '::' . $arrValues['entry'];
+
+            if (in_array($strCheckValue, $arrKnownValues))
+            {
+                unset($mixValues[$key]);
+            }
+        }
+
+        // Merge
+        $arrReturn = array_merge($arrReturn, $mixValues);
+
+        // Return
+        return $arrReturn;
     }
 
     /**
