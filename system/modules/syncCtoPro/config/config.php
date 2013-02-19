@@ -8,7 +8,6 @@
  * @license    EULA
  * @filesource
  */
-
 /**
  * Backend
  */
@@ -33,42 +32,30 @@ $GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive((array) $GLO
         'syncCto_hash',
         'PRIMARY'
     ),
-));
+        ));
 
 /**
  * Ignored fields for sync 
  */
 $GLOBALS['SYC_CONFIG']['sync_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['sync_blacklist'], array(
-    'all' => array(        
+    'all' => array(
         'PRIMARY',
     ),
     'tl_page' => array(
         'dns',
     ),
-));
-
-/**
- * @ToDo: Remove
- */
-$GLOBALS['SYC_CONFIG']['diff_blacklist'] = array(
-    'all' => array(
-        'tstamp',
-        'syncCto_hash',
-        'PRIMARY'
-    ),
-);
+        ));
 
 /**
  * Ignored tables for sync database
  */
 $GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge((array) $GLOBALS['SYC_CONFIG']['table_hidden'], array(
     'tl_synccto_diff'
-));
+        ));
 
 /**
  * CtoCommunication RPC Calls
  */
-
 // Import as SE file
 $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_IMPORT"] = array(
     "class"     => "SyncCtoProDatabase",
@@ -80,7 +67,7 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_IMPORT"] = array(
 );
 
 // Export as SE file
-$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EMPORT"] = array(
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EXPORT"] = array(
     "class"     => "SyncCtoProDatabase",
     "function"  => "getDataForAsFile",
     "typ"       => "POST",
@@ -89,6 +76,17 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EMPORT"] = array(
         "table",
         "ids",
         "fields",
+    ),
+);
+
+// DELETE SE
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_DELETE"] = array(
+    "class"    => "SyncCtoProDatabase",
+    "function" => "deleteEntries",
+    "typ"      => "POST",
+    "parameter" => array(
+        "table",
+        "ids"
     ),
 );
 
@@ -102,5 +100,4 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_GET_HASHES"] = array(
         "ids",
     ),
 );
-
 ?>
