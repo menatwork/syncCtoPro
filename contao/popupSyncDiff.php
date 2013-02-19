@@ -302,25 +302,34 @@ class PopupSyncDiff extends Backend
     protected function renderOverview()
     {
         // Get IDs
-        $arrTransferIds = $this->Input->post('transfer_ids');
-        $arrDeleteIds   = $this->Input->post('delete_ids');
+        $arrTransferIds     = $this->Input->post('transfer_ids');
+        $arrDeleteClientIds = $this->Input->post('delete_client_ids');
+        $arrDeleteIds       = $this->Input->post('delete_ids');
 
         // Submit with fields
-        if (key_exists("forward", $_POST) && !empty($arrTransferIds))
+        if (key_exists("transfer", $_POST) && !(empty($arrTransferIds) && empty($arrDeleteClientIds)))
         {
-            // Run each field            
-            foreach ($arrTransferIds as $mixTransferId)
+            // Run each field for transfer         
+            foreach ((array) $arrTransferIds as $mixTransferId)
             {
                 $arrTransferId = trimsplit("::", $mixTransferId);
 
                 $this->arrSyncSettings['syncCtoPro_transfer'][$arrTransferId[0]][$arrTransferId[1]] = $arrTransferId[1];
             }
 
+            // Run each field for delete         
+            foreach ((array) $arrDeleteClientIds as $mixDeleteId)
+            {
+                $arrDeleteId = trimsplit("::", $mixDeleteId);
+
+                $this->arrSyncSettings['syncCtoPro_delete_client'][$arrDeleteId[0]][$arrDeleteId[1]] = $arrDeleteId[1];
+            }
+
             $this->blnClose = true;
             return;
         }
         // Submit without values
-        else if (key_exists("forward", $_POST) && empty($arrTransferIds))
+        else if (key_exists("transfer", $_POST) && empty($arrTransferIds) && empty($arrDeleteClientIds))
         {
             $this->arrSyncSettings['syncCtoPro_transfer'] = array();
 
@@ -338,11 +347,11 @@ class PopupSyncDiff extends Backend
                 $this->arrSyncSettings['syncCtoPro_delete'][$mixDeleteId[0]][$mixDeleteId[1]] = $mixDeleteId[1];
             }
         }
-        
+
         // Get all data
-        $arrAllPageValues = $this->renderEmelemtsPart('tl_page', array('title', 'id', 'pid', 'sorting'));
-        $arrAllArticleValues = $this->renderEmelemtsPart('tl_article', array('title', 'id', 'sorting', 'pid'));
-        $arrAllContentValues = $this->renderEmelemtsPart('tl_content', array('type', 'id', 'sorting', 'pid'));
+        $arrAllPageValues = $this->renderElementsPart('tl_page', array('title', 'id', 'pid', 'sorting'));
+        $arrAllArticleValues = $this->renderElementsPart('tl_article', array('title', 'id', 'sorting', 'pid'));
+        $arrAllContentValues = $this->renderElementsPart('tl_content', array('type', 'id', 'sorting', 'pid'));
 
         // Sorting 
         uasort($arrAllPageValues, array($this, 'sortByPid'));
@@ -352,10 +361,18 @@ class PopupSyncDiff extends Backend
         $arrArticleNeeded = array();
         $arrPageNeeded = array();
 
+        $arrAllowedTables = $this->arrSyncSettings['syncCtoPro_tables_checked'];
+
         // Clean up content
         foreach ($arrAllContentValues as $key => $value)
         {
-            if ($value['state'] == 'same')
+            if (in_array($value['state'], array('same', 'ignored')))
+            {
+                unset($arrAllContentValues[$key]);
+                continue;
+            }
+
+            if (!in_array('tl_content', $arrAllowedTables))
             {
                 unset($arrAllContentValues[$key]);
                 continue;
@@ -364,10 +381,17 @@ class PopupSyncDiff extends Backend
             $arrArticleNeeded[$value['pid']] = true;
         }
 
+
         // Clean up article
         foreach ($arrAllArticleValues as $key => $value)
         {
-            if ($value['state'] == 'same' && !key_exists($value['id'], $arrArticleNeeded))
+            if (in_array($value['state'], array('same', 'ignored')) && !key_exists($value['id'], $arrArticleNeeded))
+            {
+                unset($arrAllArticleValues[$key]);
+                continue;
+            }
+
+            if (!in_array('tl_article', $arrAllowedTables) && !key_exists($value['id'], $arrArticleNeeded))
             {
                 unset($arrAllArticleValues[$key]);
                 continue;
@@ -379,7 +403,13 @@ class PopupSyncDiff extends Backend
         // Clean up pages
         foreach ($arrAllPageValues as $key => $value)
         {
-            if ($value['state'] == 'same' && !key_exists($value['id'], $arrPageNeeded))
+            if (in_array($value['state'], array('same', 'ignored')) && !key_exists($value['id'], $arrPageNeeded))
+            {
+                unset($arrAllPageValues[$key]);
+                continue;
+            }
+
+            if (!in_array('tl_page', $arrAllowedTables) && !key_exists($value['id'], $arrPageNeeded))
             {
                 unset($arrAllPageValues[$key]);
                 continue;
@@ -399,6 +429,7 @@ class PopupSyncDiff extends Backend
         $objOverviewTemplate->arrAllPageValues    = $arrAllPageValues;
         $objOverviewTemplate->arrAllArticleValues = $arrAllArticleValues;
         $objOverviewTemplate->arrAllContentValues = $arrAllContentValues;
+        $objOverviewTemplate->arrAllowedTables    = $arrAllowedTables;
         $objOverviewTemplate->base                = $this->Environment->base;
         $objOverviewTemplate->path                = $this->Environment->path;
         $objOverviewTemplate->id                  = $this->intClientID;
@@ -410,7 +441,7 @@ class PopupSyncDiff extends Backend
         $this->strContentData = $objOverviewTemplate->parse();
     }
 
-    protected function renderEmelemtsPart($strTable, $arrFields)
+    protected function renderElementsPart($strTable, $arrFields)
     {
         // Get all data / load helper
         $arrFilePathes = $this->arrSyncSettings['syncCtoPro_ExternFile'];
@@ -420,19 +451,19 @@ class PopupSyncDiff extends Backend
         $arrClientElementHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor($strTable);
 
         // Get server Pages
-        $arrtElement = $this->Database
+        $arrElement = $this->Database
                 ->query('SELECT ' . implode(", ", $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
                 ->fetchAllAssoc();
 
-        $arrtElementHashes = $this->objSyncCtoProDatabase->getHashValueFor($strTable, array());
+        $arrElementHashes = $this->objSyncCtoProDatabase->getHashValueFor($strTable, array());
 
         if (key_exists($strTable, (array) $this->arrSyncSettings['syncCtoPro_delete']))
-        {            
-            return $this->buildTree($arrtElement, $arrtElementHashes, $arrClientElement['data'], $arrClientElementHashes, (array) $this->arrSyncSettings['syncCtoPro_delete'][$strTable]);
+        {
+            return $this->buildTree($arrElement, $arrElementHashes, $arrClientElement['data'], $arrClientElementHashes, (array) $this->arrSyncSettings['syncCtoPro_delete'][$strTable]);
         }
         else
         {
-            return $this->buildTree($arrtElement, $arrtElementHashes, $arrClientElement['data'], $arrClientElementHashes, array());
+            return $this->buildTree($arrElement, $arrElementHashes, $arrClientElement['data'], $arrClientElementHashes, array());
         }
     }
 
@@ -491,18 +522,29 @@ class PopupSyncDiff extends Backend
 
         // Diff Options
         $arrDiffOptions = array(
-                //'ignoreWhitespace' => true,
-                //'ignoreCase' => true,
+                'ignoreWhitespace' => true,
+                'ignoreCase' => true,
         );
 
         // Get ignored fields
         $arrFilterFields = $this->getIgnoredFieldsFor($this->strTable);
-        
+
         // Load fields
         $this->loadDataContainer($this->strTable);
         $arrDcaFields = $GLOBALS['TL_DCA'][$this->strTable]['fields'];
 
-        foreach ($this->arrLocalData[0] as $strField => $mixValue)
+        if (empty($this->arrLocalData))
+        {
+            $arrExternData = array();
+            $arrLocalData = $this->arrExternData['data'][0]['insert'];
+        }
+        else
+        {
+            $arrLocalData  = $this->arrLocalData[0];
+            $arrExternData = $this->arrExternData['data'][0]['insert'];
+        }
+        
+        foreach ($arrLocalData as $strField => $mixValue)
         {
             // Check if the field is in diff blacklist for all
             if (in_array($strField, $arrFilterFields))
@@ -514,7 +556,7 @@ class PopupSyncDiff extends Backend
             $strCurrentFieldSettings = $arrDcaFields[$strField];
 
             $mixValuesServer = $mixValue;
-            $mixValuesClient = $this->arrExternData['data'][0][$strField];
+            $mixValuesClient = $arrExternData[$strField];
 
             // Check if we have a difference
             if ($mixValuesServer == $mixValuesClient)
@@ -532,12 +574,30 @@ class PopupSyncDiff extends Backend
             if (is_array(($tmp = deserialize($mixValuesServer))) && !is_array($mixValuesServer))
             {
                 $mixValuesServer = $this->implode($tmp);
+
+                $strReplaceTest  = trim(str_replace(',', '', $mixValuesServer));                
+                if (empty($strReplaceTest))
+                {
+                    $mixValuesServer = '';
+                }
             }
             if (is_array(($tmp             = deserialize($mixValuesClient))) && !is_array($mixValuesClient))
             {
                 $mixValuesClient = $this->implode($tmp);
+
+                $strReplaceTest  = trim(str_replace(',', '', $mixValuesClient));                
+                if (empty($strReplaceTest))
+                {
+                    $mixValuesClient = '';
+                }
             }
             unset($tmp);
+
+            // Check if both values are empty (0, '', null etc.)
+            if (empty($mixValuesServer) && empty($mixValuesClient))
+            {
+                continue;
+            }
 
             // Convert date fields
             if ($strCurrentFieldSettings['eval']['rgxp'] == 'date')
@@ -559,11 +619,13 @@ class PopupSyncDiff extends Backend
             // Convert strings into arrays
             if (!is_array($mixValuesServer))
             {
-                $mixValuesServer = explode("\n", $mixValuesServer);
+//                $mixValuesServer = explode("\n\t", strip_tags($mixValuesServer));
+                $mixValuesServer = (array) strip_tags($mixValuesServer);
             }
             if (!is_array($mixValuesClient))
             {
-                $mixValuesClient = explode("\n", $mixValuesClient);
+//                $mixValuesClient = explode("\n\t", strip_tags($mixValuesClient));
+                $mixValuesClient = (array) strip_tags($mixValuesClient);
             }
 
             // Get field name
@@ -579,15 +641,22 @@ class PopupSyncDiff extends Backend
             {
                 $strHumanReadableField = $GLOBALS['TL_LANG'][$this->strTable][$strField];
             }
-
+            
             // Run php-diff
-            $objDiff = new Diff($mixValuesClient, $mixValuesServer, $arrDiffOptions);
+            if (empty($this->arrLocalData))
+            {
+                $objDiff = new Diff($mixValuesServer, $mixValuesClient, $arrDiffOptions);
+            }
+            else
+            {
+                $objDiff = new Diff($mixValuesClient, $mixValuesServer, $arrDiffOptions);
+            }
 
             $objRenderer = new Diff_Renderer_Html_Contao();
             $objRenderer->setOptions(array('field' => $strHumanReadableField));
 
             $mixResult = $objDiff->Render($objRenderer);
-
+            
             $strContent .= $mixResult;
         }
 
@@ -670,10 +739,16 @@ class PopupSyncDiff extends Backend
     public function rebuildArray($arrData)
     {
         $arrReturn = array();
-
         foreach ($arrData as $arrValue)
         {
-            $arrReturn[$arrValue['id']] = $arrValue;
+            if (key_exists('insert', $arrValue))
+            {
+                $arrReturn[$arrValue['insert']['id']] = $arrValue['insert'];
+            }
+            else
+            {
+                $arrReturn[$arrValue['id']] = $arrValue;
+            }
         }
 
         return $arrReturn;
@@ -686,7 +761,7 @@ class PopupSyncDiff extends Backend
      * @param array $arrTargetPages
      * @param array $arrTargetHashes
      */
-    protected function buildTree($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes, $arrIgnoredIds)
+    protected function buildTree($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes, $arrIgnoredIds = array())
     {
         // Set id as key
         $arrSourcePages = $this->rebuildArray($arrSourcePages);
@@ -700,17 +775,12 @@ class PopupSyncDiff extends Backend
         $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
 
         $arrReturn = array();
-        
+
         foreach ($arrSourcePages as $intID => $mixValues)
         {
-            // Check ignored list
-            if (in_array($intID, (array) $arrIgnoredIds))
-            {
-                continue;
-            }
-
             // Set ID
-            $arrReturn[$intID]['id'] = $intID;
+            $arrReturn[$intID]['id']     = $intID;
+            $arrReturn[$intID]['delete'] = false;
 
             // Set pid
             if (key_exists('pid', $mixValues))
@@ -735,15 +805,31 @@ class PopupSyncDiff extends Backend
             }
 
             // Set all other informations
-            if (key_exists($intID, $arrTargetPages))
+            if (key_exists($intID, $arrTargetPages) && key_exists($intID, $arrTargetHashes))
             {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID]);
+            }
+            else if (key_exists($intID, $arrTargetPages) && !key_exists($intID, $arrTargetHashes))
+            {
+                $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
+                $arrReturn[$intID]['target'] = $arrTargetPages[$intID];
+            }
+            else if (!key_exists($intID, $arrTargetPages) && key_exists($intID, $arrTargetHashes))
+            {
+                $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
+                $arrReturn[$intID]['target'] = $arrTargetHashes[$intID];
             }
             else
             {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = array();
+            }
+
+            // Set state ignored if in list
+            if (in_array($intID, $arrIgnoredIds))
+            {
+                $arrReturn[$intID]['state'] = 'ignored';
             }
         }
 
@@ -752,17 +838,25 @@ class PopupSyncDiff extends Backend
             $arrReturn[$intID] = array(
                 'id'     => $intID,
                 'pid'    => $arrTargetPages[$intID]['pid'],
-                'state'  => 'missing',
+                'state'  => 'diff',
+                'delete' => true,
                 'source' => array(),
                 'target' => array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID])
             );
+
+            if (in_array($intID, $arrIgnoredIds))
+            {
+                $arrReturn[$intID]['state'] = 'ignored';
+            }
         }
+
+
 
         return $arrReturn;
     }
 
     /**
-     * Get a list with ignored fields for the diff
+     * Get a list with ignored fields for the hashes
      * 
      * @param string $strTable Name of table
      * @return array
@@ -772,19 +866,19 @@ class PopupSyncDiff extends Backend
         $arrReturn = array();
 
         // Get all Values
-        if (key_exists('all', $GLOBALS['SYC_CONFIG']['diff_blacklist']))
+        if (key_exists('all', $GLOBALS['SYC_CONFIG']['trigger_blacklist']))
         {
-            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['diff_blacklist']['all']);
+            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['trigger_blacklist']['all']);
         }
 
         // Get special Values
-        if (key_exists($strTable, $GLOBALS['SYC_CONFIG']['diff_blacklist']))
+        if (key_exists($strTable, $GLOBALS['SYC_CONFIG']['trigger_blacklist']))
         {
-            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['diff_blacklist'][$strTable]);
+            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['trigger_blacklist'][$strTable]);
         }
 
         $arrUserSettings = array();
-        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value)
+        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_hash_blacklist']) as $key => $value)
         {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }
