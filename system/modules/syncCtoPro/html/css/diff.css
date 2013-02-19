@@ -1,16 +1,28 @@
   
    /* Overview */
 
+  .comparelist .page {
+    padding-left:5px;
+  }
+
   .comparelist .article {
-    padding-left:18px;
+    padding-left:12px;
   }
   
   .comparelist .content {
-    padding-left:46px;
+    padding-left:38px;
   }
 
   /* Details */
-  
+
+  div.back a {
+    display:inline-block;
+  }
+
+  #diff {
+    clear:both;
+  }
+
   #diff .change {
     margin-bottom:13px;
     border:1px solid #ddd;
@@ -64,4 +76,3 @@
     margin:0;
     padding:2px 6px 1px;
   }
-  
