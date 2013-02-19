@@ -54,10 +54,11 @@ class SyncCtoProDatabase extends Backend
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    // Export Functions
+    // DbInstaller Hooks
     ////////////////////////////////////////////////////////////////////////////
 
     /**
+     * Clear the DbInstaller from contao
      * 
      * @param array $arrComments
      * @return array
@@ -84,6 +85,26 @@ class SyncCtoProDatabase extends Backend
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Delete Functions
+    ////////////////////////////////////////////////////////////////////////////
+
+    public function deleteEntries($strTable, $arrIds = array())
+    {
+        if (empty($arrIds))
+        {
+            return false;
+        }
+
+        if (!$this->Database->tableExists($strTable))
+        {
+            return false;
+        }
+
+        $strQuery = "DELETE FROM $strTable WHERE id IN (" . implode(", ", $arrIds) . ")";
+        $this->Database->query($strQuery);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
     // Export Functions
     ////////////////////////////////////////////////////////////////////////////
 
@@ -98,7 +119,7 @@ class SyncCtoProDatabase extends Backend
      * 
      * @return boolean|string
      */
-    public function getDataForAsFile($strPath, $strTable, $arrIds = null, $arrFields = null)
+    public function getDataForAsFile($strPath, $strTable, $arrIds = null, $arrFields = null, $arrOnlyInsert = array())
     {
         $objData = $this->getDataFor($strTable, $arrIds, $arrFields);
 
@@ -114,7 +135,7 @@ class SyncCtoProDatabase extends Backend
             $strPath        = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-" . standardize($strTable) . ".gzip");
         }
 
-        return $this->writeXML($strPath, $objData, $strTable);
+        return $this->writeXML($strPath, $objData, $strTable, $arrOnlyInsert);
     }
 
     /**
@@ -219,7 +240,7 @@ class SyncCtoProDatabase extends Backend
         // Split in update/insert
         foreach ($arrData as $mixKey => $arrValues)
         {
-            if (in_array($arrValues['id'], $arrKnownIDs))
+            if (in_array($arrValues['update']['id'], $arrKnownIDs))
             {
                 $arrUpdate[] = $arrValues;
             }
@@ -234,11 +255,11 @@ class SyncCtoProDatabase extends Backend
         // Update
         foreach ($arrUpdate as $key => $arrValues)
         {
-            $intID = $arrValues['id'];
-            unset($arrValues['id']);
+            $intID = $arrValues['update']['id'];
+            unset($arrValues['update']['id']);
 
             $this->Database->prepare("UPDATE $strTable %s WHERE id=?")
-                    ->set($arrValues)
+                    ->set($arrValues['update'])
                     ->execute($intID);
         }
 
@@ -246,7 +267,7 @@ class SyncCtoProDatabase extends Backend
         foreach ($arrInsert as $key => $arrValues)
         {
             $this->Database->prepare("INSERT INTO $strTable %s")
-                    ->set($arrValues)
+                    ->set($arrValues['insert'])
                     ->execute();
         }
 
@@ -265,7 +286,7 @@ class SyncCtoProDatabase extends Backend
      * 
      * @return string
      */
-    public function writeXML($strPath, Database_Result $objData, $strTable)
+    public function writeXML($strPath, Database_Result $objData, $strTable, $arrOnlyInsert = array())
     {
         // Write gzip xml file
         $objGzFile = new File($strPath);
@@ -274,7 +295,6 @@ class SyncCtoProDatabase extends Backend
 
         // Compression
         $objGzFile = gzopen(TL_ROOT . "/" . $strPath, "wb");
-
 
         // Create XML File
         $objXml = new XMLWriter();
@@ -297,10 +317,23 @@ class SyncCtoProDatabase extends Backend
 
         foreach ($objData->fetchAllAssoc() as $arrRow)
         {
+            // Write to xml if memory limit hit
             if ($this->intMaxMemoryUsage < memory_get_usage(true))
             {
                 $strXMLFlush = $objXml->flush(true);
                 gzputs($objGzFile, $strXMLFlush, strlen($strXMLFlush));
+            }
+
+            // Get the id for filtering            
+            $arrFieldListForInsert = array();
+            if (key_exists('all', $arrOnlyInsert))
+            {
+                $arrFieldListForInsert = array_merge($arrFieldListForInsert, $arrOnlyInsert['all']);
+            }
+
+            if (key_exists($arrRow['id'], $arrOnlyInsert))
+            {
+                $arrFieldListForInsert = array_merge($arrFieldListForInsert, $arrOnlyInsert[$arrRow['id']]);
             }
 
             $objXml->startElement('row');
@@ -309,6 +342,13 @@ class SyncCtoProDatabase extends Backend
             {
                 $objXml->startElement('data');
                 $objXml->writeAttribute('name', $strField);
+
+                // Adding flag for only insert
+                if (in_array($strField, $arrFieldListForInsert))
+                {
+                    $objXml->writeAttribute('onlyInsert', true);
+                }
+
                 $objXml->writeCdata($mixvalue);
                 $objXml->endElement(); // End data
             }
@@ -367,12 +407,16 @@ class SyncCtoProDatabase extends Backend
             $objXMLFile->close();
         }
 
+        // Close zip archive
+        gzclose($objGzFile);
+
         $arrData = array(
             'table' => '',
             'data'  => array(),
             'fields' => array()
         );
         $strCurrentAttribute = '';
+        $blnOnlyInsert       = false;
         $blnInData           = false;
         $blnInTable          = false;
         $intI                = 0;
@@ -390,7 +434,16 @@ class SyncCtoProDatabase extends Backend
                 case XMLReader::CDATA:
                     if ($blnInData)
                     {
-                        $arrData['data'][$intI][$strCurrentAttribute] = $objXMLReader->value;
+                        // Check if the field is only for insert
+                        if ($blnOnlyInsert)
+                        {
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $objXMLReader->value;
+                        }
+                        else
+                        {
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $objXMLReader->value;
+                            $arrData['data'][$intI]['update'][$strCurrentAttribute] = $objXMLReader->value;
+                        }
                     }
                     else if ($blnInTable)
                     {
@@ -407,6 +460,15 @@ class SyncCtoProDatabase extends Backend
                             $strCurrentAttribute                                    = $objXMLReader->getAttribute('name');
                             $arrData['fields'][$objXMLReader->getAttribute('name')] = 1;
                             $blnInData                                              = true;
+
+                            if ($objXMLReader->getAttribute('onlyInsert') == true)
+                            {
+                                $blnOnlyInsert = true;
+                            }
+                            else
+                            {
+                                $blnOnlyInsert = false;
+                            }
                             break;
 
                         case 'table':
@@ -439,6 +501,7 @@ class SyncCtoProDatabase extends Backend
         }
 
         $objXMLFile->delete();
+        $objXMLFile->close();
 
         return $arrData;
     }
@@ -523,7 +586,7 @@ class SyncCtoProDatabase extends Backend
     {
         // Get a list for ignored fields
         $arrIgnoredFields = $this->getIgnoredFieldsFor('tl_page');
-        
+
         // Update trigger
         $this->runUpdateTrigger('tl_page', $arrIgnoredFields);
         $this->runInsertTrigger('tl_page', $arrIgnoredFields);
@@ -544,7 +607,7 @@ class SyncCtoProDatabase extends Backend
     {
         // Get a list for ignored fields
         $arrIgnoredFields = $this->getIgnoredFieldsFor('tl_article');
-        
+
         // Update trigger
         $this->runUpdateTrigger('tl_article', $arrIgnoredFields);
         $this->runInsertTrigger('tl_article', $arrIgnoredFields);
@@ -565,7 +628,7 @@ class SyncCtoProDatabase extends Backend
     {
         // Get a list for ignored fields
         $arrIgnoredFields = $this->getIgnoredFieldsFor('tl_content');
-        
+
         // Update trigger
         $this->runUpdateTrigger('tl_content', $arrIgnoredFields);
         $this->runInsertTrigger('tl_content', $arrIgnoredFields);
@@ -733,11 +796,11 @@ class SyncCtoProDatabase extends Backend
         }
 
         $arrUserSettings = array();
-        foreach ( (array) deserialize($GLOBALS['TL_CONFIG']['syncCto_hash_blacklist']) as $key => $value)
+        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_hash_blacklist']) as $key => $value)
         {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }
-        
+
         // Get all Values
         if (key_exists('all', $arrUserSettings))
         {
