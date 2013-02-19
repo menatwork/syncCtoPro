@@ -29,4 +29,5 @@ $GLOBALS['TL_LANG']['tl_syncCto_settings']['tables']['all']            = 'Alle';
 $GLOBALS['TL_LANG']['tl_syncCto_settings']['tables']['tl_page']        = 'Seitenstruktur';
 $GLOBALS['TL_LANG']['tl_syncCto_settings']['tables']['tl_article']     = 'Artikel';
 $GLOBALS['TL_LANG']['tl_syncCto_settings']['tables']['tl_content']     = 'Inhaltselement';
+
 ?>
