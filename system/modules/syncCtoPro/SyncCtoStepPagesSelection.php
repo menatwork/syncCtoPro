@@ -157,6 +157,10 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
                     break;
 
                 case $i++:
+                    $this->checkSelects();
+                    break;
+
+                case $i++:
                     $this->generateDataForPageTree();
                     break;
 
@@ -365,20 +369,49 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $intDiffFounds += $this->countDiffs($arrArticle, $arrArticleHashes, $arrClientArticle['data'], $arrClientArticleHashes);
 
         // Content ---------
-        $arrClientContent       = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_article']);
-        $arrClientContentHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_article');
+        $arrClientContent       = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_content']);
+        $arrClientContentHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_content');
 
         // Get server article
         $arrContent = $this->Database
-                ->query('SELECT title, id, pid FROM tl_article ORDER BY pid, id')
+                ->query('SELECT type, id, pid FROM tl_content ORDER BY pid, id')
                 ->fetchAllAssoc();
 
-        $arrContentHashes = $objSyncCtoProDatabase->getHashValueFor('tl_article', array());
+        $arrContentHashes = $objSyncCtoProDatabase->getHashValueFor('tl_content', array());
 
         $intDiffFounds += $this->countDiffs($arrContent, $arrContentHashes, $arrClientContent['data'], $arrClientContentHashes);
 
         // If we have no diffs skipp this step
         if ($intDiffFounds == 0)
+        {
+            // Skip if no tables are selected
+            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
+            $this->objData->setHtml("");
+
+            $this->objSyncCtoClient->setRefresh(true);
+            $this->objSyncCtoClient->addStep();
+
+            return;
+        }
+
+        // Go to next step
+        $this->objData->setState(SyncCtoEnum::WORK_WORK);
+        $this->objData->setHtml("");
+
+        $this->objStepPool->step++;
+
+        $this->objSyncCtoClient->setRefresh(true);
+
+        return;
+    }
+
+    /**
+     * Step 1.1 - Check if we have to show the popup
+     */
+    protected function checkSelects()
+    {
+        // If we have no diffs skipp this step
+        if (count($this->arrSyncSettings['syncCtoPro_tables_checked']) == 0)
         {
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
@@ -411,7 +444,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         if (key_exists("forward", $_POST))
         {
             // Check if we have some data
-            if (empty($this->arrSyncSettings['syncCtoPro_transfer']))
+            if (empty($this->arrSyncSettings['syncCtoPro_transfer']) && empty($this->arrSyncSettings['syncCtoPro_delete_client']))
             {
                 // Skip if no tables are selected
                 $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
@@ -457,14 +490,21 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
         $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
 
+        if (empty($arrPages) && empty($arrArticles) && empty($arrContentElements))
+        {
+            // Set output
+            $this->objStepPool->step = $this->objStepPool->step + 2;
+            return;
+        }
+
         $objSyncCtoDatabasePro = SyncCtoProDatabase::getInstance();
 
         // Write some tempfiles
         $strRandomToken = substr(md5(time() . " | " . rand(0, 65535)), 0, 8);
 
-        $strPageFile    = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-page.gzip"), 'tl_page', $arrPages);
-        $strArticleFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-article.gzip"), 'tl_article', $arrArticles);
-        $strContentFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-content.gzip"), 'tl_content', $arrContentElements);
+        $strPageFile    = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-page.gzip"), 'tl_page', $arrPages, null, $this->getIgnoredFieldsFor('tl_page'));
+        $strArticleFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-article.gzip"), 'tl_article', $arrArticles, null, $this->getIgnoredFieldsFor('tl_article'));
+        $strContentFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-content.gzip"), 'tl_content', $arrContentElements, null, $this->getIgnoredFieldsFor('tl_content'));
 
         $this->objStepPool->files = array(
             'tl_page'    => "SyncCto-SE-$strRandomToken-page.gzip",
@@ -596,19 +636,34 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
      */
     protected function importExtern()
     {
-        foreach ($this->objStepPool->files as $strType => $strFile)
+        // Insert Data
+        if (!empty($this->arrSyncSettings['syncCtoPro_transfer']))
         {
-            $blnResponse = $this
-                    ->objSyncCtoProCommunicationClient
-                    ->importDatabaseSE($this->objSyncCtoHelper->standardizePath($this->arrClientInformation['folders']['tmp'], 'sql', $strFile));
-
-            // Check if the file was send and saved.
-            if (!$blnResponse)
+            foreach ((array) $this->objStepPool->files as $strType => $strFile)
             {
-                throw new Exception("Could not import file for $strType.");
+                $blnResponse = $this
+                        ->objSyncCtoProCommunicationClient
+                        ->importDatabaseSE($this->objSyncCtoHelper->standardizePath($this->arrClientInformation['folders']['tmp'], 'sql', $strFile));
+
+                // Check if the file was send and saved.
+                if (!$blnResponse)
+                {
+                    throw new Exception("Could not import file for $strType.");
+                }
             }
         }
 
+        // Delete Data
+        if (!empty($this->arrSyncSettings['syncCtoPro_delete_client']))
+        {
+            $arrDeleteIds = $this->arrSyncSettings['syncCtoPro_delete_client'];
+
+            foreach ((array) $arrDeleteIds as $strTable => $arrIds)
+            {
+                $this->objSyncCtoProCommunicationClient->deleteEntries($strTable, $arrIds);
+            }
+        }
+        
         // Set output
         $this->objData->setState(SyncCtoEnum::WORK_OK);
         $this->objData->setHtml('');
@@ -674,7 +729,7 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
         $intDiffFounds = 0;
 
         foreach ($arrSourcePages as $intID => $mixValues)
-        {            
+        {
             if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
             {
                 continue;
@@ -700,10 +755,60 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 
         foreach ($arrData as $arrValue)
         {
-            $arrReturn[$arrValue['id']] = $arrValue;
+            if (key_exists('insert', $arrValue))
+            {
+                $arrReturn[$arrValue['insert']['id']] = $arrValue['insert'];
+            }
+            else
+            {
+                $arrReturn[$arrValue['id']] = $arrValue;
+            }
         }
 
         return $arrReturn;
+    }
+
+    /**
+     * Get a list with ignored fields for the sync
+     * 
+     * @param string $strTable Name of table
+     * @return array
+     */
+    protected function getIgnoredFieldsFor($strTable)
+    {
+        $arrReturn = array();
+
+        // Get all Values
+        if (key_exists('all', $GLOBALS['SYC_CONFIG']['sync_blacklist']))
+        {
+            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['sync_blacklist']['all']);
+        }
+
+        // Get special Values
+        if (key_exists($strTable, $GLOBALS['SYC_CONFIG']['sync_blacklist']))
+        {
+            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['sync_blacklist'][$strTable]);
+        }
+
+        $arrUserSettings = array();
+        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_sync_blacklist']) as $key => $value)
+        {
+            $arrUserSettings[$value['table']][] = $value['entry'];
+        }
+
+        // Get all Values
+        if (key_exists('all', $arrUserSettings))
+        {
+            $arrReturn = array_merge($arrReturn, $arrUserSettings['all']);
+        }
+
+        // Get special Values
+        if (key_exists($strTable, $arrUserSettings))
+        {
+            $arrReturn = array_merge($arrReturn, $arrUserSettings[$strTable]);
+        }
+
+        return array('all' => array_unique($arrReturn));
     }
 
 }
