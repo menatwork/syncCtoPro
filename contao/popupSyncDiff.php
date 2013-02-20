@@ -522,8 +522,8 @@ class PopupSyncDiff extends Backend
 
         // Diff Options
         $arrDiffOptions = array(
-                'ignoreWhitespace' => true,
-                'ignoreCase' => true,
+            'ignoreWhitespace' => true,
+            'ignoreCase'       => true,
         );
 
         // Get ignored fields
@@ -543,7 +543,10 @@ class PopupSyncDiff extends Backend
             $arrLocalData  = $this->arrLocalData[0];
             $arrExternData = $this->arrExternData['data'][0]['insert'];
         }
-        
+
+        $arrDataForDiff = array();
+
+        // Check data an make something with it
         foreach ($arrLocalData as $strField => $mixValue)
         {
             // Check if the field is in diff blacklist for all
@@ -573,31 +576,15 @@ class PopupSyncDiff extends Backend
             // Convert serialized arrays into strings
             if (is_array(($tmp = deserialize($mixValuesServer))) && !is_array($mixValuesServer))
             {
-                $mixValuesServer = $this->implode($tmp);
-
-                $strReplaceTest  = trim(str_replace(',', '', $mixValuesServer));                
-                if (empty($strReplaceTest))
-                {
-                    $mixValuesServer = '';
-                }
+                $mixValuesServer                              = $this->implode($tmp);
+                $arrDataForDiff[$strField]['server']['array'] = true;
             }
-            if (is_array(($tmp             = deserialize($mixValuesClient))) && !is_array($mixValuesClient))
+            if (is_array(($tmp                                          = deserialize($mixValuesClient))) && !is_array($mixValuesClient))
             {
-                $mixValuesClient = $this->implode($tmp);
-
-                $strReplaceTest  = trim(str_replace(',', '', $mixValuesClient));                
-                if (empty($strReplaceTest))
-                {
-                    $mixValuesClient = '';
-                }
+                $mixValuesClient                              = $this->implode($tmp);
+                $arrDataForDiff[$strField]['client']['array'] = true;
             }
             unset($tmp);
-
-            // Check if both values are empty (0, '', null etc.)
-            if (empty($mixValuesServer) && empty($mixValuesClient))
-            {
-                continue;
-            }
 
             // Convert date fields
             if ($strCurrentFieldSettings['eval']['rgxp'] == 'date')
@@ -615,17 +602,45 @@ class PopupSyncDiff extends Backend
                 $mixValuesServer = $this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesServer ? : '');
                 $mixValuesClient = $this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesClient ? : '');
             }
+            
+            // Save for later operations
+            $arrDataForDiff[$strField]['server']['data'] = $mixValuesServer;
+            $arrDataForDiff[$strField]['client']['data'] = $mixValuesClient;
+        }
+        
+        // Get the last key
+        $arrLastKeys = array_keys($arrDataForDiff);
+        $arrLastKeys = array_pop($arrLastKeys);
 
-            // Convert strings into arrays
-            if (!is_array($mixValuesServer))
+        // Check each field a make if diff if not empty
+        foreach ($arrDataForDiff as $strField => $arrValues)
+        {
+            // only check array if we have enough other entries
+            if ($strContent != '' && $strField != $arrLastKeys)
             {
-//                $mixValuesServer = explode("\n\t", strip_tags($mixValuesServer));
-                $mixValuesServer = (array) strip_tags($mixValuesServer);
+                // Check for empty data
+                if ($arrValues['server']['array'] === true)
+                {
+                    $strReplaceTest = trim(str_replace(',', '', $arrValues['server']['data']));
+                    if (empty($strReplaceTest))
+                    {
+                        $arrValues['server']['data'] = '';
+                    }
+                }
+
+                if ($arrValues['client']['array'] === true)
+                {
+                    $strReplaceTest = trim(str_replace(',', '', $arrValues['client']['data']));
+                    if (empty($strReplaceTest))
+                    {
+                        $arrValues['client']['data'] = '';
+                    }
+                }
             }
-            if (!is_array($mixValuesClient))
+
+            if (empty($arrValues['server']['data']) == true && empty($arrValues['client']['data']) == true)
             {
-//                $mixValuesClient = explode("\n\t", strip_tags($mixValuesClient));
-                $mixValuesClient = (array) strip_tags($mixValuesClient);
+                continue;
             }
 
             // Get field name
@@ -641,22 +656,34 @@ class PopupSyncDiff extends Backend
             {
                 $strHumanReadableField = $GLOBALS['TL_LANG'][$this->strTable][$strField];
             }
-            
+
+            // Convert strings into arrays
+            if (!is_array($mixValuesServer))
+            {
+//                $mixValuesServer = explode("\n\t", strip_tags($mixValuesServer));
+                $arrValues['server']['data'] = (array) strip_tags($arrValues['server']['data']);
+            }
+            if (!is_array($mixValuesClient))
+            {
+//                $mixValuesClient = explode("\n\t", strip_tags($mixValuesClient));
+                $arrValues['client']['data'] = (array) strip_tags($arrValues['client']['data']);
+            }
+
             // Run php-diff
             if (empty($this->arrLocalData))
             {
-                $objDiff = new Diff($mixValuesServer, $mixValuesClient, $arrDiffOptions);
+                $objDiff = new Diff($arrValues['server']['data'], $arrValues['client']['data'], $arrDiffOptions);
             }
             else
             {
-                $objDiff = new Diff($mixValuesClient, $mixValuesServer, $arrDiffOptions);
+                $objDiff = new Diff($arrValues['client']['data'], $arrValues['server']['data'], $arrDiffOptions);
             }
 
             $objRenderer = new Diff_Renderer_Html_Contao();
             $objRenderer->setOptions(array('field' => $strHumanReadableField));
 
             $mixResult = $objDiff->Render($objRenderer);
-            
+
             $strContent .= $mixResult;
         }
 
