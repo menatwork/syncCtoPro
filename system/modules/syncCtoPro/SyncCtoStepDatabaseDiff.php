@@ -8,7 +8,7 @@
  * @license    EULA
  * @filesource
  */
-class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
+class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 {
     ////////////////////////////////////////////////////////////////////////////
     // Vars / Objects
@@ -140,7 +140,24 @@ class SyncCtoStepPagesSelection extends Backend implements InterfaceSyncCtoStep
 
     public function syncFrom()
     {
-        throw new Exception('Not impl. now.');
+        try
+        {
+            throw new Exception('Not impl. now.');
+        }
+        catch (Exception $exc)
+        {
+            $objErrTemplate              = new BackendTemplate('be_syncCto_error');
+            $objErrTemplate->strErrorMsg = $exc->getMessage();
+
+            $this->objData->setState(SyncCtoEnum::WORK_ERROR);
+            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']["step_4"]['description_1']);
+            $this->objData->setHtml($objErrTemplate->parse());
+
+            $this->objSyncCtoClient->setRefresh(true);
+            $this->objSyncCtoClient->addStep();
+
+            $this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
+        }
     }
 
     public function syncTo()
