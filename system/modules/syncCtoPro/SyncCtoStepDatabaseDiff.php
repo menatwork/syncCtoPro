@@ -271,7 +271,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
      */
     protected function checkSystem()
     {        
-        if (!SyncCtoProSystem::getInstance()->checkERData() && false)
+        if (!SyncCtoProSystem::getInstance()->checkERData() || !SyncCtoProSystem::getInstance()->checkHash())
         {
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
@@ -284,7 +284,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
             return;
         }
         
-        if (!$this->objSyncCtoProCommunicationClient->checkER())
+        if (!$this->objSyncCtoProCommunicationClient->checkER() || $this->objSyncCtoProCommunicationClient->checkHash())
         {
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);

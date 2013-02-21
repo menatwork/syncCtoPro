@@ -8,16 +8,9 @@
  * @license    EULA
  * @filesource
  */
-
-/**
- * SyncCtoProRunOnce
- */
-class SyncCtoProRunOnce extends Backend
+class RunonceSyncCtoPro extends Backend
 {
 
-    /**
-     * Initialize object (do not remove)
-     */
     public function __construct()
     {
         parent::__construct();
@@ -25,31 +18,29 @@ class SyncCtoProRunOnce extends Backend
 
     public function run()
     {
-        $blnTableExists = $this->Database->tableExists('tl_synccto_diff');
-
-        if ($blnTableExists == false)
+        // Check referer
+        if ($this->getReferer() == 'contao/main.php?do=repository_manager&install=extension')
         {
-            $strCreate = "
-               CREATE TABLE `tl_synccto_diff` (
-                  `id` int(10) unsigned NOT NULL auto_increment,
-                  `table` varchar(255) NOT NULL default '',
-                  `row_id` int(10) unsigned NOT NULL default '0',
-                  `hash` text NULL,
-                  PRIMARY KEY  (`id`),
-                  UNIQUE KEY `keys` (`table`,`row_id`)
-                ) ENGINE=MyISAM DEFAULT CHARSET=utf8";
+            if (SyncCtoProSystem::getInstance()->checkERData())
+            {
+                // Generate hash
+                $strHash = md5($GLOBALS['TL_CONFIG']['encryptionKey'] . "|" . $GLOBALS['TL_CONFIG']['encryptionKey']);
 
-            $this->Database->query($strCreate);
+                // Save hash
+                if (key_exists('syncCtoPro_hash', $GLOBALS['TL_CONFIG']))
+                {
+                    Config::getInstance()->update("\$GLOBALS['TL_CONFIG']['syncCtoPro_hash']", $strHash);
+                }
+                else
+                {
+                    Config::getInstance()->add("\$GLOBALS['TL_CONFIG']['syncCtoPro_hash']", $strHash);
+                }
+            }
         }
-
-        $blnFieldExists = $this->Database->fieldExists('syncCto_hash', 'tl_page') && $this->Database->fieldExists('syncCto_hash', 'tl_article') && $this->Database->fieldExists('syncCto_hash', 'tl_content');
-
-        $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
-        $objSyncCtoProDatabase->updateTrigger($blnFieldExists);
     }
 
 }
 
-$SyncCtoProRunOnce = new SyncCtoProRunOnce();
-$SyncCtoProRunOnce->run();
+$objRunner = new RunonceSyncCtoPro();
+$objRunner->run();
 ?>

@@ -75,7 +75,39 @@ class SyncCtoProSystem extends Backend
         {
             return false;
         }
-        
+
+        return true;
+    }
+
+    public function checkHash()
+    {
+        // Check special functions, don't delete
+        // it could damage the whole system.
+        $strTrigger = SyncCtoHelper::getInstance()->standardizePath($GLOBALS['SYC_PATH']['debug'], 'trigger.php');
+
+        if (file_exists(TL_ROOT . '/' . $strTrigger))
+        {
+            include_once TL_ROOT . '/' . $strTrigger;
+            if (extTriggerClass::extHashCheck())
+            {
+                return extTriggerClass::extHashCall();
+            }
+        }
+
+        // Check if we have the hash
+        if (!key_exists('syncCtoPro_hash', $GLOBALS['TL_CONFIG']))
+        {
+            return false;
+        }
+
+        // Check hash
+        $strHash = md5($GLOBALS['TL_CONFIG']['installPassword'] . "|" . $GLOBALS['TL_CONFIG']['encryptionKey']);
+
+        if ($GLOBALS['TL_CONFIG']['syncCtoPro_hash'] != $strHash)
+        {
+            return false;
+        }
+
         return true;
     }
 

@@ -180,6 +180,16 @@ class SyncCtoProCommunicationClient
         return $this->runServer('SYNCCTOPRO_CHECK_ER');
     }
 
+    /**
+     * Check the ER
+     * 
+     * @return boolean
+     */
+    public function checkHash()
+    {
+        return $this->runServer('SYNCCTOPRO_CHECK_HASH');
+    }
+
 }
 
 ?>
