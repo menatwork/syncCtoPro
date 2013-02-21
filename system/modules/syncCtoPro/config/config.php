@@ -79,7 +79,7 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EXPORT"] = array(
     ),
 );
 
-// DELETE SE
+// Delete SE
 $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_DELETE"] = array(
     "class"    => "SyncCtoProDatabase",
     "function" => "deleteEntries",
@@ -99,5 +99,13 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_GET_HASHES"] = array(
         "table",
         "ids",
     ),
+);
+
+// Check ER status
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_CHECK_ER"] = array(
+    "class"     => "SyncCtoProSystem",
+    "function"  => "checkERData",
+    "typ"       => "GET",
+    "parameter" => null
 );
 ?>

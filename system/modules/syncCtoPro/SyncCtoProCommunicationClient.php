@@ -170,6 +170,16 @@ class SyncCtoProCommunicationClient
         return $this->runServer('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData);
     }
 
+    /**
+     * Check the ER
+     * 
+     * @return boolean
+     */
+    public function checkER()
+    {
+        return $this->runServer('SYNCCTOPRO_CHECK_ER');
+    }
+
 }
 
 ?>

@@ -174,7 +174,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
                     break;
 
                 case $i++:
-                    $this->checkSelects();
+                    $this->checkSystem();
                     break;
 
                 case $i++:
@@ -264,6 +264,61 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
         // Set output
         $this->objStepPool->step++;
+    }
+
+    /**
+     * Step 1.1 - Check if we have to show the popup
+     */
+    protected function checkSystem()
+    {        
+        if (!SyncCtoProSystem::getInstance()->checkERData() && false)
+        {
+            // Skip if no tables are selected
+            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
+            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['local_er']['short'] );
+            $this->objData->setHtml($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['local_er']['long']);
+
+            $this->objSyncCtoClient->setRefresh(true);
+            $this->objSyncCtoClient->addStep();
+
+            return;
+        }
+        
+        if (!$this->objSyncCtoProCommunicationClient->checkER())
+        {
+            // Skip if no tables are selected
+            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
+            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['remote_er']['short'] );
+            $this->objData->setHtml($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['remote_er']['long']);
+
+            $this->objSyncCtoClient->setRefresh(true);
+            $this->objSyncCtoClient->addStep();
+
+            return;
+        }
+
+        // If we have no diffs skipp this step
+        if (count($this->arrSyncSettings['syncCtoPro_tables_checked']) == 0)
+        {
+            // Skip if no tables are selected
+            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
+            $this->objData->setHtml("");
+
+            $this->objSyncCtoClient->setRefresh(true);
+            $this->objSyncCtoClient->addStep();
+
+            return;
+        }
+
+        // Go to next step
+        $this->objData->setState(SyncCtoEnum::WORK_WORK);
+        $this->objData->setHtml("");
+
+        $this->objStepPool->step++;
+
+        $this->objSyncCtoClient->setRefresh(true);
+
+        return;
     }
 
     /**
@@ -400,35 +455,6 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
         // If we have no diffs skipp this step
         if ($intDiffFounds == 0)
-        {
-            // Skip if no tables are selected
-            $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
-            $this->objData->setHtml("");
-
-            $this->objSyncCtoClient->setRefresh(true);
-            $this->objSyncCtoClient->addStep();
-
-            return;
-        }
-
-        // Go to next step
-        $this->objData->setState(SyncCtoEnum::WORK_WORK);
-        $this->objData->setHtml("");
-
-        $this->objStepPool->step++;
-
-        $this->objSyncCtoClient->setRefresh(true);
-
-        return;
-    }
-
-    /**
-     * Step 1.1 - Check if we have to show the popup
-     */
-    protected function checkSelects()
-    {
-        // If we have no diffs skipp this step
-        if (count($this->arrSyncSettings['syncCtoPro_tables_checked']) == 0)
         {
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
@@ -680,7 +706,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
                 $this->objSyncCtoProCommunicationClient->deleteEntries($strTable, $arrIds);
             }
         }
-        
+
         // Set output
         $this->objData->setState(SyncCtoEnum::WORK_OK);
         $this->objData->setHtml('');
