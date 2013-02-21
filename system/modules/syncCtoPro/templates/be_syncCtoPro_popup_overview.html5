@@ -58,8 +58,8 @@
                             <?php endif; ?>
                         </td>
                         <td class="page">  
+                            <img src="<?php echo $this->path; ?>/system/themes/default/images/regular.gif" alt="" />
                             <?php if(!empty($arrPageValues['source']['title'])): ?>
-                                <img src="<?php echo $this->path; ?>/system/themes/default/images/regular.gif" alt="" />
                                 <?php echo $arrPageValues['source']['title']; ?>
                             <?php else: ?>
                                 <?php echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; ?>
@@ -67,8 +67,8 @@
                         </td>
                         <td></td>
                         <td class="page">
+                            <img src="<?php echo $this->path; ?>/system/themes/default/images/regular.gif" alt="" />
                             <?php if(!empty($arrPageValues['target']['title'])): ?>
-                                <img src="<?php echo $this->path; ?>/system/themes/default/images/regular.gif" alt="" />
                                 <?php echo $arrPageValues['target']['title']; ?>
                             <?php else: ?>
                                 <?php echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; ?>
@@ -97,8 +97,8 @@
                                 <?php endif; ?>
                             </td>
                             <td class="article">
+                                <img src="<?php echo $this->path; ?>/system/themes/default/images/article.gif" alt="" />
                                 <?php if(!empty($arrArticleValues['source']['title'])): ?>
-                                    <img src="<?php echo $this->path; ?>/system/themes/default/images/article.gif" alt="" />
                                     <?php echo $arrArticleValues['source']['title']; ?>
                                 <?php else: ?>
                                     <?php echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; ?>
@@ -106,8 +106,8 @@
                             </td>
                             <td></td>
                             <td class="article">
+                                <img src="<?php echo $this->path; ?>/system/themes/default/images/article.gif" alt="" />
                                 <?php if(!empty($arrArticleValues['target']['title'])): ?>
-                                    <img src="<?php echo $this->path; ?>/system/themes/default/images/article.gif" alt="" />
                                     <?php echo $arrArticleValues['target']['title']; ?>
                                 <?php else: ?>
                                     <?php echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; ?>
