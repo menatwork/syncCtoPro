@@ -17,10 +17,9 @@ $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_1']   = 'Diffe
 /**
  * Info
  */
-$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['local_er']['short']         = 'Fehler der Pro Version auf der lokalen Installation.';
-$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['local_er']['long']          = 'Die Pro Version von SyncCto wurde nicht über das ER installiert ...';
-$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['remote_er']['short']        = 'Fehler der Pro Version auf der entfernten Installation.';
-$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['remote_er']['long']         = 'Die Pro Version von SyncCto wurde nicht über das ER installiert ...';
+$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['pro_sync']['error_server']  = 'syncCtoPro konnte auf dem %sServer%s nicht ordnungsgemäß ausgeführt werden.';
+$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['pro_sync']['error_client']  = 'syncCtoPro konnte auf dem %sClient%s nicht ordnungsgemäß ausgeführt werden.';
+$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['security']['error']         = '<br /><p class="tl_help">syncCtoPro wurde nicht über den offiziellen Erweiterungskatalog von Contao installiert.<br /> Bitte installieren Sie syncCtoPro erneut über den Erweiterungskatalog.</p>';
 
 /**
  * Popup
