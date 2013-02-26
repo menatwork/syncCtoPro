@@ -271,11 +271,11 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
      */
     protected function checkSystem()
     {
-        if (true || !SyncCtoProSystem::getInstance()->checkERData() || !SyncCtoProSystem::getInstance()->checkHash())
+        if (!SyncCtoProSystem::getInstance()->checkERData() || !SyncCtoProSystem::getInstance()->checkHash())
         {
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
-             $this->objData->setDescription(vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['pro_sync']['error_server'], array('<a href="' . Environment::getInstance()->base . '" target="_blank" style="text-decoration:underline;">', '</a>')));
+            $this->objData->setDescription(vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['pro_sync']['error_server'], array('<a href="' . Environment::getInstance()->base . '" target="_blank" style="text-decoration:underline;">', '</a>')));
             $this->objData->setHtml($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['security']['error']);
 
             $this->objSyncCtoClient->setRefresh(true);
@@ -284,12 +284,12 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
             return;
         }
 
-        if (!$this->objSyncCtoProCommunicationClient->checkER() || $this->objSyncCtoProCommunicationClient->checkHash())
+        if (!$this->objSyncCtoProCommunicationClient->checkER() || !$this->objSyncCtoProCommunicationClient->checkHash())
         {
             // Get Client information
             $arrClientInformation = SyncCtoCommunicationClient::getInstance()->getClientData();
-            $strAddress = $arrClientInformation['address'] . $arrClientInformation['path'];
-            
+            $strAddress           = $arrClientInformation['address'] . $arrClientInformation['path'];
+
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
             $this->objData->setDescription(vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['pro_sync']['error_client'], array('<a href="' . $strAddress . '" target="_blank" style="text-decoration:underline;">', '</a>')));
