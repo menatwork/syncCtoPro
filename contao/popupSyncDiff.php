@@ -28,6 +28,7 @@ class PopupSyncDiff extends Backend
 
     const VIEWMODE_OVERVIEW = 'overview';
     const VIEWMODE_DETAIL   = 'detail';
+    const VIEWMODE_ALL      = 'all';
 
     ////////////////////////////////////////////////////////////////////////////
     // Objects
@@ -193,6 +194,11 @@ class PopupSyncDiff extends Backend
      */
     public function run()
     {
+        if ($this->Input->post('showall') == self::VIEWMODE_ALL)
+        {
+            $this->strViewMode = self::VIEWMODE_ALL;
+        }
+
         try
         {
             // Basic functions
@@ -209,9 +215,26 @@ class PopupSyncDiff extends Backend
 
                 // Detail diff
                 case self::VIEWMODE_DETAIL:
-                    $this->loadExternDataFor($this->strTable, $this->intRowId);
-                    $this->loadLocalDataFor($this->strTable, $this->intRowId);
-                    $this->runDiff();
+                    $arrExtData = $this->loadExternDataFor($this->strTable, $this->intRowId);
+                    $arrLocData = $this->loadLocalDataFor($this->strTable, $this->intRowId);
+
+                    if (empty($arrLocData))
+                    {
+                        $arrLocalData  = array();
+                        $arrExternData = $arrExtData['data'][0]['insert'];
+                    }
+                    else
+                    {
+                        $arrLocalData  = $arrLocData[0];
+                        $arrExternData = $arrExtData['data'][0]['insert'];
+                    }
+
+                    $this->runDiff($arrLocalData, $arrExternData);
+                    break;
+
+                // Detail diff for all entries
+                case self::VIEWMODE_ALL:
+                    $this->runAllDiff();
                     break;
 
                 default:
@@ -349,7 +372,7 @@ class PopupSyncDiff extends Backend
         }
 
         // Get all data
-        $arrAllPageValues = $this->renderElementsPart('tl_page', array('title', 'id', 'pid', 'sorting'));
+        $arrAllPageValues    = $this->renderElementsPart('tl_page', array('title', 'id', 'pid', 'sorting'));
         $arrAllArticleValues = $this->renderElementsPart('tl_article', array('title', 'id', 'sorting', 'pid'));
         $arrAllContentValues = $this->renderElementsPart('tl_content', array('type', 'id', 'sorting', 'pid'));
 
@@ -359,7 +382,7 @@ class PopupSyncDiff extends Backend
         uasort($arrAllContentValues, array($this, 'sortByPid'));
 
         $arrArticleNeeded = array();
-        $arrPageNeeded = array();
+        $arrPageNeeded    = array();
 
         $arrAllowedTables = $this->arrSyncSettings['syncCtoPro_tables_checked'];
 
@@ -472,53 +495,13 @@ class PopupSyncDiff extends Backend
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Load a list with id/titles from client
-     */
-    protected function loadExternDataFor($strTable, $intID)
-    {
-        $strExportFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', $strTable, array($intID));
-
-        // Check if we have all files
-        if ($strExportFile === false)
-        {
-            throw new Exception('Missing export file for tl_page');
-        }
-
-        //Load the se export files from client
-        $strSavePath = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], basename($strExportFile));
-
-        $blnResponse = $this->objSyncCtoProCommunicationClient->getFile($strExportFile, $strSavePath);
-
-        // Check if we have the file
-        if (!$blnResponse)
-        {
-            throw new Exception("Empty file list from client. Maybe file sending was not complet for $strExportFile.");
-        }
-
-        // Read client pages
-        $this->arrExternData = $this->objSyncCtoProDatabase->readXML($strSavePath);
-    }
-
-    /**
-     * Load local data
-     * 
-     * @param string $strTable
-     * @param integer $intID
-     */
-    protected function loadLocalDataFor($strTable, $intID)
-    {
-        $this->arrLocalData = $this->Database->prepare("SELECT * FROM $strTable WHERE id = ?")
-                ->executeUncached($intID)
-                ->fetchAllAssoc();
-    }
-
-    /**
      * Search for differences and generate the 
      * detail page.
      */
-    protected function runDiff()
+    protected function runDiff($arrLocalData, $arrExternData, $blnReturn = false, $strTemplate = 'be_syncCtoPro_popup_detail')
     {
         $strContent = "";
+        $blnFlip    = false;
 
         // Diff Options
         $arrDiffOptions = array(
@@ -533,18 +516,14 @@ class PopupSyncDiff extends Backend
         $this->loadDataContainer($this->strTable);
         $arrDcaFields = $GLOBALS['TL_DCA'][$this->strTable]['fields'];
 
-        if (empty($this->arrLocalData))
-        {
-            $arrExternData = array();
-            $arrLocalData = $this->arrExternData['data'][0]['insert'];
-        }
-        else
-        {
-            $arrLocalData  = $this->arrLocalData[0];
-            $arrExternData = $this->arrExternData['data'][0]['insert'];
-        }
-
         $arrDataForDiff = array();
+
+        if (empty($arrLocalData))
+        {
+            $arrLocalData  = $arrExternData;
+            $arrExternData = null;
+            $blnFlip       = true;
+        }
 
         // Check data an make something with it
         foreach ($arrLocalData as $strField => $mixValue)
@@ -602,12 +581,12 @@ class PopupSyncDiff extends Backend
                 $mixValuesServer = $this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesServer ? : '');
                 $mixValuesClient = $this->parseDate($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesClient ? : '');
             }
-            
+
             // Save for later operations
             $arrDataForDiff[$strField]['server']['data'] = $mixValuesServer;
             $arrDataForDiff[$strField]['client']['data'] = $mixValuesClient;
         }
-        
+
         // Get the last key
         $arrLastKeys = array_keys($arrDataForDiff);
         $arrLastKeys = array_pop($arrLastKeys);
@@ -670,7 +649,7 @@ class PopupSyncDiff extends Backend
             }
 
             // Run php-diff
-            if (empty($this->arrLocalData))
+            if ($blnFlip)
             {
                 $objDiff = new Diff($arrValues['server']['data'], $arrValues['client']['data'], $arrDiffOptions);
             }
@@ -687,26 +666,218 @@ class PopupSyncDiff extends Backend
             $strContent .= $mixResult;
         }
 
-        // Load CSS
-        $GLOBALS['TL_JAVASCRIPT'][] = TL_SCRIPT_URL . 'system/modules/syncCtoPro/html/css/diff.css';
-
         // Set wrapper template information
-        $objDetailsTemplate = new BackendTemplate("be_syncCtoPro_popup_detail");
+        $objDetailsTemplate = new BackendTemplate($strTemplate);
 
         $objDetailsTemplate->base      = $this->Environment->base;
         $objDetailsTemplate->path      = $this->Environment->path;
         $objDetailsTemplate->id        = $this->intClientID;
         $objDetailsTemplate->direction = $this->strDirection;
 
-        $objDetailsTemplate->content  = $strContent;
-        $objDetailsTemplate->headline = vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail'], array($this->strTable, $this->intRowId));
+        $objDetailsTemplate->content      = $strContent;
+        $objDetailsTemplate->headline     = vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail'], array($this->strTable, $this->intRowId));
+        $objDetailsTemplate->currentPoint = $this->strCurrentPoint;
 
-        $this->strContentData = $objDetailsTemplate->parse();
+        if ($blnReturn)
+        {
+            return $objDetailsTemplate->parse();
+        }
+        else
+        {
+            $this->strContentData = $objDetailsTemplate->parse();
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // View - Detail for ALL entries
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Load a list with id/titles from client
+     */
+    protected function runAllDiff()
+    {
+        $arrShowId  = array();
+        $arrExtData = array();
+        $arrLocData = array();
+
+        $arrTransferData = (array) $this->Input->post('transfer_ids');
+        $arrDeleteData   = (array) $this->Input->post('delete_client_ids');
+
+        // Get table and id
+        foreach ($arrTransferData as $value)
+        {
+            $arrRow = trimsplit("::", $value);
+
+            $arrShowId[$arrRow[0]][] = $arrRow[1];
+        }
+
+        // Get table and id
+        foreach ($arrDeleteData as $value)
+        {
+            $arrRow = trimsplit("::", $value);
+
+            $arrShowId[$arrRow[0]][] = $arrRow[1];
+        }
+
+        // Load data from extren
+        foreach ($arrShowId as $key => $value)
+        {
+            $arrExtData[$key] = $this->loadExternDataFor($key, $value);
+        }
+
+        // Load data from locale
+        foreach ($arrShowId as $key => $value)
+        {
+            $arrLocData[$key] = $this->loadLocalDataFor($key, $value);
+        }
+
+        // Rebuild array for extern data
+        $arrRebuildExtData = array();
+        foreach ($arrExtData as $strTable => $arrTableValues)
+        {
+            foreach ($arrTableValues['data'] as $arrData)
+            {
+                $arrInsert                                      = $arrData['insert'];
+                $arrRebuildExtData[$strTable][$arrInsert['id']] = $arrInsert;
+            }
+        }
+
+        $arrExtData = $arrRebuildExtData;
+
+        $strDiffBuffer = "";
+
+        $arrTableNames = array_merge(array_keys($arrLocData), array_keys($arrExtData));
+
+        foreach ($arrTableNames as $strTableName)
+        {
+            $this->strTable = $strTableName;
+
+            // Read first local data
+            foreach ($arrLocData[$strTableName] as $mixID => $arrLocaleData)
+            {
+                $this->intRowId = $arrLocaleData['id'];
+                
+                if ($strTableName == 'tl_page')
+                {
+                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLocaleData['title'], '-');
+                }
+                elseif ($strTableName == 'tl_article')
+                {
+                    $arrLookupPage = $this->Database->prepare('SELECT title FROM tl_page WHERE id =?')
+                            ->execute($arrLocaleData['pid'])
+                            ->fetchAllAssoc();
+
+                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLookupPage[0]['title'], '-');
+                }
+                else if ($strTableName == 'tl_content')
+                {
+                    $arrLookupArticle = $this->Database->prepare('SELECT pid,title FROM tl_article WHERE id =?')
+                            ->execute($arrLocaleData['pid'])
+                            ->fetchAllAssoc();
+
+                    $arrLookupPage = $this->Database->prepare('SELECT title FROM tl_page WHERE id =?')
+                            ->execute($arrLookupArticle[0]['pid'])
+                            ->fetchAllAssoc();
+
+                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLookupPage[0]['title'], $arrLookupArticle[0]['title']);
+                }
+
+                if (key_exists($arrLocaleData['id'], $arrExtData[$strTableName]))
+                {
+                    $strDiffBuffer .= $this->runDiff($arrLocaleData, $arrExtData[$strTableName][$arrLocaleData['id']], true, 'be_syncCtoPro_popup_detail_small');
+
+                    // Free up memory
+                    unset($arrExtData[$strTableName][$arrLocaleData['id']]);
+                    unset($arrLocData[$strTableName][$mixID]);
+                }
+                else
+                {
+                    $strDiffBuffer .= $this->runDiff($arrLocaleData, null, true, 'be_syncCtoPro_popup_detail_small');
+
+                    // Free up memory
+                    unset($arrLocData[$strTableName][$mixID]);
+                }
+            }
+
+            // Read second extern data
+            foreach ($arrExtData[$strTableName] as $mixID => $arrExternData)
+            {
+                $this->intRowId = $mixID;
+                $strDiffBuffer .= $this->runDiff(array(), $arrExternData, true, 'be_syncCtoPro_popup_detail_small');
+
+                // Free up memory
+                unset($arrExtData[$strTableName][$mixID]);
+            }
+        }
+
+        // Add Base template
+        $objBaseTemplate = new BackendTemplate('be_syncCtoPro_popup_all');
+
+        $objBaseTemplate->base      = $this->Environment->base;
+        $objBaseTemplate->path      = $this->Environment->path;
+        $objBaseTemplate->id        = $this->intClientID;
+        $objBaseTemplate->direction = $this->strDirection;
+
+        $objBaseTemplate->headline = $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_diff_all'];
+        $objBaseTemplate->strData  = $strDiffBuffer;
+
+        $this->strContentData = $objBaseTemplate->parse();
     }
 
     ////////////////////////////////////////////////////////////////////////////
     // Helper
     ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Load a list with id/titles from client
+     */
+    protected function loadExternDataFor($strTable, $mixID)
+    {
+        $strExportFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', $strTable, (array) $mixID);
+
+        // Check if we have all files
+        if ($strExportFile === false)
+        {
+            throw new Exception('Missing export file for tl_page');
+        }
+
+        //Load the se export files from client
+        $strSavePath = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], basename($strExportFile));
+
+        $blnResponse = $this->objSyncCtoProCommunicationClient->getFile($strExportFile, $strSavePath);
+
+        // Check if we have the file
+        if (!$blnResponse)
+        {
+            throw new Exception("Empty file list from client. Maybe file sending was not complet for $strExportFile.");
+        }
+
+        // Read client pages
+        return $this->objSyncCtoProDatabase->readXML($strSavePath);
+    }
+
+    /**
+     * Load local data
+     * 
+     * @param string $strTable
+     * @param integer $intID
+     */
+    protected function loadLocalDataFor($strTable, $mixID)
+    {
+        if (is_array($mixID))
+        {
+            return $this->Database->prepare("SELECT * FROM $strTable WHERE id IN (" . implode(", ", $mixID) . ")")
+                            ->executeUncached()
+                            ->fetchAllAssoc();
+        }
+        else
+        {
+            return $this->Database->prepare("SELECT * FROM $strTable WHERE id = ?")
+                            ->executeUncached($mixID)
+                            ->fetchAllAssoc();
+        }
+    }
 
     /**
      * Implode a multi-dimensional array recursively

@@ -1,5 +1,13 @@
 <?php $this->import('String'); ?>
 
+<script>
+    function mySubmit(strName)
+    {
+        $(strName).click()
+        return false;
+    }
+</script>
+
 <h1 class="file"><strong><?php echo $this->headline; ?></strong></h1>
 
 <div id="tl_listing" class="tl_listing_container">
@@ -39,7 +47,10 @@
                         <?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?>
                     </th>
                     <th class="diff">
-                        &nbsp;
+                        <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo PopupSyncDiff::VIEWMODE_ALL ?>" />
+                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo Environment::getInstance()->request; ?>" OnClick="mySubmit('showall'); return false;">
+                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/diff.gif" alt="" />
+                        </a>
                     </th>
                 </tr>
             </thead>

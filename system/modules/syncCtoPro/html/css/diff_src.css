@@ -11,6 +11,10 @@
   .comparelist .content {
     padding-left:38px;
   }
+  
+  .hidden {
+    display:none;
+  }
 
  /*------------------------------------------------------------------------*/
 

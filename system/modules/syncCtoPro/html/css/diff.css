@@ -1,2 +1,120 @@
 /* Copyright (c) MEN AT WORK 2013 :: LGPL license */
-.comparelist .page{padding-left:5px}.comparelist .article{padding-left:12px}.comparelist .content{padding-left:38px}.diffview{width:100%}#tl_listing{position:relative}div.back{margin-top:10px}div.back.bottom{margin-top:25px}#clear{float:right;margin-top:10px}#legend{position:absolute;top:8px;margin-top:0;right:0}#legend p{float:left;margin-left:10px;margin-bottom:0;padding:3px 8px;-webkit-border-radius:3px;border-radius:3px;border-width:1px;border-style:solid}p.server{border-color:#b7ebb7;background-color:#d8f9d8}p.client{border-color:#fec8c8;background-color:#fdd}#diff{clear:both}#diff .change{margin-bottom:13px;border:1px solid #ddd;background:#fcfcfc;font-family:Courier,monospace;font-size:12px;border-radius:3px}#diff .replace.left,#diff .delete.left{background:#fdd}#diff .replace.right,#diff .insert.right{background:#d8f9d8}#diff .replace ins{color:#060;background:#bfb}#diff .replace del{color:#a00;background:#fbb}#diff h2{background:none repeat scroll 0 0 #eee;border-bottom:1px solid #ddd;color:#666966;font-size:11px;margin:0;padding:3px 6px 4px}#diff ins,#diff del{text-decoration:none}#diff td{padding:5px;border:0}
+
+  .comparelist .page {
+    padding-left:5px;
+  }
+
+  .comparelist .article {
+    padding-left:12px;
+  }
+  
+  .comparelist .content {
+    padding-left:38px;
+  }
+  
+  .hidden {
+    display:none;
+  }
+
+ /*------------------------------------------------------------------------*/
+
+  .diffview {
+    width:100%;
+  }
+ 
+  #tl_listing {
+    position:relative;
+  }
+
+  div.back {
+    margin-top:10px;
+  }
+
+  div.back.bottom {
+    margin-top:25px;
+  }
+
+  #clear {
+    float:right;
+    margin-top:10px;
+  }
+
+  #legend {
+    position:absolute;
+    top:8px;
+    margin-top:0;
+    right:0;
+  }
+  
+  #legend p {
+    float:left;
+    margin-left:10px;
+    margin-bottom:0;
+    padding:3px 8px;
+    -webkit-border-radius:3px;
+    border-radius:3px; 
+    border-width:1px;
+    border-style:solid;
+  }
+  
+  p.server {
+    border-color:#b7ebb7;
+    background-color:#d8f9d8;
+  }
+  
+  p.client {
+    border-color:#fec8c8;
+    background-color:#ffdddd;
+  }
+
+  #diff {
+    clear:both;
+  }
+
+  #diff .change {
+    margin-bottom:13px;
+    border:1px solid #ddd;
+    background:#fcfcfc;
+    font-family:Courier,monospace;
+    font-size:12px;
+    border-radius:3px;
+  }
+
+  #diff .replace.left,
+  #diff .delete.left {
+    background:#fdd;
+  }
+
+  #diff .replace.right,
+  #diff .insert.right {
+    background:#d8f9d8;
+  }
+
+  #diff .replace ins {
+    color:#060;
+    background:#bfb;
+  }
+
+  #diff .replace del {
+    color:#a00;
+    background:#fbb;
+  }
+
+  #diff h2 {
+    background:none repeat scroll 0 0 #EEEEEE;
+    border-bottom:1px solid #DDDDDD;
+    color:#666966;
+    font-size:11px;
+    margin:0;
+    padding:3px 6px 4px;
+  }
+
+  #diff ins,
+  #diff del {
+    text-decoration:none;
+  }
+
+  #diff td {
+    padding:5px;
+    border:0;
+  }
