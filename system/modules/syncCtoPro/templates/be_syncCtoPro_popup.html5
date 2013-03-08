@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="<?php echo $this->language; ?>">
+<head>
+<meta charset="<?php echo $this->charset; ?>">
+<title><?php echo $this->title; ?> - Contao Open Source CMS <?php echo VERSION; ?></title>
+<base href="<?php echo $this->base; ?>">
+<?php echo $this->stylesheets; ?>
+<?php echo $this->javascripts; ?>
+</head>
+<body class="__ua__">
+
+<div id="container">
+    <div id="main">
+        <?php if ($this->close): ?>
+        <img src="<?php echo $this->Environment->base; ?>system/modules/syncCto/html/icons/steps/iconWork.gif" alt="" />
+        <script>
+            window.addEvent("domready",function(){
+                window.parent.document.getElement('input[name=forward]').click();
+            });
+        </script>
+        <?php elseif ($this->error && count($this->arrError) != 0): ?>
+        <?php foreach ($this->arrError AS $error): ?>
+            <p class="tl_error"><?php echo $error; ?></p>
+        <?php endforeach; ?>
+        <?php else: ?>
+            <?php echo $this->content; ?>
+        <?php endif; ?>
+    </div>
+</div>
+</body>
+</html>

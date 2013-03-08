@@ -1,0 +1,12 @@
+<fieldset>
+<legend><?php echo $this->headline; ?></legend>
+
+<p><?php echo $this->currentPoint; ?></p>
+
+<?php if ($this->content): ?>
+<div id="diff">
+    <?php echo $this->content; ?>
+</div>
+<?php endif; ?>
+
+</fieldset>
