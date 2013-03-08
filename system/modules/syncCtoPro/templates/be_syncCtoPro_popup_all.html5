@@ -12,8 +12,7 @@
     <p class="server"><?php echo $GLOBALS['TL_LANG']['MSC']['server']; ?></p>
     <p class="client"><?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?></p>
 </div>
-<br/>
-<br/>
+
 <?php echo $this->strData; ?>
 
 </div>

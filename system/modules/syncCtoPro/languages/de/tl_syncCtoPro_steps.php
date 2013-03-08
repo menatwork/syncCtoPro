@@ -27,5 +27,5 @@ $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['security']['error']         = '<br /
 $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_diff_all'] = 'Alle Unterschiede anzeigen';
 $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail']   = 'Unterschiede für %s (ID: %s) anzeigen';
 $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']           = '-';
-$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position']          = 'Seite: %s | Atricle: %s';
+$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position']          = 'Seite: %s | Artikel: %s';
 ?>
