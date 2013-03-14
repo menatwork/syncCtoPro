@@ -1,7 +1,7 @@
 <fieldset>
-<legend><strong><?php echo $this->headline; ?></strong>:</legend>
+<legend><?php echo $this->headline; ?></legend>
 
-<?php echo $this->currentPoint; ?>
+<p><?php echo $this->currentPoint; ?></p>
 
 <?php if ($this->content): ?>
 <div id="diff">
@@ -10,4 +10,3 @@
 <?php endif; ?>
 
 </fieldset>
-<br />
