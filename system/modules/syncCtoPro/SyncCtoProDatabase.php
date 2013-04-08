@@ -579,6 +579,29 @@ class SyncCtoProDatabase extends Backend
         $this->triggerArticle($blnUpdate);
         $this->triggerContent($blnUpdate);
     }
+    
+    /**
+     * Update all trigger
+     * 
+     * @param boolean $blnUpdate
+     */
+    public function updateSpecialTriggers($blnPage, $blnArticle, $blnContent, $blnUpdate = false)
+    {
+        if($blnPage)
+        {
+            $this->triggerPage($blnUpdate);
+        }
+        
+        if($blnArticle)
+        {
+            $this->triggerArticle($blnUpdate);
+        }
+        
+        if($blnContent)
+        {
+            $this->triggerContent($blnUpdate);
+        }
+    }
 
     /**
      * Update Trigger for tl_page

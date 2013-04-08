@@ -66,6 +66,10 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
      */
     protected static $objInstance = null;
 
+    const WORKINGMODE_NONE   = 0;
+    const WORKINGMODE_DIFF   = 1;
+    const WORKINGMODE_UPDATE = 2;
+
     ////////////////////////////////////////////////////////////////////////////
     // Core
     ////////////////////////////////////////////////////////////////////////////
@@ -124,14 +128,40 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
     protected function checkSync()
     {
-        if ($this->arrSyncSettings['post_data']['database_pages_check'] == true)
+        if ($this->getWorkingMode() != self::WORKINGMODE_NONE)
         {
             return true;
         }
-        else
+
+        return false;
+    }
+
+    /**
+     * Check what we have to do. Only update hashes or do a diff.
+     * 
+     * @return int
+     */
+    protected function getWorkingMode()
+    {
+        // Check if database is enabeld
+        if ($this->arrSyncSettings['syncCto_SyncDatabase'] != true)
         {
-            return false;
+            return self::WORKINGMODE_NONE;
         }
+
+        // Check if diff is enabeld
+        if ($this->arrSyncSettings['post_data']['database_pages_check'] == true)
+        {
+            return self::WORKINGMODE_DIFF;
+        }
+
+        // Check if we have to regenerate the hashes
+        if (array_search('tl_page', $this->arrSyncSettings['syncCto_SyncTables']) !== false || array_search('tl_article', $this->arrSyncSettings['syncCto_SyncTables']) !== false || array_search('tl_content', $this->arrSyncSettings['syncCto_SyncTables']) !== false)
+        {
+            return self::WORKINGMODE_UPDATE;
+        }
+
+        return self::WORKINGMODE_NONE;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -164,46 +194,79 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
     {
         $this->init();
 
-        $i = 1;
         try
         {
-            switch ($this->objStepPool->step)
+            // Do the whole diff.
+            if ($this->getWorkingMode() == self::WORKINGMODE_DIFF)
             {
-                case $i++:
-                    $this->showBasicStep();
-                    break;
+                $i = 1;
+                switch ($this->objStepPool->step)
+                {
+                    case $i++:
+                        $this->showBasicStep();
+                        break;
 
-                case $i++:
-                    $this->checkSystem();
-                    break;
+                    case $i++:
+                        $this->checkSystem(true);
+                        break;
 
-                case $i++:
-                    $this->generateDataForPageTree();
-                    break;
+                    case $i++:
+                        $this->generateDataForPageTree();
+                        break;
 
-                case $i++:
-                    $this->loadFilesForPageTree();
-                    break;
+                    case $i++:
+                        $this->loadFilesForPageTree();
+                        break;
 
-                case $i++:
-                    $this->checkRun();
-                    break;
+                    case $i++:
+                        $this->checkRun();
+                        break;
 
-                case $i++:
-                    $this->showPopup('To');
-                    break;
+                    case $i++:
+                        $this->showPopup('To');
+                        break;
 
-                case $i++:
-                    $this->generateLocalUpdateFiles();
-                    break;
+                    case $i++:
+                        $this->generateLocalUpdateFiles();
+                        break;
 
-                case $i++:
-                    $this->sendUpdateFiles();
-                    break;
+                    case $i++:
+                        $this->sendUpdateFiles();
+                        break;
 
-                case $i++:
-                    $this->importExtern();
-                    break;
+                    case $i++:
+                        $this->importExtern();
+                        break;
+
+                    case $i++:
+//                    $this->refreshTimestamps();
+                        $this->setNextStep();
+                        break;
+                }
+            }
+            // Run only the hash update for some special tables
+            else if ($this->getWorkingMode() == self::WORKINGMODE_UPDATE)
+            {
+                $i = 1;
+                switch ($this->objStepPool->step)
+                {
+                    case $i++:
+                        $this->showBasicStep();
+                        break;
+
+                    case $i++:
+                        $this->checkSystem(false);
+                        break;
+
+                    case $i++:
+                        $this->refreshHashes();
+                        break;
+
+                    case $i++:
+                        $this->refreshTimestamps();
+                        $this->setNextStep();
+                        break;
+                }
             }
         }
         catch (Exception $exc)
@@ -260,7 +323,15 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
     {
         $this->objData->setState(SyncCtoEnum::WORK_WORK);
         $this->objData->setTitle($GLOBALS['TL_LANG']['MSC']['step'] . " %s");
-        $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_1']);
+
+        if ($this->getWorkingMode() == self::WORKINGMODE_DIFF)
+        {
+            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_1']);
+        }
+        else if ($this->getWorkingMode() == self::WORKINGMODE_UPDATE)
+        {
+            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_2']);
+        }
 
         // Set output
         $this->objStepPool->step++;
@@ -269,7 +340,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
     /**
      * Step 1.1 - Check if we have to show the popup
      */
-    protected function checkSystem()
+    protected function checkSystem($blnWithTables = true)
     {
         if (!SyncCtoProSystem::getInstance()->checkERData() || !SyncCtoProSystem::getInstance()->checkHash())
         {
@@ -302,7 +373,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         }
 
         // If we have no diffs skipp this step
-        if (count($this->arrSyncSettings['syncCtoPro_tables_checked']) == 0)
+        if ($blnWithTables && count($this->arrSyncSettings['syncCtoPro_tables_checked']) == 0)
         {
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
@@ -330,7 +401,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
      */
     protected function generateDataForPageTree()
     {
-        $strPageFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_page', null, array('id', 'pid', 'title'));
+        $strPageFile    = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_page', null, array('id', 'pid', 'title'));
         $strArticleFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_article', null, array('id', 'pid', 'title'));
         $strContentFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_content', null, array('id', 'pid', 'type'));
 
@@ -548,16 +619,48 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
         // Write some tempfiles
         $strRandomToken = substr(md5(time() . " | " . rand(0, 65535)), 0, 8);
+        $arrFiles       = array();
 
-        $strPageFile    = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-page.gzip"), 'tl_page', $arrPages, null, $this->getIgnoredFieldsFor('tl_page'));
-        $strArticleFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-article.gzip"), 'tl_article', $arrArticles, null, $this->getIgnoredFieldsFor('tl_article'));
-        $strContentFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-content.gzip"), 'tl_content', $arrContentElements, null, $this->getIgnoredFieldsFor('tl_content'));
+        if (!empty($arrPages))
+        {
+            $strPageFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-page.gzip"), 'tl_page', $arrPages, null, $this->getIgnoredFieldsFor('tl_page'));
 
-        $this->objStepPool->files = array(
-            'tl_page'    => "SyncCto-SE-$strRandomToken-page.gzip",
-            'tl_article' => "SyncCto-SE-$strRandomToken-article.gzip",
-            'tl_content' => "SyncCto-SE-$strRandomToken-content.gzip",
-        );
+            // Check if we have all files
+            if ($strPageFile === false)
+            {
+                throw new Exception('Missing export file for tl_page');
+            }
+
+            $arrFiles['tl_page'] = "SyncCto-SE-$strRandomToken-page.gzip";
+        }
+
+        if (!empty($arrArticles))
+        {
+            $strArticleFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-article.gzip"), 'tl_article', $arrArticles, null, $this->getIgnoredFieldsFor('tl_article'));
+
+            // Check if we have all files
+            if ($strArticleFile === false)
+            {
+                throw new Exception('Missing export file for tl_article');
+            }
+
+            $arrFiles['tl_article'] = "SyncCto-SE-$strRandomToken-article.gzip";
+        }
+
+        if (!empty($arrContentElements))
+        {
+            $strContentFile = $objSyncCtoDatabasePro->getDataForAsFile($this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], "SyncCto-SE-$strRandomToken-content.gzip"), 'tl_content', $arrContentElements, null, $this->getIgnoredFieldsFor('tl_content'));
+
+            // Check if we have all files
+            if ($strContentFile === false)
+            {
+                throw new Exception('Missing export file for tl_content');
+            }
+
+            $arrFiles['tl_content'] = "SyncCto-SE-$strRandomToken-content.gzip";
+        }
+
+        $this->objStepPool->files = $arrFiles;
 
         // Set output
         $this->objStepPool->step++;
@@ -570,8 +673,8 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
      */
     protected function generateExternUpdateFiles()
     {
-        $arrPages    = $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
-        $arrArticles = array();
+        $arrPages           = $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
+        $arrArticles        = array();
         $arrContentElements = array();
 
         // Article
@@ -712,12 +815,8 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         }
 
         // Set output
-        $this->objData->setState(SyncCtoEnum::WORK_OK);
-        $this->objData->setHtml('');
         $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_3']);
-
-        $this->objSyncCtoClient->addStep();
-        $this->objSyncCtoClient->setRefresh(true);
+        $this->objStepPool->step++;
     }
 
     /**
@@ -743,6 +842,121 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         $this->objData->setState(SyncCtoEnum::WORK_OK);
         $this->objData->setHtml('');
         $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCto_sync']['step_4']['description_3']);
+
+        $this->objSyncCtoClient->addStep();
+        $this->objSyncCtoClient->setRefresh(true);
+    }
+
+    /**
+     * Refresh all hashes on client side.
+     */
+    protected function refreshHashes()
+    {
+        // Check if we have content
+        $arrPages           = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
+        $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
+        $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
+
+        if (!empty($arrPages))
+        {
+            $blnPage = true;
+        }
+
+        if (!empty($arrArticles))
+        {
+            $blnArticle = true;
+        }
+
+        if (!empty($arrContentElements))
+        {
+            $blnContent = true;
+        }
+
+        // Update only changed tables.
+        $this->objSyncCtoProCommunicationClient->updateSpecialTriggers($blnPage, $blnArticle, $blnContent, true);
+
+        // Next step
+        $this->objStepPool->step++;
+    }
+
+    protected function refreshTimestamps()
+    {
+        $arrTables = array();
+
+        // Check which table has been updated
+        $arrPages           = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
+        $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
+        $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
+
+        if (!empty($arrPages))
+        {
+            $arrTables[] = 'tl_page';
+        }
+
+        if (!empty($arrArticles))
+        {
+            $arrTables[] = 'tl_article';
+        }
+
+        if (!empty($arrContentElements))
+        {
+            $arrTables[] = 'tl_content';
+        }
+
+        $arrTableTimestamp = array(
+            'server' => $this->objSyncCtoHelper->getDatabaseTablesTimestamp($arrTables),
+            'client' => $this->objSyncCtoProCommunicationClient->getClientTimestamp($arrTables)
+        );
+
+        foreach ($arrTableTimestamp AS $location => $arrTimeStamps)
+        {
+            // Update timestamp
+            $mixLastTableTimestamp = $this->Database
+                    ->prepare("SELECT " . $location . "_timestamp FROM tl_synccto_clients WHERE id=?")
+                    ->limit(1)
+                    ->execute($this->intClientID)
+                    ->fetchAllAssoc();
+
+            if (strlen($mixLastTableTimestamp[0][$location . "_timestamp"]) != 0)
+            {
+                $arrLastTableTimestamp = deserialize($mixLastTableTimestamp[0][$location . "_timestamp"]);
+            }
+            else
+            {
+                $arrLastTableTimestamp = array();
+            }
+
+            foreach ($arrTimeStamps as $key => $value)
+            {
+                $arrLastTableTimestamp[$key] = $value;
+            }
+
+            // Search for old entries
+            $arrTables = $this->Database->listTables();
+            foreach ($arrLastTableTimestamp as $key => $value)
+            {
+                if (!in_array($key, $arrTables))
+                {
+                    unset($arrLastTableTimestamp[$key]);
+                }
+            }
+
+            $this->Database
+                    ->prepare("UPDATE tl_synccto_clients SET " . $location . "_timestamp = ? WHERE id = ? ")
+                    ->execute(serialize($arrLastTableTimestamp), $this->intClientID);
+        }
+
+        // Next step
+        $this->objStepPool->step++;
+    }
+
+    /**
+     * Set all for the next step
+     */
+    protected function setNextStep()
+    {
+        $this->objData->setState(SyncCtoEnum::WORK_OK);
+        $this->objData->setHtml('');
 
         $this->objSyncCtoClient->addStep();
         $this->objSyncCtoClient->setRefresh(true);

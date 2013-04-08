@@ -558,7 +558,7 @@ class PopupSyncDiff extends Backend
                 $mixValuesServer                              = $this->implode($tmp);
                 $arrDataForDiff[$strField]['server']['array'] = true;
             }
-            if (is_array(($tmp                                          = deserialize($mixValuesClient))) && !is_array($mixValuesClient))
+            if (is_array(($tmp = deserialize($mixValuesClient))) && !is_array($mixValuesClient))
             {
                 $mixValuesClient                              = $this->implode($tmp);
                 $arrDataForDiff[$strField]['client']['array'] = true;
