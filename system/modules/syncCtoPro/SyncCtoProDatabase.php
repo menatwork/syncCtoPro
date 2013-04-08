@@ -550,7 +550,7 @@ class SyncCtoProDatabase extends Backend
     /**
      * Call this for hooks
      */
-    public function updateTriggerFromHook($arrCommand)
+    public function updateTriggerFromHook($mixValues = null)
     {
         try
         {
@@ -562,7 +562,10 @@ class SyncCtoProDatabase extends Backend
             $this->log('There was an error by updating the triggers for SyncCtoPro. Error: ' . $exc->getMessage(), __CLASS__ . " | " . __FUNCTION__, TL_ERROR);
         }
 
-        return $arrCommand;
+        if($mixValues != null)
+        {
+            return $mixValues;
+        }
     }
 
     /**
