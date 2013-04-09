@@ -128,7 +128,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
     protected function checkSync()
     {
-        if ($this->getWorkingMode() != self::WORKINGMODE_NONE)
+        if ($this->getWorkingMode() == self::WORKINGMODE_DIFF)
         {
             return true;
         }
@@ -142,13 +142,13 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
      * @return int
      */
     protected function getWorkingMode()
-    {
+    {        
         // Check if database is enabeld
         if ($this->arrSyncSettings['syncCto_SyncDatabase'] != true)
         {
             return self::WORKINGMODE_NONE;
         }
-
+        
         // Check if diff is enabeld
         if ($this->arrSyncSettings['post_data']['database_pages_check'] == true)
         {
@@ -162,6 +162,171 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         }
 
         return self::WORKINGMODE_NONE;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Hook - Additional Functions
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Hook for create the hash vlaues for client
+     * 
+     * @param SyncCtoModuleClient $syncCtoClient
+     * @param int $intClientID
+     * @return void
+     */
+    public function remoteUpdateHashes(SyncCtoModuleClient $syncCtoClient, $intClientID)
+    {
+        // Set Basic
+        $this->setSyncCto($syncCtoClient);
+        
+        // Check if we have to run this step
+        if ($this->getWorkingMode() != self::WORKINGMODE_UPDATE)
+        {
+            return;
+        }
+
+        try
+        {
+            // Call function
+            $this->refreshHashes();
+
+            // Set info
+            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_2']);
+        }
+        catch (Exception $exc)
+        {
+            $strHTML = $this->objData->getHtml();
+            $strHTML = '<p> There was an error for SyncCto Pro: ' . $exc->getMessage() . '</p>';
+            $this->objData->setHtml($strHTML);
+        }
+    }
+
+    public function localeUpdateTimestamp(SyncCtoModuleClient $syncCtoClient, $intClientID)
+    {
+        // Set Basic
+        $this->setSyncCto($syncCtoClient);
+
+        // Check if we have to run this step
+        if ($this->getWorkingMode() != self::WORKINGMODE_UPDATE)
+        {
+            return;
+        }
+
+        try
+        {
+            // Call function
+            $this->refreshTimestamps();
+
+            // Set info
+            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_2']);
+        }
+        catch (Exception $exc)
+        {
+            $strHTML = $this->objData->getHtml();
+            $strHTML = '<p> There was an error for SyncCto Pro: ' . $exc->getMessage() . '</p>';
+            $this->objData->setHtml($strHTML);
+        }
+    }
+
+    /**
+     * Refresh all hashes on client side.
+     */
+    protected function refreshHashes()
+    {
+        // Check if we have content
+        $arrPages           = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
+        $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
+        $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
+
+        if (!empty($arrPages))
+        {
+            $blnPage = true;
+        }
+
+        if (!empty($arrArticles))
+        {
+            $blnArticle = true;
+        }
+
+        if (!empty($arrContentElements))
+        {
+            $blnContent = true;
+        }
+
+        // Update only changed tables.
+        $this->objSyncCtoProCommunicationClient->updateSpecialTriggers($blnPage, $blnArticle, $blnContent, true);
+    }
+
+    /**
+     * Refresh the timestamps
+     */
+    protected function refreshTimestamps()
+    {
+        $arrTables = array();
+
+        // Check which table has been updated
+        $arrPages           = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
+        $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
+        $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
+
+        if (!empty($arrPages))
+        {
+            $arrTables[] = 'tl_page';
+        }
+
+        if (!empty($arrArticles))
+        {
+            $arrTables[] = 'tl_article';
+        }
+
+        if (!empty($arrContentElements))
+        {
+            $arrTables[] = 'tl_content';
+        }
+
+        $arrTableTimestamp = array(
+            'server' => $this->objSyncCtoHelper->getDatabaseTablesTimestamp($arrTables),
+            'client' => $this->objSyncCtoProCommunicationClient->getClientTimestamp($arrTables)
+        );
+
+        foreach ($arrTableTimestamp AS $location => $arrTimeStamps)
+        {
+            // Update timestamp
+            $mixLastTableTimestamp = $this->Database
+                    ->prepare("SELECT " . $location . "_timestamp FROM tl_synccto_clients WHERE id=?")
+                    ->limit(1)
+                    ->execute($this->intClientID)
+                    ->fetchAllAssoc();
+
+            if (strlen($mixLastTableTimestamp[0][$location . "_timestamp"]) != 0)
+            {
+                $arrLastTableTimestamp = deserialize($mixLastTableTimestamp[0][$location . "_timestamp"]);
+            }
+            else
+            {
+                $arrLastTableTimestamp = array();
+            }
+
+            foreach ($arrTimeStamps as $key => $value)
+            {
+                $arrLastTableTimestamp[$key] = $value;
+            }
+
+            // Search for old entries
+            $arrTables = $this->Database->listTables();
+            foreach ($arrLastTableTimestamp as $key => $value)
+            {
+                if (!in_array($key, $arrTables))
+                {
+                    unset($arrLastTableTimestamp[$key]);
+                }
+            }
+
+            $this->Database
+                    ->prepare("UPDATE tl_synccto_clients SET " . $location . "_timestamp = ? WHERE id = ? ")
+                    ->execute(serialize($arrLastTableTimestamp), $this->intClientID);
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -194,79 +359,52 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
     {
         $this->init();
 
+        // Do the whole diff.
         try
         {
-            // Do the whole diff.
-            if ($this->getWorkingMode() == self::WORKINGMODE_DIFF)
+            $i = 1;
+            switch ($this->objStepPool->step)
             {
-                $i = 1;
-                switch ($this->objStepPool->step)
-                {
-                    case $i++:
-                        $this->showBasicStep();
-                        break;
+                case $i++:
+                    $this->showBasicStep();
+                    break;
 
-                    case $i++:
-                        $this->checkSystem(true);
-                        break;
+                case $i++:
+                    $this->checkSystem(true);
+                    break;
 
-                    case $i++:
-                        $this->generateDataForPageTree();
-                        break;
+                case $i++:
+                    $this->generateDataForPageTree();
+                    break;
 
-                    case $i++:
-                        $this->loadFilesForPageTree();
-                        break;
+                case $i++:
+                    $this->loadFilesForPageTree();
+                    break;
 
-                    case $i++:
-                        $this->checkRun();
-                        break;
+                case $i++:
+                    $this->checkRun();
+                    break;
 
-                    case $i++:
-                        $this->showPopup('To');
-                        break;
+                case $i++:
+                    $this->showPopup('To');
+                    break;
 
-                    case $i++:
-                        $this->generateLocalUpdateFiles();
-                        break;
+                case $i++:
+                    $this->generateLocalUpdateFiles();
+                    break;
 
-                    case $i++:
-                        $this->sendUpdateFiles();
-                        break;
+                case $i++:
+                    $this->sendUpdateFiles();
+                    break;
 
-                    case $i++:
-                        $this->importExtern();
-                        break;
+                case $i++:
+                    $this->importExtern();
+                    break;
 
-                    case $i++:
+                case $i++:
 //                    $this->refreshTimestamps();
-                        $this->setNextStep();
-                        break;
-                }
-            }
-            // Run only the hash update for some special tables
-            else if ($this->getWorkingMode() == self::WORKINGMODE_UPDATE)
-            {
-                $i = 1;
-                switch ($this->objStepPool->step)
-                {
-                    case $i++:
-                        $this->showBasicStep();
-                        break;
-
-                    case $i++:
-                        $this->checkSystem(false);
-                        break;
-
-                    case $i++:
-                        $this->refreshHashes();
-                        break;
-
-                    case $i++:
-                        $this->refreshTimestamps();
-                        $this->setNextStep();
-                        break;
-                }
+                    $this->setNextStep();
+                    break;
             }
         }
         catch (Exception $exc)
@@ -845,109 +983,6 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
         $this->objSyncCtoClient->addStep();
         $this->objSyncCtoClient->setRefresh(true);
-    }
-
-    /**
-     * Refresh all hashes on client side.
-     */
-    protected function refreshHashes()
-    {
-        // Check if we have content
-        $arrPages           = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
-        $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
-        $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
-
-        if (!empty($arrPages))
-        {
-            $blnPage = true;
-        }
-
-        if (!empty($arrArticles))
-        {
-            $blnArticle = true;
-        }
-
-        if (!empty($arrContentElements))
-        {
-            $blnContent = true;
-        }
-
-        // Update only changed tables.
-        $this->objSyncCtoProCommunicationClient->updateSpecialTriggers($blnPage, $blnArticle, $blnContent, true);
-
-        // Next step
-        $this->objStepPool->step++;
-    }
-
-    protected function refreshTimestamps()
-    {
-        $arrTables = array();
-
-        // Check which table has been updated
-        $arrPages           = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_page'];
-        $arrArticles        = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_article'];
-        $arrContentElements = (array) $this->arrSyncSettings['syncCtoPro_transfer']['tl_content'];
-
-        if (!empty($arrPages))
-        {
-            $arrTables[] = 'tl_page';
-        }
-
-        if (!empty($arrArticles))
-        {
-            $arrTables[] = 'tl_article';
-        }
-
-        if (!empty($arrContentElements))
-        {
-            $arrTables[] = 'tl_content';
-        }
-
-        $arrTableTimestamp = array(
-            'server' => $this->objSyncCtoHelper->getDatabaseTablesTimestamp($arrTables),
-            'client' => $this->objSyncCtoProCommunicationClient->getClientTimestamp($arrTables)
-        );
-
-        foreach ($arrTableTimestamp AS $location => $arrTimeStamps)
-        {
-            // Update timestamp
-            $mixLastTableTimestamp = $this->Database
-                    ->prepare("SELECT " . $location . "_timestamp FROM tl_synccto_clients WHERE id=?")
-                    ->limit(1)
-                    ->execute($this->intClientID)
-                    ->fetchAllAssoc();
-
-            if (strlen($mixLastTableTimestamp[0][$location . "_timestamp"]) != 0)
-            {
-                $arrLastTableTimestamp = deserialize($mixLastTableTimestamp[0][$location . "_timestamp"]);
-            }
-            else
-            {
-                $arrLastTableTimestamp = array();
-            }
-
-            foreach ($arrTimeStamps as $key => $value)
-            {
-                $arrLastTableTimestamp[$key] = $value;
-            }
-
-            // Search for old entries
-            $arrTables = $this->Database->listTables();
-            foreach ($arrLastTableTimestamp as $key => $value)
-            {
-                if (!in_array($key, $arrTables))
-                {
-                    unset($arrLastTableTimestamp[$key]);
-                }
-            }
-
-            $this->Database
-                    ->prepare("UPDATE tl_synccto_clients SET " . $location . "_timestamp = ? WHERE id = ? ")
-                    ->execute(serialize($arrLastTableTimestamp), $this->intClientID);
-        }
-
-        // Next step
-        $this->objStepPool->step++;
     }
 
     /**
