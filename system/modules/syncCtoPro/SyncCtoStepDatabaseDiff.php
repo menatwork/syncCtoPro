@@ -149,14 +149,14 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
             return self::WORKINGMODE_NONE;
         }
         
-        // Check if diff is enabeld
-        if ($this->arrSyncSettings['post_data']['database_pages_check'] == true)
+        // Check if diff is enabeld - DC_Memoery and DC_General
+        if ($this->arrSyncSettings['post_data']['database_pages_check'] == true || $this->arrSyncSettings['post_data']['database_pages_check_b'] == true)
         {
             return self::WORKINGMODE_DIFF;
         }
 
         // Check if we have to regenerate the hashes
-        if (array_search('tl_page', $this->arrSyncSettings['syncCto_SyncTables']) !== false || array_search('tl_article', $this->arrSyncSettings['syncCto_SyncTables']) !== false || array_search('tl_content', $this->arrSyncSettings['syncCto_SyncTables']) !== false)
+        if (is_array($this->arrSyncSettings['syncCto_SyncTables']) && (array_search('tl_page', $this->arrSyncSettings['syncCto_SyncTables']) !== false || array_search('tl_article', $this->arrSyncSettings['syncCto_SyncTables']) !== false || array_search('tl_content', $this->arrSyncSettings['syncCto_SyncTables']) !== false))
         {
             return self::WORKINGMODE_UPDATE;
         }
