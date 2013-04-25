@@ -13,6 +13,7 @@
  * Steps
  */
 $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_1']   = 'Differenzierte Synchronisation.';
+$GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_2']   = 'Prüfsummen der entfernten Installation aktualisieren.';
 
 /**
  * Info

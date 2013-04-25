@@ -18,7 +18,8 @@ $GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncC
  */
 $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'clearDbInstaller');
 $GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
-$GLOBALS['TL_HOOKS']['syncExecuteFinalOperations'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
+$GLOBALS['TL_HOOKS']['syncAdditionalFunctions'][] = array('SyncCtoStepDatabaseDiff', 'remoteUpdateHashes');
+$GLOBALS['TL_HOOKS']['syncAdditionalFunctions'][] = array('SyncCtoStepDatabaseDiff', 'localeUpdateTimestamp');
 
 /**
  * Ignored fields for trigger / hash 
@@ -32,7 +33,7 @@ $GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive((array) $GLO
         'syncCto_hash',
         'PRIMARY'
     ),
-        ));
+));
 
 /**
  * Ignored fields for sync 
@@ -44,18 +45,32 @@ $GLOBALS['SYC_CONFIG']['sync_blacklist'] = array_merge_recursive((array) $GLOBAL
     'tl_page' => array(
         'dns',
     ),
-        ));
+));
 
 /**
  * Ignored tables for sync database
  */
 $GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge((array) $GLOBALS['SYC_CONFIG']['table_hidden'], array(
     'tl_synccto_diff'
-        ));
+));
 
 /**
  * CtoCommunication RPC Calls
  */
+
+// Refresh all hashes
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_REFRESH_HASHES"] = array(
+    "class"     => "SyncCtoProDatabase",
+    "function"  => "updateSpecialTriggers",
+    "typ"       => "POST",
+    "parameter" => array(
+        "page",
+        "article",
+        "content",
+        "update"
+    ),
+);
+
 // Import as SE file
 $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_IMPORT"] = array(
     "class"     => "SyncCtoProDatabase",

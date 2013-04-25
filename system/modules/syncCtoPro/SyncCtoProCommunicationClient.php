@@ -189,6 +189,35 @@ class SyncCtoProCommunicationClient
     {
         return $this->runServer('SYNCCTOPRO_CHECK_HASH');
     }
+    
+    /**
+     * Refresh all hashes from client
+     * 
+     * @return void
+     */
+    public function updateSpecialTriggers($blnPage, $blnArticle, $blnContent, $blnUpdate = false)
+    {
+        $arrData = array(
+            array(
+                "name"  => "page",
+                "value" => $blnPage,
+            ),
+            array(
+                "name"  => "article",
+                "value" => $blnArticle,
+            ),
+            array(
+                "name"  => "content",
+                "value" => $blnContent,
+            ),
+            array(
+                "name"  => "update",
+                "value" => $blnUpdate,
+            ),
+        );        
+        
+        return $this->runServer('SYNCCTOPRO_REFRESH_HASHES', $arrData);
+    }
 
 }
 

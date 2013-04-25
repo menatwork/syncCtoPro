@@ -558,7 +558,7 @@ class PopupSyncDiff extends Backend
                 $mixValuesServer                              = $this->implode($tmp);
                 $arrDataForDiff[$strField]['server']['array'] = true;
             }
-            if (is_array(($tmp                                          = deserialize($mixValuesClient))) && !is_array($mixValuesClient))
+            if (is_array(($tmp = deserialize($mixValuesClient))) && !is_array($mixValuesClient))
             {
                 $mixValuesClient                              = $this->implode($tmp);
                 $arrDataForDiff[$strField]['client']['array'] = true;
@@ -595,12 +595,12 @@ class PopupSyncDiff extends Backend
         foreach ($arrDataForDiff as $strField => $arrValues)
         {
             // only check array if we have enough other entries
-            if ($strContent != '' && $strField != $arrLastKeys)
+            if ( $strContent != '' || ($strContent == '' && $strField != $arrLastKeys) )
             {
                 // Check for empty data
                 if ($arrValues['server']['array'] === true)
                 {
-                    $strReplaceTest = trim(str_replace(',', '', $arrValues['server']['data']));
+                    $strReplaceTest = trim(str_replace(array(',', '{', '}'), '', $arrValues['server']['data']));
                     if (empty($strReplaceTest))
                     {
                         $arrValues['server']['data'] = '';
@@ -609,7 +609,7 @@ class PopupSyncDiff extends Backend
 
                 if ($arrValues['client']['array'] === true)
                 {
-                    $strReplaceTest = trim(str_replace(',', '', $arrValues['client']['data']));
+                    $strReplaceTest = trim(str_replace(array(',', '{', '}'), '', $arrValues['client']['data']));
                     if (empty($strReplaceTest))
                     {
                         $arrValues['client']['data'] = '';
@@ -891,21 +891,32 @@ class PopupSyncDiff extends Backend
         {
             return $var;
         }
-        elseif (!is_array(next($var)))
-        {
-            return implode(', ', $var);
-        }
-        else
-        {
-            $buffer = '';
 
-            foreach ($var as $k => $v)
+        $strReturn = '';
+        $blnFirst  = true;
+
+        foreach ($var as $key => $value)
+        {
+            if (!$blnFirst)
             {
-                $buffer .= $k . ": " . $this->implode($v) . "\n";
+                $strReturn .= ', ';
+            }
+            else
+            {
+                $blnFirst = false;
             }
 
-            return trim($buffer);
+            if (is_array($value))
+            {
+                $strReturn .= '{' . $this->implode($value) . '}';
+            }
+            else
+            {
+                $strReturn .= $value;
+            }
         }
+        
+        return $strReturn;
     }
 
     /**
