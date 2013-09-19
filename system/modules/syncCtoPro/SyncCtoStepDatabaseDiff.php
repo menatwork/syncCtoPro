@@ -408,7 +408,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
                     break;
 
                 case $i++:
-                    if ($_SERVER['REMOTE_ADDR'] == '192.168.19.125' && $this->arrSyncSettings['automode'])
+                    if ($this->arrSyncSettings['automode'])
                     {
                         $this->runAutoDiff();
                     }
