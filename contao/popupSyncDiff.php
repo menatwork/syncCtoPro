@@ -1059,8 +1059,6 @@ class PopupSyncDiff extends Backend
             }
         }
 
-
-
         return $arrReturn;
     }
 
