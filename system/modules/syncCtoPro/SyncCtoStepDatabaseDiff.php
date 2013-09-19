@@ -57,6 +57,13 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
     protected $objSyncCtoProCommunicationClient;
 
     /**
+     * Ext. database class for pro.
+     * 
+     * @var SyncCtoProDatabase 
+     */
+    protected $objSyncCtoProDatabase;
+
+    /**
      * @var SyncCtoHelper
      */
     protected $objSyncCtoHelper;
@@ -80,6 +87,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
         // Init helper
         $this->objSyncCtoProCommunicationClient = SyncCtoProCommunicationClient::getInstance();
+        $this->objSyncCtoProDatabase            = SyncCtoProDatabase::getInstance();
         $this->objSyncCtoHelper                 = SyncCtoHelper::getInstance();
 
         $this->loadLanguageFile('tl_syncCtoPro_steps');
@@ -112,6 +120,14 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         $this->arrClientInformation = $this->objSyncCtoClient->getClientInformation();
     }
 
+    /**
+     * Save the sync settings for a client
+     */
+    protected function saveSyncSettings()
+    {
+        $this->objSyncCtoClient->setSyncSettings($this->arrSyncSettings);
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Check System
     ////////////////////////////////////////////////////////////////////////////
@@ -123,6 +139,12 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
     public function checkSyncTo()
     {
+        // If automode return true, always.
+        if ($this->arrSyncSettings['automode'])
+        {
+            return true;
+        }
+
         return $this->checkSync();
     }
 
@@ -150,7 +172,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         }
         
         // Check if diff is enabeld - DC_Memoery and DC_General
-        if ($this->arrSyncSettings['post_data']['database_pages_check'] == true || $this->arrSyncSettings['post_data']['database_pages_check_b'] == true)
+        if ($this->arrSyncSettings['post_data']['database_pages_check'] == true || $this->arrSyncSettings['post_data']['database_pages_check_b'] == true || $this->arrSyncSettings['automode'] == true)
         {
             return self::WORKINGMODE_DIFF;
         }
@@ -386,7 +408,14 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
                     break;
 
                 case $i++:
-                    $this->showPopup('To');
+                    if ($_SERVER['REMOTE_ADDR'] == '192.168.19.125' && $this->arrSyncSettings['automode'])
+                    {
+                        $this->runAutoDiff();
+                    }
+                    else
+                    {
+                        $this->showPopup('To');
+                    }
                     break;
 
                 case $i++:
@@ -736,6 +765,76 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
     }
 
     /**
+     * Step 5 - Show popup for pages
+     * 
+     * @return type
+     */
+    protected function runAutoDiff()
+    {      
+         // Get all data / load helper
+        $arrFilePathes         = $this->arrSyncSettings['syncCtoPro_ExternFile'];
+        $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
+
+        $arrPageDiffs = array();
+        $arrArticleDiffs = array();
+        $arrContentDiffs = array();
+
+        // Pages -----------
+        // Read client pages
+        $arrClientPages      = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_page']);
+        $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
+
+        // Get server Pages
+        $arrPages = $this->Database
+                ->query('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
+                ->fetchAllAssoc();
+
+        $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());
+
+        $arrPageDiffs = $this->getIdDiffs($arrPages, $arrPageHashes, $arrClientPages['data'], $arrClientPageHashes);
+
+        // Article ---------
+        $arrClientArticle       = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_article']);
+        $arrClientArticleHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_article');
+
+        // Get server article
+        $arrArticle = $this->Database
+                ->query('SELECT title, id, pid FROM tl_article ORDER BY pid, id')
+                ->fetchAllAssoc();
+
+        $arrArticleHashes = $objSyncCtoProDatabase->getHashValueFor('tl_article', array());
+
+        $arrArticleDiffs = $this->getIdDiffs($arrArticle, $arrArticleHashes, $arrClientArticle['data'], $arrClientArticleHashes);
+
+        // Content ---------
+        $arrClientContent       = $objSyncCtoProDatabase->readXML($arrFilePathes['tl_content']);
+        $arrClientContentHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_content');
+
+        // Get server article
+        $arrContent = $this->Database
+                ->query('SELECT type, id, pid FROM tl_content ORDER BY pid, id')
+                ->fetchAllAssoc();
+
+        $arrContentHashes = $objSyncCtoProDatabase->getHashValueFor('tl_content', array());
+
+        $arrContentDiffs = $this->getIdDiffs($arrContent, $arrContentHashes, $arrClientContent['data'], $arrClientContentHashes);
+
+        $this->saveIdToSession($arrPageDiffs, 'tl_page');
+        $this->saveIdToSession($arrArticleDiffs, 'tl_article');
+        $this->saveIdToSession($arrContentDiffs, 'tl_content');
+
+        // Go to next step
+        $this->objData->setState(SyncCtoEnum::WORK_WORK);
+        $this->objData->setHtml("");
+
+        $this->objStepPool->step++;
+
+        $this->objSyncCtoClient->setRefresh(true);
+
+        return;
+    }
+
+    /**
      * Step 6 - Build update files for extern
      * 
      * @throws Exception
@@ -1040,6 +1139,44 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
     }
 
     /**
+     * Get a list with ID's from diff.
+     * @param type $arrSourcePages
+     * @param type $arrSourceHashes
+     * @param type $arrTargetPages
+     * @param type $arrTargetHashes
+     * @return type
+     */
+    protected function getIdDiffs($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes)
+    {
+        // Set id as key
+        $arrSourcePages = $this->rebuildArray($arrSourcePages);
+        $arrTargetPages = $this->rebuildArray($arrTargetPages);
+
+        // Search for missing entries
+        $arrKeysSource = array_keys($arrSourcePages);
+        $arrKeysTarget = array_keys($arrTargetPages);
+
+        $arrMissingClient = array_diff($arrKeysSource, $arrKeysTarget);
+        $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);        
+        
+        $arrReturn = array();
+
+        foreach ($arrSourcePages as $intID => $mixValues)
+        {
+            if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
+            {
+                continue;
+            }
+            
+            $arrReturn['transfer'][] = $intID;
+        }
+        
+        $arrReturn['delete'] = $arrMissingServer;        
+       
+        return $arrReturn;
+    }
+
+    /**
      * Search the id and set it as key 
      * 
      * @param array $arrData
@@ -1105,6 +1242,29 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         }
 
         return array('all' => array_unique($arrReturn));
+    }
+
+    /**
+     * Save all id's to session settings.
+     * 
+     * @param array $arrData Array with insert and deletet ids.
+     * @param string $strTable Name of table.
+     */
+    protected function saveIdToSession($arrData, $strTable)
+    {
+        // Run each field for transfer
+        foreach ((array) $arrData['transfer'] as $intTransferId)
+        {
+            $this->arrSyncSettings['syncCtoPro_transfer'][$strTable][$intTransferId] = $intTransferId;
+        }
+
+        // Run each field for delete
+        foreach ((array) $arrData['delete'] as $intDeleteId)
+        {
+            $this->arrSyncSettings['syncCtoPro_delete_client'][$strTable][$intDeleteId] = $intDeleteId;
+        }
+
+        $this->saveSyncSettings();
     }
 
 }
