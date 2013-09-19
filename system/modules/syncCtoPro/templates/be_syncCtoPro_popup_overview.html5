@@ -147,6 +147,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="content">
+                                    <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/content.png" alt="" />
                                     <?php if(!empty($arrContentValues['source']['type'])): ?>
                                         <?php echo (key_exists($arrContentValues['source']['type'], $GLOBALS['TL_LANG']['tl_content']))? $GLOBALS['TL_LANG']['tl_content'][$arrContentValues['source']['type']][0] : $arrContentValues['source']['type'] ; ?>
                                     <?php else: ?>
@@ -154,7 +155,8 @@
                                     <?php endif; ?>
                                 </td>
                                 <td></td>
-                                <td class="content">      
+                                <td class="content"> 
+                                    <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/content.png" alt="" />
                                     <?php if(!empty($arrContentValues['target']['type'])): ?>
                                         <?php echo (key_exists($arrContentValues['target']['type'], $GLOBALS['TL_LANG']['tl_content']))? $GLOBALS['TL_LANG']['tl_content'][$arrContentValues['target']['type']][0] : $arrContentValues['target']['type'] ; ?>
                                     <?php else: ?>
