@@ -3,7 +3,7 @@
 <script>
     function mySubmit(strName)
     {
-        $(strName).click()
+        $(strName).click();
         return false;
     }
 </script>
@@ -149,7 +149,7 @@
                                 <td class="content">
                                     <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/content.png" alt="" />
                                     <?php if(!empty($arrContentValues['source']['type'])): ?>
-                                        <?php echo (key_exists($arrContentValues['source']['type'], $GLOBALS['TL_LANG']['tl_content']))? $GLOBALS['TL_LANG']['tl_content'][$arrContentValues['source']['type']][0] : $arrContentValues['source']['type'] ; ?>
+                                        <?php echo $this->helperClass->getReadableContentName($arrContentValues['source']['type']) ; ?>
                                     <?php else: ?>
                                         <?php echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; ?>
                                     <?php endif; ?>
@@ -158,7 +158,7 @@
                                 <td class="content"> 
                                     <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/content.png" alt="" />
                                     <?php if(!empty($arrContentValues['target']['type'])): ?>
-                                        <?php echo (key_exists($arrContentValues['target']['type'], $GLOBALS['TL_LANG']['tl_content']))? $GLOBALS['TL_LANG']['tl_content'][$arrContentValues['target']['type']][0] : $arrContentValues['target']['type'] ; ?>
+                                        <?php echo $this->helperClass->getReadableContentName($arrContentValues['target']['type']) ; ?>                                       
                                     <?php else: ?>
                                         <?php echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; ?>
                                     <?php endif; ?>

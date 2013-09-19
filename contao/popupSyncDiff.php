@@ -291,10 +291,17 @@ class PopupSyncDiff extends Backend
         $GLOBALS['TL_CSS'][] = TL_SCRIPT_URL . 'system/modules/syncCtoPro/html/css/diff.css';
 
         // Set javascript
-        $GLOBALS['TL_JAVASCRIPT'][] = TL_PLUGINS_URL . 'plugins/mootools/' . MOOTOOLS_CORE . '/mootools-core.js';
-        $GLOBALS['TL_JAVASCRIPT'][] = 'contao/contao.js';
-        $GLOBALS['TL_JAVASCRIPT'][] = TL_SCRIPT_URL . 'system/modules/syncCto/html/js/compare_src.js';
-
+        if (version_compare(VERSION, '3.0', '<'))
+        {
+            $GLOBALS['TL_JAVASCRIPT'][] = TL_PLUGINS_URL . 'plugins/mootools/' . MOOTOOLS_CORE . '/mootools-core.js';
+            $GLOBALS['TL_JAVASCRIPT'][] = 'contao/contao.js';
+            $GLOBALS['TL_JAVASCRIPT'][] = TL_SCRIPT_URL . 'system/modules/syncCto/html/js/compare_src.js';
+        }
+        else
+        {
+            $GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/core/' . MOOTOOLS . '/mootools.js';
+        }
+        
         // Template work
         $this->popupTemplate->theme    = $this->getTheme();
         $this->popupTemplate->base     = $this->Environment->base;
@@ -403,7 +410,6 @@ class PopupSyncDiff extends Backend
 
             $arrArticleNeeded[$value['pid']] = true;
         }
-
 
         // Clean up article
         foreach ($arrAllArticleValues as $key => $value)
@@ -748,6 +754,7 @@ class PopupSyncDiff extends Backend
         $strDiffBuffer = "";
 
         $arrTableNames = array_merge(array_keys($arrLocData), array_keys($arrExtData));
+        $arrTableNames = array_unique($arrTableNames);
 
         foreach ($arrTableNames as $strTableName)
         {
@@ -783,7 +790,7 @@ class PopupSyncDiff extends Backend
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLookupPage[0]['title'], $arrLookupArticle[0]['title']);
                 }
 
-                if (key_exists($arrLocaleData['id'], $arrExtData[$strTableName]))
+                if (isset( $arrExtData[$strTableName]) && key_exists($arrLocaleData['id'], $arrExtData[$strTableName]))
                 {
                     $strDiffBuffer .= $this->runDiff($arrLocaleData, $arrExtData[$strTableName][$arrLocaleData['id']], true, 'be_syncCtoPro_popup_detail_small');
 
@@ -801,7 +808,7 @@ class PopupSyncDiff extends Backend
             }
 
             // Read second extern data
-            foreach ($arrExtData[$strTableName] as $mixID => $arrExternData)
+            foreach ((array) $arrExtData[$strTableName] as $mixID => $arrExternData)
             {
                 $this->intRowId = $mixID;
                 $strDiffBuffer .= $this->runDiff(array(), $arrExternData, true, 'be_syncCtoPro_popup_detail_small');
@@ -828,6 +835,45 @@ class PopupSyncDiff extends Backend
     ////////////////////////////////////////////////////////////////////////////
     // Helper
     ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Get the humsn readable name of a content type.
+     * 
+     * @param string $strType Type of content element.
+     * 
+     * @return string Name for the content element.
+     */
+    public function getReadableContentName($strType)
+    {
+        // Check tl_content
+        if (array_key_exists($strType, $GLOBALS['TL_LANG']['tl_content']))
+        {
+            if (is_array($GLOBALS['TL_LANG']['tl_content'][$strType]))
+            {
+                return $GLOBALS['TL_LANG']['tl_content'][$strType][0];
+            }
+            else
+            {
+                return $GLOBALS['TL_LANG']['tl_content'][$strType];
+            }
+        }
+        
+        // Check cte
+        if (isset($GLOBALS['TL_LANG']['CTE']) && array_key_exists($strType, $GLOBALS['TL_LANG']['CTE']))
+        {
+            if (is_array($GLOBALS['TL_LANG']['CTE'][$strType]))
+            {
+                return $GLOBALS['TL_LANG']['CTE'][$strType][0];
+            }
+            else
+            {
+                return $GLOBALS['TL_LANG']['CTE'][$strType];
+            }
+        }
+
+        // Nothing found return the type.
+        return $strType;
+    }
 
     /**
      * Load a list with id/titles from client
