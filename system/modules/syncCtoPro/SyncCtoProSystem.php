@@ -71,7 +71,8 @@ class SyncCtoProSystem extends Backend
         }
 
         // Check license key
-        if (empty($objResult->lickey))
+        $strLickey= $objResult->lickey;
+        if (empty($strLickey))
         {
             return false;
         }
@@ -101,7 +102,7 @@ class SyncCtoProSystem extends Backend
         }
 
         // Check hash
-        $strHash = md5($GLOBALS['TL_CONFIG']['installPassword'] . "|" . $GLOBALS['TL_CONFIG']['encryptionKey']);
+        $strHash = md5($GLOBALS['TL_CONFIG']['encryptionKey'] . "|" . $GLOBALS['TL_CONFIG']['encryptionKey']);
 
         if ($GLOBALS['TL_CONFIG']['syncCtoPro_hash'] != $strHash)
         {

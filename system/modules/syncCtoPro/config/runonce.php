@@ -19,7 +19,9 @@ class RunonceSyncCtoPro extends Backend
     public function run()
     {
         // Check referer
-        if ($this->getReferer() == 'contao/main.php?do=repository_manager&install=extension')
+        if ($this->getReferer() == 'contao/main.php?do=repository_manager&install=extension' 
+                || $this->getReferer() == 'contao/main.php?do=repository_manager&update=database'
+                || $this->getReferer() == 'contao/main.php?do=repository_manager')
         {
             if (SyncCtoProSystem::getInstance()->checkERData())
             {
