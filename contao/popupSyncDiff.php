@@ -1131,7 +1131,7 @@ class PopupSyncDiff extends Backend
         }
 
         $arrUserSettings = array();
-        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_hash_blacklist']) as $key => $value)
+        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value)
         {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }
