@@ -33,6 +33,9 @@ $GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive((array) $GLO
         'syncCto_hash',
         'PRIMARY'
     ),
+    'tl_page' => array(
+        'dns',
+    ),
 ));
 
 /**
