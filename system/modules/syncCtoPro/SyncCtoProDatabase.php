@@ -548,6 +548,53 @@ class SyncCtoProDatabase extends Backend
     ////////////////////////////////////////////////////////////////////////////
 
     /**
+     * Try to remove all triggers.
+     * 
+     * @param mixed $mixValues
+     * 
+     * @return mixed
+     */
+    public function removeTriggerFromHook($mixValues = null)
+    {
+        try
+        {
+            $this->runRemoveTrigger('tl_page');
+            $this->runRemoveTrigger('tl_article');
+            $this->runRemoveTrigger('tl_content');
+        }
+        catch (Exception $exc)
+        {
+            $this->addErrorMessage($GLOBALS['TL_LANG']['ERR']['trigger_delete'] . '<br/>' . $GLOBALS['TL_LANG']['tl_syncCto_check']['trigger_information']);
+            $this->log('There was an error by deleting the triggers for SyncCtoPro. Error: ' . $exc->getMessage(), __CLASS__ . " | " . __FUNCTION__, TL_ERROR);
+        }
+
+        if ($mixValues != null)
+        {
+            return $mixValues;
+        }
+    }
+
+    /**
+     * Remove all triggers from a chosen tabel.
+     * 
+     * @param string $strTable Name of the tabel.
+     */
+    protected function runRemoveTrigger($strTable)
+    {
+        // Drop
+        $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterUpdateHashRefresh`";
+        $this->Database->query($strQuery);
+
+        // Drop
+        $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterInsertHashRefresh`";
+        $this->Database->query($strQuery);
+
+        // Drop
+        $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterDeleteHashRefresh`";
+        $this->Database->query($strQuery);
+    }
+
+    /**
      * Call this for hooks
      */
     public function updateTriggerFromHook($mixValues = null)
@@ -822,7 +869,7 @@ class SyncCtoProDatabase extends Backend
         }
 
         $arrUserSettings = array();
-        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_hash_blacklist']) as $key => $value)
+        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value)
         {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }
