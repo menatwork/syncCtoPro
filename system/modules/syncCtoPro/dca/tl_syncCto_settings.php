@@ -9,7 +9,7 @@
  * @filesource
  */
 $GLOBALS['TL_DCA']['tl_syncCto_settings']['palettes']['default'] = preg_replace(
-        "/syncCto_hidden_tables/i", "syncCto_hidden_tables;{diff_legend:hide},syncCto_diff_blacklist,syncCto_sync_blacklist", $GLOBALS['TL_DCA']['tl_syncCto_settings']['palettes']['default']
+        "/syncCto_hidden_tables/i", "syncCto_hidden_tables;{diff_legend:hide},syncCto_diff_blacklist,syncCto_sync_blacklist;{trigger_legend:hide},syncCto_trigger_refresh,syncCto_trigger_delete", $GLOBALS['TL_DCA']['tl_syncCto_settings']['palettes']['default']
 );
 
 $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_diff_blacklist'] = array(
@@ -74,11 +74,72 @@ $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_sync_blacklist'] = 
     'save_callback' => array(array('tl_syncCto_settings_pro', 'saveSyncBlacklist'))
 );
 
+$GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_refresh'] = array(
+    'label'     => &$GLOBALS['TL_LANG']['tl_syncCto_settings']['trigger_refresh'],
+    'exclude'   => true,
+    'inputType' => 'checkbox',
+    'eval'      => array(
+        'alwaysSave'   => true,
+        'tl_class'     => 'w50'
+    ),
+    'save_callback' => array(array('tl_syncCto_settings_pro', 'refreshTrigger'))
+);
+
+$GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_delete'] = array(
+    'label'     => &$GLOBALS['TL_LANG']['tl_syncCto_settings']['trigger_delete'],
+    'exclude'   => true,
+    'inputType' => 'checkbox',
+    'eval'      => array(
+        'alwaysSave'   => true,
+        'tl_class'     => 'w50'
+    ),
+    'save_callback' => array(array('tl_syncCto_settings_pro', 'deleteTrigger'))
+);
+
 /**
  * Class for syncCto settings
  */
 class tl_syncCto_settings_pro extends Backend
 {
+    
+    // Trigger update ----------------------------------------------------------
+    
+    /**
+     * Refresh all triggers.
+     * 
+     * @param type $mixValues
+     * 
+     * @return boolean
+     */
+    public function refreshTrigger($mixValues)
+    {
+        // Only run if checked.
+        if($mixValues == true)
+        {
+            SyncCtoProDatabase::getInstance()->updateTriggerFromHook();
+        }
+        
+        return false;
+    }
+
+    /**
+     * Remove all triggers from the tables.
+     * 
+     * @param type $mixValues
+     * 
+     * @return boolean
+     */
+    public function deleteTrigger($mixValues)
+    {
+        // Only run if checked.
+        if($mixValues == true)
+        {
+            SyncCtoProDatabase::getInstance()->removeTriggerFromHook();
+        }
+        
+        return false;
+    }
+    
     // Diff / Trigger ----------------------------------------------------------
 
     /**
