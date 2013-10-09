@@ -52,7 +52,7 @@ class SyncCtoProSystem extends Backend
         $arrReturn = array();
         $arrToRun  = array(
             'tl_page',
-            'tl_conent',
+            'tl_content',
             'tl_article'
         );
 
