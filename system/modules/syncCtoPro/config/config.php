@@ -8,6 +8,7 @@
  * @license    EULA
  * @filesource
  */
+
 /**
  * Backend
  */
@@ -16,10 +17,11 @@ $GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncC
 /**
  * Hooks
  */
-$GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'clearDbInstaller');
-$GLOBALS['TL_HOOKS']['sqlCompileCommands'][] = array('SyncCtoProDatabase', 'updateTriggerFromHook');
-$GLOBALS['TL_HOOKS']['syncAdditionalFunctions'][] = array('SyncCtoStepDatabaseDiff', 'remoteUpdateHashes');
-$GLOBALS['TL_HOOKS']['syncAdditionalFunctions'][] = array('SyncCtoStepDatabaseDiff', 'localeUpdateTimestamp');
+$GLOBALS['TL_HOOKS']['sqlCompileCommands'][]        = array('SyncCtoProDatabase', 'clearDbInstaller');
+$GLOBALS['TL_HOOKS']['sqlCompileCommands'][]        = array('SyncCtoProDatabase', 'updateTriggerFromHook');
+$GLOBALS['TL_HOOKS']['syncAdditionalFunctions'][]   = array('SyncCtoStepDatabaseDiff', 'remoteUpdateHashes');
+$GLOBALS['TL_HOOKS']['syncAdditionalFunctions'][]   = array('SyncCtoStepDatabaseDiff', 'localeUpdateTimestamp');
+$GLOBALS['TL_HOOKS']['syncDBUpdateBeforeDrop'][]    = array('SyncCtoProSystem', 'preventBlacklistValues');
 
 /**
  * Ignored fields for trigger / hash 
