@@ -19,24 +19,19 @@ class RunonceSyncCtoPro extends Backend
     public function run()
     {
         // Check referer
-        if ($this->getReferer() == 'contao/main.php?do=repository_manager&install=extension' 
-                || $this->getReferer() == 'contao/main.php?do=repository_manager&update=database'
-                || $this->getReferer() == 'contao/main.php?do=repository_manager')
+        if (SyncCtoProSystem::getInstance()->checkERData())
         {
-            if (SyncCtoProSystem::getInstance()->checkERData())
-            {
-                // Generate hash
-                $strHash = md5($GLOBALS['TL_CONFIG']['encryptionKey'] . "|" . $GLOBALS['TL_CONFIG']['encryptionKey']);
+            // Generate hash
+            $strHash = md5($GLOBALS['TL_CONFIG']['encryptionKey'] . "|" . $GLOBALS['TL_CONFIG']['encryptionKey']);
 
-                // Save hash
-                if (key_exists('syncCtoPro_hash', $GLOBALS['TL_CONFIG']))
-                {
-                    Config::getInstance()->update("\$GLOBALS['TL_CONFIG']['syncCtoPro_hash']", $strHash);
-                }
-                else
-                {
-                    Config::getInstance()->add("\$GLOBALS['TL_CONFIG']['syncCtoPro_hash']", $strHash);
-                }
+            // Save hash
+            if (key_exists('syncCtoPro_hash', $GLOBALS['TL_CONFIG']))
+            {
+                Config::getInstance()->update("\$GLOBALS['TL_CONFIG']['syncCtoPro_hash']", $strHash);
+            }
+            else
+            {
+                Config::getInstance()->add("\$GLOBALS['TL_CONFIG']['syncCtoPro_hash']", $strHash);
             }
         }
     }
