@@ -8,7 +8,7 @@
  * @license    EULA
  * @filesource
  */
-class SyncCtoProDatabase extends Backend
+class SyncCtoProDatabase extends \Backend
 {
 
     /**
@@ -95,13 +95,13 @@ class SyncCtoProDatabase extends Backend
             return false;
         }
 
-        if (!$this->Database->tableExists($strTable))
+        if (!\Database::getInstance()->tableExists($strTable))
         {
             return false;
         }
 
         $strQuery = "DELETE FROM $strTable WHERE id IN (" . implode(", ", $arrIds) . ")";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -149,7 +149,7 @@ class SyncCtoProDatabase extends Backend
      */
     public function getDataFor($strTable, $arrIds = null, $arrFields = null)
     {
-        if (!$this->Database->tableExists($strTable))
+        if (!\Database::getInstance()->tableExists($strTable))
         {
             return false;
         }
@@ -172,7 +172,7 @@ class SyncCtoProDatabase extends Backend
             $strWhere = "WHERE id IN(" . implode(', ', $arrIds) . ")";
         }
 
-        $objData = $this->Database->query("SELECT $strFields FROM $strTable $strWhere ORDER BY id");
+        $objData = \Database::getInstance()->query("SELECT $strFields FROM $strTable $strWhere ORDER BY id");
 
         return $objData;
     }
@@ -201,7 +201,9 @@ class SyncCtoProDatabase extends Backend
 
     public function setDataFor($strTable, $arrData, $arrInsertFields)
     {
-        if (empty($strTable) || !$this->Database->tableExists($strTable))
+
+
+        if (empty($strTable) || !\Database::getInstance()->tableExists($strTable))
         {
             throw new Exception('Error by import data. Unknown or empty tablename: ' . $arrData['table']);
         }
@@ -212,7 +214,7 @@ class SyncCtoProDatabase extends Backend
         }
 
         // Check fields
-        $arrKnownFields = $this->Database->getFieldNames($strTable);
+        $arrKnownFields = \Database::getInstance()->getFieldNames($strTable);
 
         if (($mixKey = array_search('PRIMARY', $arrKnownFields)) !== false)
         {
@@ -232,7 +234,7 @@ class SyncCtoProDatabase extends Backend
         }
 
         // Import
-        $arrKnownIDs = $this->Database->query("SELECT id FROM $strTable")->fetchEach('id');
+        $arrKnownIDs = \Database::getInstance()->query("SELECT id FROM $strTable")->fetchEach('id');
 
         $arrUpdate = array();
         $arrInsert = array();
@@ -252,26 +254,55 @@ class SyncCtoProDatabase extends Backend
             unset($arrData[$mixKey]);
         }
 
+        $arrErrors = array();
+        $intCount = 0;
+
         // Update
         foreach ($arrUpdate as $key => $arrValues)
         {
-            $intID = $arrValues['update']['id'];
-            unset($arrValues['update']['id']);
+            try
+            {
+                $intID = $arrValues['update']['id'];
+                unset($arrValues['update']['id']);
 
-            $this->Database->prepare("UPDATE $strTable %s WHERE id=?")
+                \Database::getInstance()->prepare("UPDATE $strTable %s WHERE id=?")
                     ->set($arrValues['update'])
                     ->execute($intID);
+                $intCount++;
+            }
+            catch (Exception $e)
+            {
+                $arrErrors[] = $e->getMessage();
+            }
         }
 
         // Insert
         foreach ($arrInsert as $key => $arrValues)
         {
-            $this->Database->prepare("INSERT INTO $strTable %s")
+            try
+            {
+                \Database::getInstance()->prepare("INSERT INTO $strTable %s")
                     ->set($arrValues['insert'])
                     ->execute();
+                $intCount++;
+            }
+            catch (Exception $e)
+            {
+                $arrErrors[] = $e->getMessage();
+            }
         }
 
-        return true;
+
+
+        if(empty($arrErrors))
+        {
+            return true;
+        }
+        else
+        {
+            $arrErrors = array_keys(array_flip($arrErrors));
+            throw new Exception(implode(' | ', $arrErrors));
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -286,7 +317,7 @@ class SyncCtoProDatabase extends Backend
      * 
      * @return string
      */
-    public function writeXML($strPath, Database_Result $objData, $strTable, $arrOnlyInsert = array())
+    public function writeXML($strPath, $objData, $strTable, $arrOnlyInsert = array())
     {
         // Write gzip xml file
         $objGzFile = new File($strPath);
@@ -326,12 +357,12 @@ class SyncCtoProDatabase extends Backend
 
             // Get the id for filtering            
             $arrFieldListForInsert = array();
-            if (key_exists('all', $arrOnlyInsert))
+            if (array_key_exists('all', $arrOnlyInsert))
             {
                 $arrFieldListForInsert = array_merge($arrFieldListForInsert, $arrOnlyInsert['all']);
             }
 
-            if (key_exists($arrRow['id'], $arrOnlyInsert))
+            if (array_key_exists($arrRow['id'], $arrOnlyInsert))
             {
                 $arrFieldListForInsert = array_merge($arrFieldListForInsert, $arrOnlyInsert[$arrRow['id']]);
             }
@@ -349,7 +380,7 @@ class SyncCtoProDatabase extends Backend
                     $objXml->writeAttribute('onlyInsert', true);
                 }
 
-                $objXml->writeCdata($mixvalue);
+                $objXml->writeCdata(base64_encode($mixvalue));
                 $objXml->endElement(); // End data
             }
 
@@ -421,12 +452,23 @@ class SyncCtoProDatabase extends Backend
         $blnInTable          = false;
         $intI                = 0;
 
+        //  Check if the document is valid.
+        $objXMLReaderValidate = new XMLReader();
+        $objXMLReaderValidate->open(TL_ROOT . "/" . $strTempPath);
+        $objXMLReaderValidate->setParserProperty(XMLReader::VALIDATE, true);
+        if(!$objXMLReaderValidate->isValid())
+        {
+            throw new \RuntimeException('Not a valid XML.');
+        }
+        $objXMLReaderValidate->close();
+
         // Read XML
         $objXMLReader = new XMLReader();
         $objXMLReader->open(TL_ROOT . "/" . $strTempPath);
 
         while ($objXMLReader->read())
         {
+            $arrfooBaa[] = $objXMLReader->nodeType;
             switch ($objXMLReader->nodeType)
             {
                 // Values
@@ -437,12 +479,13 @@ class SyncCtoProDatabase extends Backend
                         // Check if the field is only for insert
                         if ($blnOnlyInsert)
                         {
-                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $objXMLReader->value;
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = base64_decode($objXMLReader->value);
                         }
                         else
                         {
-                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $objXMLReader->value;
-                            $arrData['data'][$intI]['update'][$strCurrentAttribute] = $objXMLReader->value;
+                            $mixValue = base64_decode($objXMLReader->value);
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $mixValue;
+                            $arrData['data'][$intI]['update'][$strCurrentAttribute] = $mixValue;
                         }
                     }
                     else if ($blnInTable)
@@ -583,15 +626,15 @@ class SyncCtoProDatabase extends Backend
     {
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterUpdateHashRefresh`";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
 
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterInsertHashRefresh`";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
 
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterDeleteHashRefresh`";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
     }
 
     /**
@@ -720,13 +763,13 @@ class SyncCtoProDatabase extends Backend
      */
     protected function runUpdateHashes($strTable)
     {
-        if (!$this->Database->fieldExists('syncCto_hash', $strTable))
+        if (!\Database::getInstance()->fieldExists('syncCto_hash', $strTable))
         {
             return;
         }
 
         $strQuery = "UPDATE " . $strTable . " SET syncCto_hash = now()";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
     }
 
     /**
@@ -739,7 +782,7 @@ class SyncCtoProDatabase extends Backend
     protected function runUpdateTrigger($strTable, $arrFieldFilter)
     {
         // Get field list
-        $arrFields = $this->Database->getFieldNames($strTable);
+        $arrFields = \Database::getInstance()->getFieldNames($strTable);
         foreach ($arrFieldFilter as $strField)
         {
             if (($strKey = array_search($strField, $arrFields)) !== false)
@@ -757,7 +800,7 @@ class SyncCtoProDatabase extends Backend
 
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterUpdateHashRefresh`";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
 
         // Create
         $strQuery = "
@@ -770,7 +813,7 @@ class SyncCtoProDatabase extends Backend
 
             END
             ";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
     }
 
     /**
@@ -783,7 +826,7 @@ class SyncCtoProDatabase extends Backend
     protected function runInsertTrigger($strTable, $arrFieldFilter)
     {
         // Get field list
-        $arrFields = $this->Database->getFieldNames($strTable);
+        $arrFields = \Database::getInstance()->getFieldNames($strTable);
         foreach ($arrFieldFilter as $strField)
         {
             if (($strKey = array_search($strField, $arrFields)) !== false)
@@ -801,7 +844,7 @@ class SyncCtoProDatabase extends Backend
 
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterInsertHashRefresh`";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
 
         // Create
         $strQuery = "
@@ -814,7 +857,7 @@ class SyncCtoProDatabase extends Backend
 
             END
             ";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
     }
 
     /**
@@ -828,7 +871,7 @@ class SyncCtoProDatabase extends Backend
     {
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterDeleteHashRefresh`";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
 
         // Create
         $strQuery = "
@@ -839,7 +882,7 @@ class SyncCtoProDatabase extends Backend
             
             END
             ";
-        $this->Database->query($strQuery);
+        \Database::getInstance()->query($strQuery);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -857,13 +900,13 @@ class SyncCtoProDatabase extends Backend
         $arrReturn = array();
 
         // Get all Values
-        if (key_exists('all', $GLOBALS['SYC_CONFIG']['trigger_blacklist']))
+        if (array_key_exists('all', $GLOBALS['SYC_CONFIG']['trigger_blacklist']))
         {
             $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['trigger_blacklist']['all']);
         }
 
         // Get special Values
-        if (key_exists($strTable, $GLOBALS['SYC_CONFIG']['trigger_blacklist']))
+        if (array_key_exists($strTable, $GLOBALS['SYC_CONFIG']['trigger_blacklist']))
         {
             $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['trigger_blacklist'][$strTable]);
         }
@@ -875,13 +918,13 @@ class SyncCtoProDatabase extends Backend
         }
 
         // Get all Values
-        if (key_exists('all', $arrUserSettings))
+        if (array_key_exists('all', $arrUserSettings))
         {
             $arrReturn = array_merge($arrReturn, $arrUserSettings['all']);
         }
 
         // Get special Values
-        if (key_exists($strTable, $arrUserSettings))
+        if (array_key_exists($strTable, $arrUserSettings))
         {
             $arrReturn = array_merge($arrReturn, $arrUserSettings[$strTable]);
         }
@@ -890,5 +933,3 @@ class SyncCtoProDatabase extends Backend
     }
 
 }
-
-?>

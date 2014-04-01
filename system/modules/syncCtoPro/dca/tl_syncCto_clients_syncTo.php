@@ -1,9 +1,9 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
  *
- * @copyright  MEN AT WORK 2013 
+ * @copyright  MEN AT WORK 2013
  * @package    syncCto Pro
  * @license    EULA
  * @filesource
@@ -20,5 +20,3 @@ $GLOBALS['TL_DCA']['tl_syncCto_clients_syncTo']['fields']['database_pages_check'
     'inputType' => 'checkbox',
     'exclude'   => true,
 );
-
-?>

@@ -38,7 +38,7 @@ class SyncCtoProCommunicationClient
     protected function __construct()
     {
         // Helper
-        $this->objSyncCtoCommunicationClient = SyncCtoCommunicationClient::getInstance();
+        $this->objSyncCtoCommunicationClient = \SyncCtoCommunicationClient::getInstance();
     }
 
     /**
@@ -220,5 +220,3 @@ class SyncCtoProCommunicationClient
     }
 
 }
-
-?>

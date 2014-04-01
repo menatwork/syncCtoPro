@@ -18,5 +18,3 @@ $GLOBALS['TL_DCA']['tl_syncCto_clients_syncFrom']['fields']['database_pages_chec
     'inputType' => 'checkbox',
     'exclude'   => true,
 ); */
-
-?>

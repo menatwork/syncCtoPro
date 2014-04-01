@@ -136,4 +136,3 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_CHECK_HASH"] = array(
     "typ"       => "GET",
     "parameter" => null
 );
-?>

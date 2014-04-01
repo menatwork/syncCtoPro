@@ -3,7 +3,7 @@
 /**
  * Contao Open Source CMS
  *
- * Copyright (c) 2005-2013 Leo Feyer
+ * Copyright (c) 2005-2014 Leo Feyer
  *
  * @package SyncCtoPro
  * @link    https://contao.org
@@ -16,10 +16,12 @@
  */
 ClassLoader::addClasses(array
 (
-	'SyncCtoProCommunicationClient' => 'system/modules/syncCtoPro/SyncCtoProCommunicationClient.php',
-	'SyncCtoStepDatabaseDiff'       => 'system/modules/syncCtoPro/SyncCtoStepDatabaseDiff.php',
-	'SyncCtoProSystem'              => 'system/modules/syncCtoPro/SyncCtoProSystem.php',
 	'SyncCtoProDatabase'            => 'system/modules/syncCtoPro/SyncCtoProDatabase.php',
+	'SyncCtoProSystem'              => 'system/modules/syncCtoPro/SyncCtoProSystem.php',
+    'SyncCtoProTableSettings'       => 'system/modules/syncCtoPro/SyncCtoProTableSettings.php',
+    'SyncCtoStepDatabaseDiff'       => 'system/modules/syncCtoPro/SyncCtoStepDatabaseDiff.php',
+    'SyncCtoProCommunicationClient' => 'system/modules/syncCtoPro/SyncCtoProCommunicationClient.php',
+    'SyncCtoProPopupDiff'           => 'system/modules/syncCtoPro/SyncCtoProPopupDiff.php',
 ));
 
 
@@ -28,10 +30,10 @@ ClassLoader::addClasses(array
  */
 TemplateLoader::addFiles(array
 (
-	'be_syncCtoPro_form'               => 'system/modules/syncCtoPro/templates',
-	'be_syncCtoPro_popup_overview'     => 'system/modules/syncCtoPro/templates',
-	'be_syncCtoPro_popup_detail'       => 'system/modules/syncCtoPro/templates',
-	'be_syncCtoPro_popup_all'          => 'system/modules/syncCtoPro/templates',
 	'be_syncCtoPro_popup_detail_small' => 'system/modules/syncCtoPro/templates',
+	'be_syncCtoPro_popup_detail'       => 'system/modules/syncCtoPro/templates',
 	'be_syncCtoPro_popup'              => 'system/modules/syncCtoPro/templates',
+	'be_syncCtoPro_popup_all'          => 'system/modules/syncCtoPro/templates',
+	'be_syncCtoPro_popup_overview'     => 'system/modules/syncCtoPro/templates',
+	'be_syncCtoPro_form'               => 'system/modules/syncCtoPro/templates',
 ));

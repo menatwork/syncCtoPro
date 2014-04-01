@@ -8,7 +8,7 @@
  * @license    EULA
  * @filesource
  */
-class SyncCtoProSystem extends Backend
+class SyncCtoProSystem extends \Backend
 {
 
     protected static $objInstance = null;
@@ -112,13 +112,13 @@ class SyncCtoProSystem extends Backend
         $arrReturn = array();
 
         // Get all Values
-        if (key_exists('all', $GLOBALS['SYC_CONFIG']['sync_blacklist']))
+        if (array_key_exists('all', $GLOBALS['SYC_CONFIG']['sync_blacklist']))
         {
             $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['sync_blacklist']['all']);
         }
 
         // Get special Values
-        if (key_exists($strTable, $GLOBALS['SYC_CONFIG']['sync_blacklist']))
+        if (array_key_exists($strTable, $GLOBALS['SYC_CONFIG']['sync_blacklist']))
         {
             $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['sync_blacklist'][$strTable]);
         }
@@ -130,13 +130,13 @@ class SyncCtoProSystem extends Backend
         }
 
         // Get all Values
-        if (key_exists('all', $arrUserSettings))
+        if (array_key_exists('all', $arrUserSettings))
         {
             $arrReturn = array_merge($arrReturn, $arrUserSettings['all']);
         }
 
         // Get special Values
-        if (key_exists($strTable, $arrUserSettings))
+        if (array_key_exists($strTable, $arrUserSettings))
         {
             $arrReturn = array_merge($arrReturn, $arrUserSettings[$strTable]);
         }
@@ -175,5 +175,3 @@ class SyncCtoProSystem extends Backend
     }
 
 }
-
-?>
