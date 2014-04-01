@@ -12,7 +12,7 @@
 
 <div id="tl_listing" class="tl_listing_container">
 
-<form id="db_form" action="<?php echo $this->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=<?php echo PopupSyncDiff::VIEWMODE_OVERVIEW; ?>" method="post">
+<form id="db_form" action="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_OVERVIEW; ?>" method="post">
     <div class="formbody">
         <input type="hidden" name="FORM_SUBMIT" value="<?php echo $this->formId; ?>" />        
         <input type="hidden" name="REQUEST_TOKEN" value="<?php echo REQUEST_TOKEN; ?>">
@@ -41,15 +41,15 @@
                         <?php echo $GLOBALS['TL_LANG']['MSC']['server']; ?>
                     </th>
                     <th class="direction">
-                        <img src="<?php echo $this->Environment->base; ?>system/modules/syncCto/html/icons/steps/iconSync<?php echo $this->direction; ?>.png" alt="" />
+                        <img src="<?php echo $this->Environment->base; ?>system/modules/syncCto/assets/images/steps/iconSync<?php echo $this->direction; ?>.png" alt="" />
                     </th>
                     <th class="client">
                         <?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?>
                     </th>
                     <th class="diff">
-                        <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo PopupSyncDiff::VIEWMODE_ALL ?>" />
+                        <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo SyncCtoProPopupDiff::VIEWMODE_ALL ?>" />
                         <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo Environment::getInstance()->request; ?>" OnClick="mySubmit('showall'); return false;">
-                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/diff.gif" alt="" />
+                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" />
                         </a>
                     </th>
                 </tr>
@@ -87,8 +87,8 @@
                         </td>
                         <td align="center" class="col_4 diff">   
                             <?php if ($arrPageValues['state'] == 'diff' && in_array('tl_page', $this->arrAllowedTables)): ?>
-                                <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrPageValues['id']; ?>&table=tl_page&view=<?php echo PopupSyncDiff::VIEWMODE_DETAIL; ?>">
-                                    <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/diff.gif" alt="" />
+                                <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrPageValues['id']; ?>&table=tl_page&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_DETAIL; ?>">
+                                    <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" />
                                 </a>
                             <?php endif; ?>
                         </td>
@@ -126,8 +126,8 @@
                             </td>
                             <td align="center" class="col_4 diff">   
                                 <?php if ($arrArticleValues['state'] == 'diff' && in_array('tl_article', $this->arrAllowedTables)): ?>
-                                    <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrArticleValues['id']; ?>&table=tl_article&view=<?php echo PopupSyncDiff::VIEWMODE_DETAIL; ?>">
-                                        <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/diff.gif" alt="" />
+                                    <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrArticleValues['id']; ?>&table=tl_article&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_DETAIL; ?>">
+                                        <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" />
                                     </a>
                                 <?php endif; ?>
                             </td>
@@ -147,7 +147,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="content">
-                                    <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/content.png" alt="" />
+                                    <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
                                     <?php if(!empty($arrContentValues['source']['type'])): ?>
                                         <?php echo $this->helperClass->getReadableContentName($arrContentValues['source']['type']) ; ?>
                                     <?php else: ?>
@@ -156,7 +156,7 @@
                                 </td>
                                 <td></td>
                                 <td class="content"> 
-                                    <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/content.png" alt="" />
+                                    <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
                                     <?php if(!empty($arrContentValues['target']['type'])): ?>
                                         <?php echo $this->helperClass->getReadableContentName($arrContentValues['target']['type']) ; ?>                                       
                                     <?php else: ?>
@@ -165,8 +165,8 @@
                                 </td>
                                 <td align="center" class="col_4 diff">   
                                     <?php if ($arrContentValues['state'] == 'diff' && in_array('tl_content', $this->arrAllowedTables)): ?>
-                                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>contao/popupSyncDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrContentValues['id']; ?>&table=tl_content&view=<?php echo PopupSyncDiff::VIEWMODE_DETAIL; ?>">
-                                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/html/icons/diff.gif" alt="" />
+                                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrContentValues['id']; ?>&table=tl_content&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_DETAIL; ?>">
+                                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" />
                                         </a>
                                     <?php endif; ?>
                                 </td>
