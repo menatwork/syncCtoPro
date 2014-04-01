@@ -12,7 +12,7 @@
 /**
  * Backend
  */
-$GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncCtoPro/html/icons/iconClients.png';
+$GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncCtoPro/assets/icons/iconClients.png';
 
 /**
  * Hooks
