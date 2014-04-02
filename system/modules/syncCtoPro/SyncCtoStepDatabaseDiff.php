@@ -201,12 +201,6 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     {
         // Set Basic
         $this->setSyncCto($syncCtoClient);
-        
-        // Check if we have to run this step
-        if ($this->getWorkingMode() != self::WORKINGMODE_UPDATE)
-        {
-            return;
-        }
 
         try
         {
@@ -228,12 +222,6 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     {
         // Set Basic
         $this->setSyncCto($syncCtoClient);
-
-        // Check if we have to run this step
-        if ($this->getWorkingMode() != self::WORKINGMODE_UPDATE)
-        {
-            return;
-        }
 
         try
         {
@@ -315,7 +303,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         foreach ($arrTableTimestamp AS $location => $arrTimeStamps)
         {
             // Update timestamp
-            $mixLastTableTimestamp = $this->Database
+            $mixLastTableTimestamp =\Database::getInstance()
                     ->prepare("SELECT " . $location . "_timestamp FROM tl_synccto_clients WHERE id=?")
                     ->limit(1)
                     ->execute($this->intClientID)
@@ -336,7 +324,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
             }
 
             // Search for old entries
-            $arrTables = $this->Database->listTables();
+            $arrTables =\Database::getInstance()->listTables();
             foreach ($arrLastTableTimestamp as $key => $value)
             {
                 if (!in_array($key, $arrTables))
@@ -345,7 +333,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
                 }
             }
 
-            $this->Database
+           \Database::getInstance()
                     ->prepare("UPDATE tl_synccto_clients SET " . $location . "_timestamp = ? WHERE id = ? ")
                     ->execute(serialize($arrLastTableTimestamp), $this->intClientID);
         }
@@ -661,7 +649,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
 
         // Get server Pages
-        $arrPages = $this->Database
+        $arrPages =\Database::getInstance()
                 ->query('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -674,7 +662,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientArticleHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_article');
 
         // Get server article
-        $arrArticle = $this->Database
+        $arrArticle =\Database::getInstance()
                 ->query('SELECT title, id, pid FROM tl_article ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -687,7 +675,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientContentHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_content');
 
         // Get server article
-        $arrContent = $this->Database
+        $arrContent =\Database::getInstance()
                 ->query('SELECT type, id, pid FROM tl_content ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -785,7 +773,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
 
         // Get server Pages
-        $arrPages = $this->Database
+        $arrPages =\Database::getInstance()
                 ->query('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -798,7 +786,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientArticleHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_article');
 
         // Get server article
-        $arrArticle = $this->Database
+        $arrArticle =\Database::getInstance()
                 ->query('SELECT title, id, pid FROM tl_article ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -811,7 +799,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientContentHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_content');
 
         // Get server article
-        $arrContent = $this->Database
+        $arrContent =\Database::getInstance()
                 ->query('SELECT type, id, pid FROM tl_content ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -916,7 +904,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
         // Article
 
-        $arrResultArticles = $this->Database
+        $arrResultArticles =\Database::getInstance()
                 ->prepare('SELECT id FROM tl_article WHERE pid IN(' . implode(', ', $arrPages) . ')')
                 ->execute()
                 ->fetchAllAssoc();
@@ -928,7 +916,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
         // Content Elements
 
-        $arrResultContentElements = $this->Database
+        $arrResultContentElements =\Database::getInstance()
                 ->prepare('SELECT id FROM tl_content WHERE pid IN(' . implode(', ', $arrArticles) . ')')
                 ->execute()
                 ->fetchAllAssoc();
@@ -1102,11 +1090,13 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * count the diffs
-     * 
+     *
      * @param array $arrSourcePages
      * @param array $arrSourceHashes
      * @param array $arrTargetPages
      * @param array $arrTargetHashes
+     *
+     * @return int
      */
     protected function countDiffs($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes)
     {
@@ -1140,11 +1130,13 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Get a list with ID's from diff.
-     * @param type $arrSourcePages
-     * @param type $arrSourceHashes
-     * @param type $arrTargetPages
-     * @param type $arrTargetHashes
-     * @return type
+     *
+     * @param array $arrSourcePages
+     * @param array $arrSourceHashes
+     * @param array $arrTargetPages
+     * @param array $arrTargetHashes
+     *
+     * @return int
      */
     protected function getIdDiffs($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes)
     {
