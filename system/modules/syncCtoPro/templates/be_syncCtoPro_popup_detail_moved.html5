@@ -1,0 +1,19 @@
+<div class="change">
+    <h2><?php echo $this->strField; ?></h2>
+    <table class="diffview">
+        <colgroup>
+            <col width="100%"/>
+        </colgroup>
+        <tr valign="top">
+            <td class="replace right">
+                <?php if ($this->strMoved == 'up'): ?>
+                    <span><?php echo sprintf($GLOBALS['TL_LANG']['SYC']['moved_up'], $this->intMoved); ?></span>
+                <?php elseif ($this->strMoved == 'down'): ?>
+                    <span><?php echo sprintf($GLOBALS['TL_LANG']['SYC']['moved_down'], $this->intMoved); ?></span>
+                <?php elseif ($this->strMoved == 'parent'): ?>
+                    <span><?php echo $GLOBALS['TL_LANG']['SYC']['moved_parent']; ?></span>
+                <?php endif; ?>
+            </td>
+        </tr>
+    </table>
+</div>

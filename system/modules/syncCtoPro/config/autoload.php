@@ -30,10 +30,11 @@ ClassLoader::addClasses(array
  */
 TemplateLoader::addFiles(array
 (
-	'be_syncCtoPro_popup_detail_small' => 'system/modules/syncCtoPro/templates',
-	'be_syncCtoPro_popup_detail'       => 'system/modules/syncCtoPro/templates',
-	'be_syncCtoPro_popup'              => 'system/modules/syncCtoPro/templates',
-	'be_syncCtoPro_popup_all'          => 'system/modules/syncCtoPro/templates',
-	'be_syncCtoPro_popup_overview'     => 'system/modules/syncCtoPro/templates',
-	'be_syncCtoPro_form'               => 'system/modules/syncCtoPro/templates',
+    'be_syncCtoPro_form'               => 'system/modules/syncCtoPro/templates',
+    'be_syncCtoPro_popup'              => 'system/modules/syncCtoPro/templates',
+    'be_syncCtoPro_popup_all'          => 'system/modules/syncCtoPro/templates',
+    'be_syncCtoPro_popup_detail'       => 'system/modules/syncCtoPro/templates',
+    'be_syncCtoPro_popup_detail_moved' => 'system/modules/syncCtoPro/templates',
+    'be_syncCtoPro_popup_detail_small' => 'system/modules/syncCtoPro/templates',
+    'be_syncCtoPro_popup_overview'     => 'system/modules/syncCtoPro/templates',
 ));

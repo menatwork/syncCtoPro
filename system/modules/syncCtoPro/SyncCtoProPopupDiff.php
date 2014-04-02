@@ -696,32 +696,64 @@ class SyncCtoProPopupDiff extends Backend
                 $arrValues['client']['data'] = (array) strip_tags($arrValues['client']['data']);
             }
 
-            // Run php-diff
-            if ($blnFlip)
+            if ($strField == 'sorting')
             {
-                $objDiff = new Diff($arrValues['server']['data'], $arrValues['client']['data'], $arrDiffOptions);
+                $objMovedTemplate = new \BackendTemplate('be_syncCtoPro_popup_detail_moved');
+                $objMovedTemplate->strField = $strHumanReadableField;
+
+                $intServerSorting = intval($arrValues['server']['data'][0]);
+                $intClientSorting = intval($arrValues['client']['data'][0]);
+
+
+                if($intServerSorting < $intClientSorting)
+                {
+                    $objMovedTemplate->strMoved = 'up';
+                    $objMovedTemplate->intMoved = $intClientSorting - $intServerSorting;
+                }
+                else
+                {
+                    $objMovedTemplate->strMoved = 'down';
+                    $objMovedTemplate->intMoved = $intServerSorting - $intClientSorting;
+                }
+
+                $strContent .= $objMovedTemplate->parse();
+            }
+            elseif ($strField == 'pid')
+            {
+                $objMovedTemplate           = new \BackendTemplate('be_syncCtoPro_popup_detail_moved');
+                $objMovedTemplate->strField = $strHumanReadableField;
+                $objMovedTemplate->strMoved = 'parent';
+
+                $strContent .= $objMovedTemplate->parse();
             }
             else
             {
-                $objDiff = new Diff($arrValues['client']['data'], $arrValues['server']['data'], $arrDiffOptions);
+                // Run php-diff
+                if ($blnFlip)
+                {
+                    $objDiff = new Diff($arrValues['server']['data'], $arrValues['client']['data'], $arrDiffOptions);
+                }
+                else
+                {
+                    $objDiff = new Diff($arrValues['client']['data'], $arrValues['server']['data'], $arrDiffOptions);
+                }
+
+                $objRenderer = new Diff_Renderer_Html_Contao();
+                $objRenderer->setOptions(array('field' => $strHumanReadableField));
+
+                $mixResult = $objDiff->Render($objRenderer);
+
+                $strContent .= $mixResult;
             }
-
-            $objRenderer = new Diff_Renderer_Html_Contao();
-            $objRenderer->setOptions(array('field' => $strHumanReadableField));
-
-            $mixResult = $objDiff->Render($objRenderer);
-
-            $strContent .= $mixResult;
         }
 
         // Set wrapper template information
         $objDetailsTemplate = new \BackendTemplate($strTemplate);
 
-        $objDetailsTemplate->base      = $this->Environment->base;
-        $objDetailsTemplate->path      = $this->Environment->path;
-        $objDetailsTemplate->id        = $this->intClientID;
-        $objDetailsTemplate->direction = $this->strDirection;
-
+        $objDetailsTemplate->base         = $this->Environment->base;
+        $objDetailsTemplate->path         = $this->Environment->path;
+        $objDetailsTemplate->id           = $this->intClientID;
+        $objDetailsTemplate->direction    = $this->strDirection;
         $objDetailsTemplate->content      = $strContent;
         $objDetailsTemplate->headline     = vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail'], array($this->strTable, $this->intRowId));
         $objDetailsTemplate->currentPoint = $this->strCurrentPoint;
@@ -947,9 +979,13 @@ class SyncCtoProPopupDiff extends Backend
 
     /**
      * Load local data
-     * 
+     *
      * @param string $strTable
-     * @param integer $intID
+     * @param        $mixID
+     *
+     * @internal param int $intID
+     *
+     * @return array
      */
     protected function loadLocalDataFor($strTable, $mixID)
     {
