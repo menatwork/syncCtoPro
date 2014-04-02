@@ -3,8 +3,8 @@
 /**
  * Contao Open Source CMS
  *
- * @copyright  MEN AT WORK 2013 
- * @package    syncCto Pro
+ * @copyright  MEN AT WORK 2014 
+ * @package    syncCtoPro
  * @license    EULA
  * @filesource
  */
@@ -26,16 +26,17 @@ $GLOBALS['TL_HOOKS']['syncDBUpdateBeforeDrop'][]    = array('SyncCtoProSystem', 
 /**
  * Ignored fields for trigger / hash 
  */
-$GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['trigger_blacklist'], array(
-    'all' => array(
+$GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['trigger_blacklist'], array
+(
+    'all' => array
+    (
         'id',
-        'pid',
-        'sorting',
         'tstamp',
         'syncCto_hash',
         'PRIMARY'
     ),
-    'tl_page' => array(
+    'tl_page' => array
+    (
         'dns',
     ),
 ));
@@ -43,11 +44,14 @@ $GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive((array) $GLO
 /**
  * Ignored fields for sync 
  */
-$GLOBALS['SYC_CONFIG']['sync_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['sync_blacklist'], array(
-    'all' => array(
+$GLOBALS['SYC_CONFIG']['sync_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['sync_blacklist'], array
+(
+    'all' => array
+    (
         'PRIMARY',
     ),
-    'tl_page' => array(
+    'tl_page' => array
+    (
         'dns',
     ),
 ));
@@ -55,7 +59,8 @@ $GLOBALS['SYC_CONFIG']['sync_blacklist'] = array_merge_recursive((array) $GLOBAL
 /**
  * Ignored tables for sync database
  */
-$GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge((array) $GLOBALS['SYC_CONFIG']['table_hidden'], array(
+$GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge((array) $GLOBALS['SYC_CONFIG']['table_hidden'], array
+(
     'tl_synccto_diff'
 ));
 
@@ -64,11 +69,13 @@ $GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge((array) $GLOBALS['SYC_CONFI
  */
 
 // Refresh all hashes
-$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_REFRESH_HASHES"] = array(
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_REFRESH_HASHES"] = array
+(
     "class"     => "SyncCtoProDatabase",
     "function"  => "updateSpecialTriggers",
     "typ"       => "POST",
-    "parameter" => array(
+    "parameter" => array
+    (
         "page",
         "article",
         "content",
@@ -77,21 +84,25 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_REFRESH_HASHES"] = array(
 );
 
 // Import as SE file
-$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_IMPORT"] = array(
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_IMPORT"] = array
+(
     "class"     => "SyncCtoProDatabase",
     "function"  => "setDataForAsFile",
     "typ"       => "POST",
-    "parameter" => array(
+    "parameter" => array
+    (
         "path"
     ),
 );
 
 // Export as SE file
-$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EXPORT"] = array(
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EXPORT"] = array
+(
     "class"     => "SyncCtoProDatabase",
     "function"  => "getDataForAsFile",
     "typ"       => "POST",
-    "parameter" => array(
+    "parameter" => array
+    (
         "path",
         "table",
         "ids",
@@ -100,29 +111,34 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_EXPORT"] = array(
 );
 
 // Delete SE
-$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_DELETE"] = array(
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_SE_DELETE"] = array
+(
     "class"     => "SyncCtoProDatabase",
     "function"  => "deleteEntries",
     "typ"       => "POST",
-    "parameter" => array(
+    "parameter" => array
+    (
         "table",
         "ids"
     ),
 );
 
 // Get hashes
-$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_GET_HASHES"] = array(
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_DATABASE_GET_HASHES"] = array
+(
     "class"     => "SyncCtoProDatabase",
     "function"  => "getHashValueFor",
     "typ"       => "POST",
-    "parameter" => array(
+    "parameter" => array
+    (
         "table",
         "ids",
     ),
 );
 
 // Check ER status
-$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_CHECK_ER"] = array(
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_CHECK_ER"] = array
+(
     "class"     => "SyncCtoProSystem",
     "function"  => "checkERData",
     "typ"       => "GET",
@@ -130,7 +146,8 @@ $GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_CHECK_ER"] = array(
 );
 
 // Check ER status
-$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_CHECK_HASH"] = array(
+$GLOBALS["CTOCOM_FUNCTIONS"]["SYNCCTOPRO_CHECK_HASH"] = array
+(
     "class"     => "SyncCtoProSystem",
     "function"  => "checkHash",
     "typ"       => "GET",

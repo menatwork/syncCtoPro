@@ -1,10 +1,10 @@
-<?php 
+<?php
 
 /**
  * Contao Open Source CMS
  *
- * @copyright  MEN AT WORK 2013 
- * @package    syncCto Pro
+ * @copyright  MEN AT WORK 2014 
+ * @package    syncCtoPro
  * @license    EULA
  * @filesource
  */

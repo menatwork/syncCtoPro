@@ -3,9 +3,9 @@
 /**
  * Contao Open Source CMS
  *
- * @copyright  MEN AT WORK 2013 
- * @package    syncCto
- * @license    GNU/LGPL 
+ * @copyright  MEN AT WORK 2014 
+ * @package    syncCtoPro
+ * @license    EULA
  * @filesource
  */
  
@@ -32,5 +32,3 @@ $GLOBALS['TL_LANG']['tl_syncCto_settings']['tables']['all']            = 'Alle';
 $GLOBALS['TL_LANG']['tl_syncCto_settings']['tables']['tl_page']        = 'Seitenstruktur';
 $GLOBALS['TL_LANG']['tl_syncCto_settings']['tables']['tl_article']     = 'Artikel';
 $GLOBALS['TL_LANG']['tl_syncCto_settings']['tables']['tl_content']     = 'Inhaltselement';
-
-?>

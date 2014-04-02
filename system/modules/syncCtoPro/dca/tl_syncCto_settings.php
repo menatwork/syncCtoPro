@@ -3,8 +3,8 @@
 /**
  * Contao Open Source CMS
  *
- * @copyright  MEN AT WORK 2013
- * @package    syncCto Pro
+ * @copyright  MEN AT WORK 2014 
+ * @package    syncCtoPro
  * @license    EULA
  * @filesource
  */
@@ -36,7 +36,8 @@ $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_diff_blacklist'] = 
                     'style'              => 'width:235px'
                 ),
             ),
-            'entry' => array(
+            'entry' => array
+            (
                 'label'     => &$GLOBALS['TL_LANG']['tl_syncCto_settings']['blacklist_entry'],
                 'exclude'   => true,
                 'inputType' => 'text',
@@ -90,7 +91,8 @@ $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_sync_blacklist'] = 
     'save_callback' => array(array('SyncCtoProTableSettings', 'saveSyncBlacklist'))
 );
 
-$GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_refresh'] = array(
+$GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_refresh'] = array
+(
     'label'         => &$GLOBALS['TL_LANG']['tl_syncCto_settings']['trigger_refresh'],
     'exclude'       => true,
     'inputType'     => 'checkbox',
@@ -99,10 +101,14 @@ $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_refresh'] =
         'alwaysSave' => true,
         'tl_class'   => 'w50'
     ),
-    'save_callback' => array(array('SyncCtoProTableSettings', 'refreshTrigger'))
+    'save_callback' => array
+    (
+        array('SyncCtoProTableSettings', 'refreshTrigger')
+    )
 );
 
-$GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_delete'] = array(
+$GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_delete'] = array
+(
     'label'         => &$GLOBALS['TL_LANG']['tl_syncCto_settings']['trigger_delete'],
     'exclude'       => true,
     'inputType'     => 'checkbox',
@@ -111,5 +117,8 @@ $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_delete'] = 
         'alwaysSave' => true,
         'tl_class'   => 'w50'
     ),
-    'save_callback' => array(array('SyncCtoProTableSettings', 'deleteTrigger'))
+    'save_callback' => array
+    (
+        array('SyncCtoProTableSettings', 'deleteTrigger')
+    )
 );
