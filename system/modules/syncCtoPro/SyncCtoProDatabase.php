@@ -201,8 +201,6 @@ class SyncCtoProDatabase extends \Backend
 
     public function setDataFor($strTable, $arrData, $arrInsertFields)
     {
-
-
         if (empty($strTable) || !\Database::getInstance()->tableExists($strTable))
         {
             throw new Exception('Error by import data. Unknown or empty tablename: ' . $arrData['table']);
@@ -244,11 +242,11 @@ class SyncCtoProDatabase extends \Backend
         {
             if (in_array($arrValues['update']['id'], $arrKnownIDs))
             {
-                $arrUpdate[] = $arrValues;
+                $arrUpdate[] = $arrValues['update'];
             }
             else
             {
-                $arrInsert[] = $arrValues;
+                $arrInsert[] = $arrValues['insert'];
             }
 
             unset($arrData[$mixKey]);
@@ -262,12 +260,13 @@ class SyncCtoProDatabase extends \Backend
         {
             try
             {
-                $intID = $arrValues['update']['id'];
-                unset($arrValues['update']['id']);
+                $intID = $arrValues['id'];
+                unset($arrValues['id']);
 
                 \Database::getInstance()->prepare("UPDATE $strTable %s WHERE id=?")
-                    ->set($arrValues['update'])
+                    ->set($arrValues)
                     ->execute($intID);
+
                 $intCount++;
             }
             catch (Exception $e)
@@ -282,8 +281,9 @@ class SyncCtoProDatabase extends \Backend
             try
             {
                 \Database::getInstance()->prepare("INSERT INTO $strTable %s")
-                    ->set($arrValues['insert'])
+                    ->set($arrValues)
                     ->execute();
+
                 $intCount++;
             }
             catch (Exception $e)
@@ -291,8 +291,6 @@ class SyncCtoProDatabase extends \Backend
                 $arrErrors[] = $e->getMessage();
             }
         }
-
-
 
         if(empty($arrErrors))
         {
@@ -312,13 +310,32 @@ class SyncCtoProDatabase extends \Backend
     /**
      * Return data as gzip xml file
      *
-     * @param Database_Result $objData
-     * @param stirng $strTable
-     * 
+     * @param string          $strPath
+     *
+     * @param Database\Result $objData
+     *
+     * @param string          $strTable
+     *
+     * @param array           $arrOnlyInsert
+     *
      * @return string
      */
     public function writeXML($strPath, $objData, $strTable, $arrOnlyInsert = array())
     {
+        // Get fields
+        $arrDatabaseFields = \Database::getInstance()->listFields($strTable);
+
+        $arrDatabaseFieldsMeta = array();
+        foreach ($arrDatabaseFields as $value)
+        {
+            if ($value["type"] == "index")
+            {
+                continue;
+            }
+
+            $arrDatabaseFieldsMeta[$value["name"]] = $value;
+        }
+
         // Write gzip xml file
         $objGzFile = new File($strPath);
         $objGzFile->write("");
@@ -380,7 +397,72 @@ class SyncCtoProDatabase extends \Backend
                     $objXml->writeAttribute('onlyInsert', true);
                 }
 
-                $objXml->writeCdata(base64_encode($mixvalue));
+                if(empty($mixvalue))
+                {
+                    $objXml->writeAttribute("type", "empty");
+                    $objXml->text('');
+                }
+                else
+                {
+                    switch (strtolower($arrDatabaseFieldsMeta[$strField]['type']))
+                    {
+                        case 'binary':
+                        case 'varbinary':
+                        case 'blob':
+                        case 'tinyblob':
+                        case 'mediumblob':
+                        case 'longblob':
+                            $objXml->writeAttribute("type", "blob");
+                            $objXml->writeCdata(base64_encode($mixvalue));
+                            break;
+
+                        case 'tinyint':
+                        case 'smallint':
+                        case 'mediumint':
+                        case 'int':
+                        case 'integer':
+                        case 'bigint':
+                            $objXml->writeAttribute("type", "int");
+                            $objXml->text($mixvalue);
+                            break;
+
+                        case 'float':
+                        case 'double':
+                        case 'real':
+                        case 'decimal':
+                        case 'numeric':
+                            $objXml->writeAttribute("type", "decimal");
+                            $objXml->text($mixvalue);
+                            break;
+
+                        case 'date':
+                        case 'datetime':
+                        case 'timestamp':
+                        case 'time':
+                        case 'year':
+                            $objXml->writeAttribute("type", "date");
+                            $objXml->text($mixvalue);
+                            break;
+
+                        case 'char':
+                        case 'varchar':
+                        case 'text':
+                        case 'tinytext':
+                        case 'mediumtext':
+                        case 'longtext':
+                        case 'enum':
+                        case 'set':
+                            $objXml->writeAttribute("type", "text");
+                            $objXml->writeCdata(base64_encode($mixvalue));
+                            break;
+
+                        default:
+                            $objXml->writeAttribute("type", "default");
+                            $objXml->writeCdata(base64_encode($mixvalue));
+                            break;
+                    }
+                }
+
                 $objXml->endElement(); // End data
             }
 
@@ -446,11 +528,13 @@ class SyncCtoProDatabase extends \Backend
             'data'  => array(),
             'fields' => array()
         );
-        $strCurrentAttribute = '';
-        $blnOnlyInsert       = false;
-        $blnInData           = false;
-        $blnInTable          = false;
-        $intI                = 0;
+
+        $strCurrentAttribute     = '';
+        $strCurrentAttributeType = '';
+        $blnOnlyInsert           = false;
+        $blnInData               = false;
+        $blnInTable              = false;
+        $intI                    = 0;
 
         //  Check if the document is valid.
         $objXMLReaderValidate = new XMLReader();
@@ -466,9 +550,10 @@ class SyncCtoProDatabase extends \Backend
         $objXMLReader = new XMLReader();
         $objXMLReader->open(TL_ROOT . "/" . $strTempPath);
 
+        $arrfooBaa = array();
+
         while ($objXMLReader->read())
         {
-            $arrfooBaa[] = $objXMLReader->nodeType;
             switch ($objXMLReader->nodeType)
             {
                 // Values
@@ -476,19 +561,37 @@ class SyncCtoProDatabase extends \Backend
                 case XMLReader::CDATA:
                     if ($blnInData)
                     {
-                        // Check if the field is only for insert
-                        if ($blnOnlyInsert)
+                        // Read the type.
+                        if ($strCurrentAttributeType == 'empty')
                         {
-                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = base64_decode($objXMLReader->value);
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = '';
+
+                            if (!$blnOnlyInsert)
+                            {
+                                $arrData['data'][$intI]['update'][$strCurrentAttribute] = '';
+                            }
+                        }
+                        elseif (in_array($strCurrentAttributeType, array("text", "blob", "default")))
+                        {
+                            $mixValue                                               = base64_decode($objXMLReader->value);
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $mixValue;
+
+                            if (!$blnOnlyInsert)
+                            {
+                                $arrData['data'][$intI]['update'][$strCurrentAttribute] = $mixValue;
+                            }
                         }
                         else
                         {
-                            $mixValue = base64_decode($objXMLReader->value);
-                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $mixValue;
-                            $arrData['data'][$intI]['update'][$strCurrentAttribute] = $mixValue;
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $objXMLReader->value;
+
+                            if (!$blnOnlyInsert)
+                            {
+                                $arrData['data'][$intI]['update'][$strCurrentAttribute] = $objXMLReader->value;
+                            }
                         }
                     }
-                    else if ($blnInTable)
+                    elseif ($blnInTable)
                     {
                         $arrData['table'] = $objXMLReader->value;
                     }
@@ -500,10 +603,13 @@ class SyncCtoProDatabase extends \Backend
                     {
                         // Start data
                         case 'data':
+                            // Get meta data.
                             $strCurrentAttribute                                    = $objXMLReader->getAttribute('name');
+                            $strCurrentAttributeType                                = $objXMLReader->getAttribute("type");
                             $arrData['fields'][$objXMLReader->getAttribute('name')] = 1;
                             $blnInData                                              = true;
 
+                            // Check if we have only the insert mode for this field.
                             if ($objXMLReader->getAttribute('onlyInsert') == true)
                             {
                                 $blnOnlyInsert = true;
@@ -511,6 +617,17 @@ class SyncCtoProDatabase extends \Backend
                             else
                             {
                                 $blnOnlyInsert = false;
+                            }
+
+                            // If empty is set, add the empty value to the array.
+                            if ($strCurrentAttributeType == 'empty')
+                            {
+                                $arrData['data'][$intI]['insert'][$strCurrentAttribute] = '';
+
+                                if (!$blnOnlyInsert)
+                                {
+                                    $arrData['data'][$intI]['update'][$strCurrentAttribute] = '';
+                                }
                             }
                             break;
 
