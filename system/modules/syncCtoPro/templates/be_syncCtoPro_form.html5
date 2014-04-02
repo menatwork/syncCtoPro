@@ -1,36 +1,24 @@
 <script>    
-    function openMediaBox()
+    function openSyncCtoProPopUp()
     {
-        <?php if(version_compare(VERSION, '3.0', '<')): ?>        
-        Mediabox.open(
-                '<?php echo $this->Environment->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview',
-                '', 
-                '850 80%'
-        );  
-        <?php else: ?>
-        Backend.openModalIframe({
-            'width':850,
-            'height':'800',
-            'title':'SyncCtoPro - Diff',
-            'url':'<?php echo $this->Environment->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview'
-        });
-        <?php endif; ?>
+        var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+        Backend.openModalIframe({'width':850,'height':(h / 100 * 90),'title':'<?php echo $GLOBALS['TL_LANG']['tl_syncCto_sync']['popup']; ?> - Pro','url':'<?php echo $this->Environment->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview'});
     }
     
     window.addEvent("domready",function(){
-        openMediaBox();
+        openSyncCtoProPopUp();
     });
 </script>
 
 <form id="<?php echo $this->cssId; ?>" action="<?php echo $this->Environment->base; ?>contao/main.php?do=synccto_clients&amp;table=tl_syncCto_clients_sync<?php echo $this->direction; ?>&amp;act=start&amp;step=<?php echo $this->step; ?>&amp;id=<?php echo $this->id; ?>" method="post">
     <div class="formbody">
-        <input type="hidden" name="FORM_SUBMIT" value="<?php echo $this->formId; ?>" />        
+        <input type="hidden" name="FORM_SUBMIT" value="<?php echo $this->formId; ?>" />
         <input type="hidden" name="REQUEST_TOKEN" value="<?php echo REQUEST_TOKEN; ?>">
 
         <div class="m12 submit_container">
             <input class="tl_submit invisible" name="forward" type="submit" value="<?php echo $this->forwardValue; ?>" />
             <input class="tl_submit" name="skip" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['skip']; ?>" />
-            <input type="button" class="tl_submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['popup']; ?>" onClick="openMediaBox(); return false;"/>
+            <input type="button" class="tl_submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['popup']; ?>" onClick="openSyncCtoProPopUp(); return false;"/>
         </div>
     </div>
 </form>

@@ -1,26 +1,24 @@
-<h1 class="file"><strong><?php echo $this->headline; ?></strong></h1>
-
 <div id="tl_listing" class="tl_listing_container">
 
-<div class="back">
-<a class="tl_submit" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview"><?php echo $GLOBALS['TL_LANG']['MSC']['backBT']; ?></a>
-</div>
+    <div class="submit_container">
+        <a class="tl_submit" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview"><?php echo $GLOBALS['TL_LANG']['MSC']['backBT']; ?></a>
+    </div>
 
-<div id="clear">&nbsp;</div>
+    <div id="legend">
+        <p class="legend server"><?php echo $GLOBALS['TL_LANG']['MSC']['server']; ?></p>
+        <p class="legend client"><?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?></p>
+    </div>
 
-<div id="legend">
-    <p class="server"><?php echo $GLOBALS['TL_LANG']['MSC']['server']; ?></p>
-    <p class="client"><?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?></p>
-</div>
+    <h3><?php echo $this->headline; ?></h3>
 
-<?php if ($this->content): ?>
-<div id="diff">
-    <?php echo $this->content; ?>
-</div>
-<?php endif; ?>
+    <?php if ($this->content): ?>
+    <div id="diff">
+        <?php echo $this->content; ?>
+    </div>
+    <?php endif; ?>
 
-<div class="back bottom">
-<a class="tl_submit" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview"><?php echo $GLOBALS['TL_LANG']['MSC']['backBT']; ?></a>
-</div>
+    <div class="bottom submit_container">
+    <a class="tl_submit" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview"><?php echo $GLOBALS['TL_LANG']['MSC']['backBT']; ?></a>
+    </div>
 
 </div>
