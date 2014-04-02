@@ -546,6 +546,21 @@ class SyncCtoProPopupDiff extends Backend
             $blnFlip       = true;
         }
 
+        // Get fields
+        $fields = \Database::getInstance()->listFields($this->strTable);
+
+        $arrFieldMeta = array();
+
+        foreach ($fields as $key => $value)
+        {
+            if ($value["type"] == "index")
+            {
+                continue;
+            }
+
+            $arrFieldMeta[$value["name"]] = $value;
+        }
+
         // Check data an make something with it
         foreach ($arrLocalData as $strField => $mixValue)
         {
@@ -601,6 +616,18 @@ class SyncCtoProPopupDiff extends Backend
             {
                 $mixValuesServer = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesServer ? : '');
                 $mixValuesClient = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesClient ? : '');
+            }
+
+            // Try to solve the problem for the ... binary uuid things.
+            if (strlen($mixValuesServer) == 16 && in_array($arrFieldMeta[$strField]['type'], array('binary', 'tinyblob', 'mediumblob', 'blob', 'longblob')))
+            {
+                $mixValuesServer = @\String::binToUuid($mixValuesServer);
+            }
+
+            // Try to solve the problem for the ... binary uuid things.
+            if (strlen($mixValuesClient) == 16 && in_array($arrFieldMeta[$strField]['type'], array('binary', 'tinyblob', 'mediumblob', 'blob', 'longblob')))
+            {
+                $mixValuesClient = @\String::binToUuid($mixValuesClient);
             }
 
             // Save for later operations
