@@ -397,11 +397,72 @@ class SyncCtoProDatabase extends \Backend
                     $objXml->writeAttribute('onlyInsert', true);
                 }
 
+                // Write empty data.
                 if(empty($mixvalue))
                 {
-                    $objXml->writeAttribute("type", "empty");
-                    $objXml->text('');
+                    if($arrDatabaseFieldsMeta[$strField]['default'] == null)
+                    {
+                        $objXml->writeAttribute("type", "null");
+                        $objXml->text('');
+                    }
+                    else
+                    {
+                        switch (strtolower($arrDatabaseFieldsMeta[$strField]['type']))
+                        {
+                            case 'binary':
+                            case 'varbinary':
+                            case 'blob':
+                            case 'tinyblob':
+                            case 'mediumblob':
+                            case 'longblob':
+                                $objXml->writeAttribute("type", "blob");
+                                break;
+
+                            case 'tinyint':
+                            case 'smallint':
+                            case 'mediumint':
+                            case 'int':
+                            case 'integer':
+                            case 'bigint':
+                                $objXml->writeAttribute("type", "int");
+                                break;
+
+                            case 'float':
+                            case 'double':
+                            case 'real':
+                            case 'decimal':
+                            case 'numeric':
+                                $objXml->writeAttribute("type", "decimal");
+                                break;
+
+                            case 'date':
+                            case 'datetime':
+                            case 'timestamp':
+                            case 'time':
+                            case 'year':
+                                $objXml->writeAttribute("type", "date");
+                                break;
+
+                            case 'char':
+                            case 'varchar':
+                            case 'text':
+                            case 'tinytext':
+                            case 'mediumtext':
+                            case 'longtext':
+                            case 'enum':
+                            case 'set':
+                                $objXml->writeAttribute("type", "text");
+                                break;
+
+                            default:
+                                $objXml->writeAttribute("type", "default");
+                                break;
+                        }
+
+                        $objXml->writeCdata($arrDatabaseFieldsMeta[$strField]['default']);
+                    }
                 }
+                // Write data.
                 else
                 {
                     switch (strtolower($arrDatabaseFieldsMeta[$strField]['type']))
@@ -550,8 +611,6 @@ class SyncCtoProDatabase extends \Backend
         $objXMLReader = new XMLReader();
         $objXMLReader->open(TL_ROOT . "/" . $strTempPath);
 
-        $arrfooBaa = array();
-
         while ($objXMLReader->read())
         {
             switch ($objXMLReader->nodeType)
@@ -561,15 +620,9 @@ class SyncCtoProDatabase extends \Backend
                 case XMLReader::CDATA:
                     if ($blnInData)
                     {
-                        // Read the type.
-                        if ($strCurrentAttributeType == 'empty')
+                        if (in_array($strCurrentAttributeType, array("null", "empty")))
                         {
-                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = '';
-
-                            if (!$blnOnlyInsert)
-                            {
-                                $arrData['data'][$intI]['update'][$strCurrentAttribute] = '';
-                            }
+                            // Nothing to do
                         }
                         elseif (in_array($strCurrentAttributeType, array("text", "blob", "default")))
                         {
@@ -622,11 +675,21 @@ class SyncCtoProDatabase extends \Backend
                             // If empty is set, add the empty value to the array.
                             if ($strCurrentAttributeType == 'empty')
                             {
-                                $arrData['data'][$intI]['insert'][$strCurrentAttribute] = '';
+                                $arrData['data'][$intI]['insert'][$strCurrentAttribute] = 'abc';
 
                                 if (!$blnOnlyInsert)
                                 {
-                                    $arrData['data'][$intI]['update'][$strCurrentAttribute] = '';
+                                    $arrData['data'][$intI]['update'][$strCurrentAttribute] = 'abc';
+                                }
+                            }
+                            // If empty is set, add the empty value to the array.
+                            elseif ($strCurrentAttributeType == 'null')
+                            {
+                                $arrData['data'][$intI]['insert'][$strCurrentAttribute] = NULL;
+
+                                if (!$blnOnlyInsert)
+                                {
+                                    $arrData['data'][$intI]['update'][$strCurrentAttribute] = NULL;
                                 }
                             }
                             break;
