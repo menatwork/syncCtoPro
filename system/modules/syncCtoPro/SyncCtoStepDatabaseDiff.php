@@ -556,7 +556,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
      */
     protected function generateDataForPageTree()
     {
-        $strPageFile    = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_page', null, array('id', 'pid', 'title'));
+        $strPageFile    = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_page', null, array('id', 'pid','title', 'sorting', 'published', 'start', 'stop', 'type', 'hide', 'protected'));
         $strArticleFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_article', null, array('id', 'pid', 'title'));
         $strContentFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_content', null, array('id', 'pid', 'type'));
 
@@ -650,7 +650,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
         // Get server Pages
         $arrPages =\Database::getInstance()
-                ->query('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
+                ->query('SELECT id, pid, title, sorting, published, start, stop, type, hide, protected FROM tl_page ORDER BY pid, id')
                 ->fetchAllAssoc();
 
         $arrPageHashes = $objSyncCtoProDatabase->getHashValueFor('tl_page', array());

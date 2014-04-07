@@ -394,7 +394,7 @@ class SyncCtoProPopupDiff extends Backend
         }
 
         // Get all data
-        $arrAllPageValues    = $this->renderElementsPart('tl_page', array('title', 'id', 'pid', 'sorting'));
+        $arrAllPageValues    = $this->renderElementsPart('tl_page', array('title', 'id', 'pid', 'sorting', 'published', 'start', 'stop', 'type', 'hide', 'protected'));
         $arrAllArticleValues = $this->renderElementsPart('tl_article', array('title', 'id', 'sorting', 'pid'));
         $arrAllContentValues = $this->renderElementsPart('tl_content', array('type', 'id', 'sorting', 'pid'));
 
@@ -1088,11 +1088,18 @@ class SyncCtoProPopupDiff extends Backend
     }
 
     /**
-     * 
+     *
      * @param array $arrSourcePages
+     *
      * @param array $arrSourceHashes
+     *
      * @param array $arrTargetPages
+     *
      * @param array $arrTargetHashes
+     *
+     * @param array $arrIgnoredIds
+     *
+     * @return array
      */
     protected function buildTree($arrSourcePages, $arrSourceHashes, $arrTargetPages, $arrTargetHashes, $arrIgnoredIds = array())
     {
@@ -1137,7 +1144,7 @@ class SyncCtoProPopupDiff extends Backend
                 $arrReturn[$intID]['state'] = 'diff';
             }
 
-            // Set all other informations
+            // Set all other information
             if (array_key_exists($intID, $arrTargetPages) && array_key_exists($intID, $arrTargetHashes))
             {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
@@ -1164,6 +1171,10 @@ class SyncCtoProPopupDiff extends Backend
             {
                 $arrReturn[$intID]['state'] = 'ignored';
             }
+
+            // Set the images.
+            $arrReturn[$intID]['source']['site_image'] = $this->getPageIcon($arrReturn[$intID]['source']);
+            $arrReturn[$intID]['target']['site_image'] = $this->getPageIcon($arrReturn[$intID]['target']);
         }
 
         foreach ($arrMissingServer as $intID)
@@ -1278,6 +1289,56 @@ class SyncCtoProPopupDiff extends Backend
 
             return ($a['id'] < $b['id']) ? -1 : 1;
         }
+    }
+
+    /**
+     * Calculate the page status icon name based on the page parameters
+     *
+     * @param array $arrPage The page array
+     *
+     * @return string The status icon name
+     */
+    public function getPageIcon($arrPage)
+    {
+        $sub   = 0;
+        $image = $arrPage['type'] . '.gif';
+
+        // Page not published or not active
+        if (!$arrPage['published'] || $arrPage['start'] && $arrPage['start'] > time() || $arrPage['stop'] && $arrPage['stop'] < time())
+        {
+            $sub += 1;
+        }
+
+        // Page hidden from menu
+        if ($arrPage['hide'] && !in_array($arrPage['type'], array('redirect', 'forward', 'root', 'error_403', 'error_404')))
+        {
+            $sub += 2;
+        }
+
+        // Page protected
+        if ($arrPage['protected'] && !in_array($arrPage['type'], array('root', 'error_403', 'error_404')))
+        {
+            $sub += 4;
+        }
+
+        // Get the image name
+        if ($sub > 0)
+        {
+            $image = $arrPage['type'] . '_' . $sub . '.gif';
+        }
+
+
+        if(file_exists(TL_ROOT . '/system/themes/' . $this->getTheme() . '/images/' . $image))
+        {
+            return 'system/themes/' . $this->getTheme() . '/images/' . $image;
+        }
+
+        if(file_exists(TL_ROOT . '/system/themes/default/images/' . $image))
+        {
+            return 'system/themes/default/images/' . $image;
+        }
+
+        return 'system/themes/default/images/regular.gif';
     }
 
 }
