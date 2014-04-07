@@ -160,17 +160,17 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Check what we have to do. Only update hashes or do a diff.
-     * 
+     *
      * @return int
      */
     protected function getWorkingMode()
-    {        
+    {
         // Check if database is enabeld
         if ($this->arrSyncSettings['syncCto_SyncDatabase'] != true)
         {
             return self::WORKINGMODE_NONE;
         }
-        
+
         // Check if diff is enabeld - DC_Memoery and DC_General
         if ($this->arrSyncSettings['post_data']['database_pages_check'] == true || $this->arrSyncSettings['post_data']['database_pages_check_b'] == true || $this->arrSyncSettings['automode'] == true)
         {
@@ -192,7 +192,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Hook for create the hash values for client
-     * 
+     *
      * @param SyncCtoModuleClient $syncCtoClient
      * @param int $intClientID
      * @return void
@@ -454,7 +454,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Show Error
-     * 
+     *
      * @param Exception $exc
      */
     protected function showError(Exception $exc)
@@ -598,7 +598,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Step 3 - Load the se export files from client
-     * 
+     *
      * @throws Exception
      */
     protected function loadFilesForPageTree()
@@ -709,7 +709,9 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Step 5 - Show popup for pages
-     * 
+     *
+     * @param $strDirection
+     *
      * @return type
      */
     protected function showPopup($strDirection)
@@ -754,11 +756,11 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Step 5 - Show popup for pages
-     * 
+     *
      * @return type
      */
     protected function runAutoDiff()
-    {      
+    {
          // Get all data / load helper
         $arrFilePathes         = $this->arrSyncSettings['syncCtoPro_ExternFile'];
         $objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
@@ -824,7 +826,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Step 6 - Build update files for extern
-     * 
+     *
      * @throws Exception
      */
     protected function generateLocalUpdateFiles()
@@ -893,7 +895,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Step 6 - Build update files for local
-     * 
+     *
      * @throws Exception
      */
     protected function generateExternUpdateFiles()
@@ -1149,8 +1151,8 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrKeysTarget = array_keys($arrTargetPages);
 
         $arrMissingClient = array_diff($arrKeysSource, $arrKeysTarget);
-        $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);        
-        
+        $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
+
         $arrReturn = array();
 
         foreach ($arrSourcePages as $intID => $mixValues)
@@ -1159,18 +1161,18 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
             {
                 continue;
             }
-            
+
             $arrReturn['transfer'][] = $intID;
         }
-        
-        $arrReturn['delete'] = $arrMissingServer;        
-       
+
+        $arrReturn['delete'] = $arrMissingServer;
+
         return $arrReturn;
     }
 
     /**
-     * Search the id and set it as key 
-     * 
+     * Search the id and set it as key
+     *
      * @param array $arrData
      * @return array
      */
@@ -1195,7 +1197,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Get a list with ignored fields for the sync
-     * 
+     *
      * @param string $strTable Name of table
      * @return array
      */
@@ -1238,7 +1240,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Save all id's to session settings.
-     * 
+     *
      * @param array $arrData Array with insert and deletet ids.
      * @param string $strTable Name of table.
      */
