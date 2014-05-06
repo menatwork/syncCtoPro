@@ -31,8 +31,8 @@ if (!is_file($dir . '/system/initialize.php'))
 define('TL_MODE', 'BE');
 require($dir . '/system/initialize.php');
 
-require_once TL_ROOT . '/plugins/phpdiff/Diff.php';
-require_once TL_ROOT . '/plugins/phpdiff/Diff/Renderer/Html/Contao.php';
+require_once TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff.php';
+require_once TL_ROOT . '/system/modules/syncCtoPro/SyncCtoProPhpDiffRendererContao.php';
 
 /**
  * Class SyncCtoPopup
