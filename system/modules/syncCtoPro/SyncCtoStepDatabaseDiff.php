@@ -558,7 +558,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     {
         $strPageFile    = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_page', null, array('id', 'pid','title', 'sorting', 'published', 'start', 'stop', 'type', 'hide', 'protected'));
         $strArticleFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_article', null, array('id', 'pid', 'title'));
-        $strContentFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_content', null, array('id', 'pid', 'type'));
+        $strContentFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', 'tl_content', null, array('id', 'pid', 'type', 'ptable'));
 
         // Check if we have all files
         if ($strPageFile === false)

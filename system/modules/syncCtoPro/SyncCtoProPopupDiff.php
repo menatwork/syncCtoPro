@@ -196,9 +196,11 @@ class SyncCtoProPopupDiff extends Backend
 
         // Load language files
         $this->loadLanguageFile('default');
+        $this->loadLanguageFile("modules");
         $this->loadLanguageFile('tl_page');
         $this->loadLanguageFile('tl_article');
         $this->loadLanguageFile('tl_content');
+        $this->loadLanguageFile("tl_syncCto_database");
         $this->loadLanguageFile('tl_syncCtoPro_steps');
         $this->loadLanguageFile($this->strTable);
 
@@ -396,7 +398,29 @@ class SyncCtoProPopupDiff extends Backend
         // Get all data
         $arrAllPageValues    = $this->renderElementsPart('tl_page', array('title', 'id', 'pid', 'sorting', 'published', 'start', 'stop', 'type', 'hide', 'protected'));
         $arrAllArticleValues = $this->renderElementsPart('tl_article', array('title', 'id', 'sorting', 'pid'));
-        $arrAllContentValues = $this->renderElementsPart('tl_content', array('type', 'id', 'sorting', 'pid'));
+        $arrAllContentValues = $this->renderElementsPart('tl_content', array('type', 'id', 'sorting', 'pid', 'ptable'));
+        $arrAdditionalContent = array();
+
+        // Get the events and news content
+        foreach ($arrAllContentValues as $strKey => $arrContent)
+        {
+            $strSourcePTable = $arrContent['source']['ptable'];
+            $strTargetPTable = $arrContent['target']['ptable'];
+
+            if ($strSourcePTable != '' && $strSourcePTable != 'tl_article')
+            {
+                $arrAdditionalContent[$strSourcePTable][] = $arrContent;
+                unset($arrAllContentValues[$strKey]);
+                continue;
+            }
+
+            if ($strTargetPTable != '' && $strTargetPTable != 'tl_article')
+            {
+                $arrAdditionalContent[$strTargetPTable][] = $arrContent;
+                unset($arrAllContentValues[$strKey]);
+                continue;
+            }
+        }
 
         // Sorting 
         uasort($arrAllPageValues, array($this, 'sortByPid'));
@@ -424,6 +448,31 @@ class SyncCtoProPopupDiff extends Backend
             }
 
             $arrArticleNeeded[$value['pid']] = true;
+        }
+
+        // Clean up additional content e.g. news, events
+        foreach ($arrAdditionalContent as $strTable => $arrContentData)
+        {
+            foreach ($arrContentData as $key => $value)
+            {
+                if (in_array($value['state'], array('same', 'ignored')))
+                {
+                    unset($arrAdditionalContent[$strTable][$key]);
+                    continue;
+                }
+
+                if (!in_array('tl_content', $arrAllowedTables))
+                {
+                    unset($arrAdditionalContent[$strTable][$key]);
+                    continue;
+                }
+            }
+
+            // If empty remove it from array.
+            if(empty($arrAdditionalContent[$strTable]))
+            {
+                unset($arrAdditionalContent[$strTable]);
+            }
         }
 
         // Clean up article
@@ -461,26 +510,98 @@ class SyncCtoProPopupDiff extends Backend
         }
 
         // No data so skip
-        if (empty($arrAllPageValues) && empty($arrAllArticleValues) && empty($arrAllContentValues))
+        if (empty($arrAllPageValues) && empty($arrAllArticleValues) && empty($arrAllContentValues) && empty($arrAdditionalContent))
         {
             $this->blnClose = true;
             return;
         }
 
+        // Get some more information for the $arrAdditionalContent
+        $arrAdditionalContentReorder = array();
+        if (!empty($arrAdditionalContent))
+        {
+            foreach ($arrAdditionalContent as $strTable => $arrContentData)
+            {
+                $arrData = array();
+
+                // Events or calender
+                if ($strTable == 'tl_calendar_events')
+                {
+                    foreach ($arrContentData as $strKey => $arrData)
+                    {
+                        $intPid        = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
+                        $arrParentData = $this->getParentData($intPid, 'tl_calendar_events', 'tl_calendar', 'title', 'title');
+
+                        // Rebuild array.
+                        if (empty($arrParentData))
+                        {
+                            $strFullTitle = 'Unknown';
+                        }
+                        elseif (isset($arrParentData['head']))
+                        {
+                            $strFullTitle = sprintf('%s - %s', $arrParentData['head'], $arrParentData['middle']);
+                        }
+                        elseif (isset($arrParentData['middle']))
+                        {
+                            $strFullTitle = sprintf('%s', $arrParentData['middle']);
+                        }
+                        else
+                        {
+                            $strFullTitle = 'Unknown';
+                        }
+
+                        $arrData['parent_information']                           = $arrParentData;
+                        $arrAdditionalContentReorder[$strTable][$strFullTitle]['data'][] = $arrData;
+                    }
+                }
+                // News
+                elseif ($strTable == 'tl_news')
+                {
+                    foreach ($arrContentData as $strKey => $arrData)
+                    {
+                        $intPid        = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
+                        $arrParentData = $this->getParentData($intPid, 'tl_news', 'tl_news_archive', 'headline', 'title');
+
+                        // Rebuild array.
+                        if (empty($arrParentData))
+                        {
+                            $strFullTitle = 'Unknown';
+                        }
+                        elseif (isset($arrParentData['head']))
+                        {
+                            $strFullTitle = sprintf('%s - %s', $arrParentData['head'], $arrParentData['middle']);
+                        }
+                        elseif (isset($arrParentData['middle']))
+                        {
+                            $strFullTitle = sprintf('%s', $arrParentData['middle']);
+                        }
+                        else
+                        {
+                            $strFullTitle = 'Unknown';
+                        }
+
+                        $arrData['parent_information']                           = $arrParentData;
+                        $arrAdditionalContentReorder[$strTable][$strFullTitle]['data'][] = $arrData;
+                    }
+                }
+            }
+        }
+
         // Template
         $objOverviewTemplate = new \BackendTemplate('be_syncCtoPro_popup_overview');
 
-        $objOverviewTemplate->arrAllPageValues    = $arrAllPageValues;
-        $objOverviewTemplate->arrAllArticleValues = $arrAllArticleValues;
-        $objOverviewTemplate->arrAllContentValues = $arrAllContentValues;
-        $objOverviewTemplate->arrAllowedTables    = $arrAllowedTables;
-        $objOverviewTemplate->base                = $this->Environment->base;
-        $objOverviewTemplate->path                = $this->Environment->path;
-        $objOverviewTemplate->id                  = $this->intClientID;
-        $objOverviewTemplate->direction           = $this->strDirection;
-        $objOverviewTemplate->headline            = $GLOBALS['TL_LANG']['MSC']['show_differences'];
-        $objOverviewTemplate->forwardValue        = $GLOBALS['TL_LANG']['MSC']['apply'];
-        $objOverviewTemplate->helperClass         = $this;
+        $objOverviewTemplate->arrAllPageValues           = $arrAllPageValues;
+        $objOverviewTemplate->arrAllArticleValues        = $arrAllArticleValues;
+        $objOverviewTemplate->arrAllContentValues        = $arrAllContentValues;
+        $objOverviewTemplate->arrAdditionalContentValues = $arrAdditionalContentReorder;
+        $objOverviewTemplate->arrAllowedTables           = $arrAllowedTables;
+        $objOverviewTemplate->base                       = \Environment::get('base');
+        $objOverviewTemplate->path                       = \Environment::get('path');
+        $objOverviewTemplate->id                         = $this->intClientID;
+        $objOverviewTemplate->direction                  = $this->strDirection;
+        $objOverviewTemplate->headline                   = $GLOBALS['TL_LANG']['MSC']['show_differences'];
+        $objOverviewTemplate->forwardValue               = $GLOBALS['TL_LANG']['MSC']['apply'];
+        $objOverviewTemplate->helperClass                = $this;
 
         $this->strContentData = $objOverviewTemplate->parse();
     }
@@ -758,6 +879,7 @@ class SyncCtoProPopupDiff extends Backend
         $objDetailsTemplate->headline     = vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail'], array($this->strTable, $this->intRowId));
         $objDetailsTemplate->currentPoint = $this->strCurrentPoint;
 
+
         if ($blnReturn)
         {
             return $objDetailsTemplate->parse();
@@ -851,7 +973,7 @@ class SyncCtoProPopupDiff extends Backend
 
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLookupPage[0]['title'], '-');
                 }
-                else if ($strTableName == 'tl_content')
+                else if ($strTableName == 'tl_content' && ($arrLocaleData['ptable'] == 'tl_article' || $arrLocaleData['ptable'] == ''))
                 {
                     $arrLookupArticle = \Database::getInstance()->prepare('SELECT pid,title FROM tl_article WHERE id =?')
                             ->execute($arrLocaleData['pid'])
@@ -862,6 +984,16 @@ class SyncCtoProPopupDiff extends Backend
                             ->fetchAllAssoc();
 
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLookupPage[0]['title'], $arrLookupArticle[0]['title']);
+                }
+                else if ($strTableName == 'tl_content' && $arrLocaleData['ptable'] == 'tl_news')
+                {
+                    $arrParentData = $this->getParentData($arrLocaleData['pid'], 'tl_news', 'tl_news_archive', 'headline', 'title');
+                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position_news'], $arrParentData['head'], $arrParentData['middle']);
+                }
+                else if ($strTableName == 'tl_content' && $arrLocaleData['ptable'] == 'tl_calendar_events')
+                {
+                    $arrParentData = $this->getParentData($arrLocaleData['pid'], 'tl_calendar_events', 'tl_calendar', 'title', 'title');
+                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position_events'], $arrParentData['head'], $arrParentData['middle']);
                 }
 
                 if (isset( $arrExtData[$strTableName]) && array_key_exists($arrLocaleData['id'], $arrExtData[$strTableName]))
@@ -909,6 +1041,191 @@ class SyncCtoProPopupDiff extends Backend
     ////////////////////////////////////////////////////////////////////////////
     // Helper
     ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Make a lookup for a human readable table name.
+     * First syncCto language
+     * Second the mapping for mod language
+     * Last the mod language
+     *
+     * @param string $strName Name of table
+     *
+     * @return string
+     */
+    public function lookUpName($strName)
+    {
+        $strBase = str_replace('tl_', "", $strName);
+
+        // If empty return a array.
+        if ($strName == '-')
+        {
+            return array(
+                'tname' => '-',
+                'iname' => '-'
+            );
+        }
+
+        // Make a lookup in synccto language files
+        if (is_array($GLOBALS['TL_LANG']['tl_syncCto_database']) && array_key_exists($strName, $GLOBALS['TL_LANG']['tl_syncCto_database']))
+        {
+            if (is_array($GLOBALS['TL_LANG']['tl_syncCto_database'][$strName]))
+            {
+                return $this->formateLookUpName($strName, $GLOBALS['TL_LANG']['tl_syncCto_database'][$strName][0]);
+            }
+            else
+            {
+                return $this->formateLookUpName($strName, $GLOBALS['TL_LANG']['tl_syncCto_database'][$strName]);
+            }
+        }
+
+        // Get MM name
+        if (in_array('metamodels', $this->Config->getActiveModules()) && preg_match("/^mm_/i", $strName))
+        {
+            try
+            {
+                if (!is_null(\MetaModels\Factory::byTableName($strName)))
+                {
+                    $objDCABuilder     = \MetaModels\Dca\MetaModelDcaBuilder::getInstance();
+                    $objMetaModels     = \MetaModels\Factory::byTableName($strName);
+                    $arrDCA            = $objDCABuilder->getDca($objMetaModels->get('id'));
+                    $arrBackendcaption = deserialize($arrDCA['backendcaption']);
+
+                    $strReturn = $objMetaModels->getName();
+
+                    foreach ((array)$arrBackendcaption as $value)
+                    {
+                        if ($value['langcode'] == \BackendUser::getInstance()->language)
+                        {
+                            $strReturn = $value['label'];
+                            break;
+                        }
+                    }
+
+                    return $this->formateLookUpName($strName, $strReturn);
+                }
+            }
+            catch (Exception $exc)
+            {
+                // Nothing to do;
+            }
+        }
+
+        // Little mapping for names
+        if (is_array($GLOBALS['SYC_CONFIG']['database_mapping']) && key_exists($strName, $GLOBALS['SYC_CONFIG']['database_mapping']))
+        {
+            $strRealSystemName = $GLOBALS['SYC_CONFIG']['database_mapping'][$strName];
+
+            if (is_array($GLOBALS['TL_LANG']['MOD'][$strRealSystemName]))
+            {
+                return $this->formateLookUpName($strName, $GLOBALS['TL_LANG']['MOD'][$strRealSystemName][0]);
+            }
+            else
+            {
+                return $this->formateLookUpName($strName, $GLOBALS['TL_LANG']['MOD'][$strRealSystemName]);
+            }
+        }
+
+        // Search in mod language array for a translation
+        if (array_key_exists($strBase, $GLOBALS['TL_LANG']['MOD']))
+        {
+            if (is_array($GLOBALS['TL_LANG']['MOD'][$strBase]))
+            {
+                return $this->formateLookUpName($strName, $GLOBALS['TL_LANG']['MOD'][$strBase][0]);
+            }
+            else
+            {
+                return $this->formateLookUpName($strName, $GLOBALS['TL_LANG']['MOD'][$strBase]);
+            }
+        }
+
+        return $this->formateLookUpName($strName, $strName);
+    }
+
+    /**
+     * Return a array with tahble names
+     *
+     * @param string $strTableName    real name like 'tl_contetn'
+     * @param string $strReadableName readable name like 'Conten Elements'
+     *
+     * @return array('tname' => [for table], 'iname' => [for title/info])
+     */
+    protected function formateLookUpName($strTableName, $strReadableName)
+    {
+        // Check if the function is activate
+        if (\BackendUser::getInstance()->syncCto_useTranslatedNames)
+        {
+            return array(
+                'tname' => $strReadableName,
+                'iname' => $strTableName
+            );
+        }
+        else
+        {
+            return array(
+                'tname' => $strTableName,
+                'iname' => $strReadableName
+            );
+        }
+    }
+
+    /**
+     * Get informtaion from the parent and parent parent table eg. events or news.
+     *
+     * @param int    $intId          First parent ID.
+     *
+     * @param string $strMiddleTable Name of the first parent table.
+     *
+     * @param string $strHeadTable   Name of the parent parent table.
+     *
+     * @param string $strMiddleField
+     *
+     * @param string $strHeadField
+     *
+     * @return array
+     */
+    public function getParentData($intId, $strMiddleTable, $strHeadTable, $strMiddleField, $strHeadField)
+    {
+        $arrReturn = array();
+
+        // Check if the middle table exists.
+        if (!\Database::getInstance()->tableExists($strMiddleTable))
+        {
+            return $arrReturn;
+        }
+
+        // Get the middle table
+        $objMiddleTable = \Database::getInstance()
+            ->prepare('SELECT id, pid, ' . $strMiddleField . ' FROM ' . $strMiddleTable . ' WHERE id=?')
+            ->execute($intId);
+
+        if ($objMiddleTable->count() == 0)
+        {
+            return $arrReturn;
+        }
+
+        $arrReturn['middle'] = $objMiddleTable->$strMiddleField;
+
+        // Check if the head table exists.
+        if ($strHeadTable == null || !\Database::getInstance()->tableExists($strHeadTable))
+        {
+            return $arrReturn;
+        }
+
+        // Get the main table.
+        $objHeadTable = \Database::getInstance()
+            ->prepare('SELECT id, ' . $strHeadField . ' FROM ' . $strHeadTable . ' WHERE id=?')
+            ->execute($objMiddleTable->pid);
+
+        if ($objHeadTable->count() == 0)
+        {
+            return $arrReturn;
+        }
+
+        $arrReturn['head'] = $objHeadTable->$strHeadField;
+
+        return $arrReturn;
+    }
+
 
     /**
      * Get the humsn readable name of a content type.
