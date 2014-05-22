@@ -400,7 +400,7 @@ class SyncCtoProDatabase extends \Backend
                 // Write empty data.
                 if(empty($mixvalue))
                 {
-                    if($arrDatabaseFieldsMeta[$strField]['default'] == null)
+                    if($arrDatabaseFieldsMeta[$strField]['default'] === null)
                     {
                         $objXml->writeAttribute("type", "null");
                         $objXml->text('');
@@ -675,11 +675,11 @@ class SyncCtoProDatabase extends \Backend
                             // If empty is set, add the empty value to the array.
                             if ($strCurrentAttributeType == 'empty')
                             {
-                                $arrData['data'][$intI]['insert'][$strCurrentAttribute] = 'abc';
+                                $arrData['data'][$intI]['insert'][$strCurrentAttribute] = '';
 
                                 if (!$blnOnlyInsert)
                                 {
-                                    $arrData['data'][$intI]['update'][$strCurrentAttribute] = 'abc';
+                                    $arrData['data'][$intI]['update'][$strCurrentAttribute] = '';
                                 }
                             }
                             // If empty is set, add the empty value to the array.
