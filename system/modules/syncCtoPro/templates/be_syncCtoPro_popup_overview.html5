@@ -17,6 +17,8 @@
             <input class="tl_submit" name="delete" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['updateRemove']; ?>" />
         </div>
 
+        <?php if (!(empty($this->arrAllPageValues) || empty($this->arrAllArticleValues) || empty($this->arrAllContentValues))): ?>
+        <h2><?php echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['normal_content']; ?></h2>
         <table class="comparelist" id="comparelist_tree">
             <colgroup>
                 <col width="25px" />
@@ -138,6 +140,87 @@
                 <?php endforeach; ?>
             </tbody>
         </table>
+        <?php endif; ?>
+
+        <?php if (!empty($this->arrAdditionalContent)) ?>
+        <?php foreach ($this->arrAdditionalContentValues as $strPTable => $arrContentData): ?>
+        <?php $arrTableName = $this->helperClass->lookUpName($strPTable); ?>
+        <h2><?php echo sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['other_content'],$arrTableName['iname'], $arrTableName['tname']); ?></h2>
+        <table class="comparelist" id="comparelist_tree">
+            <colgroup>
+                <col width="25px" />
+                <col width="44%" />
+                <col width="30px" />
+                <col width="44%" />
+                <col width="*" />
+            </colgroup>
+            <thead>
+            <tr>
+                <th class="checkbox">
+                    <input class="tl_checkbox" onclick="Backend.toggleCheckboxGroup(this, 'comparelist_tree')" type="checkbox" />
+                </th>
+                <th class="server">
+                    <?php echo $GLOBALS['TL_LANG']['MSC']['server']; ?>
+                </th>
+                <th class="direction">
+                    <img src="<?php echo $this->Environment->base; ?>system/modules/syncCto/assets/images/steps/iconSync<?php echo $this->direction; ?>.png" alt="" />
+                </th>
+                <th class="client">
+                    <?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?>
+                </th>
+                <th class="diff">
+                    <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo SyncCtoProPopupDiff::VIEWMODE_ALL ?>" />
+                    <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo Environment::getInstance()->request; ?>" OnClick="mySubmit('showall'); return false;">
+                        <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" />
+                    </a>
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($arrContentData as $mixTitle => $arrElements): ?>
+                    <tr>
+                        <td class="checkbox"> </td>
+                        <td class="page icon">
+                            <span title="<?php echo $mixTitle; ?>"><?php echo \String::substr($mixTitle, 50); ?></span>
+                        </td>
+                        <td></td>
+                        <td class="page icon"></td>
+                        <td align="center" class="diff"></td>
+                    </tr>
+                    <?php foreach ($arrElements['data'] as $mixContentKey => $arrContentValues): ?>
+                    <tr>
+                        <td class="checkbox">
+                            <?php if ($arrContentValues['state'] == 'diff' && in_array('tl_content', $this->arrAllowedTables)): ?>
+                                <input type="checkbox" name="delete_ids[]" value="tl_content::<?php echo $arrContentValues['id']; ?>" class="tl_checkbox checkbox"/>
+
+                                <?php if($arrContentValues['delete'] == true): ?>
+                                    <input type="hidden" name="delete_client_ids[]" value="tl_content::<?php echo $arrContentValues['id']; ?>" />
+                                <?php else: ?>
+                                    <input type="hidden" name="transfer_ids[]" value="tl_content::<?php echo $arrContentValues['id']; ?>" />
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </td>
+                        <td class="content icon">
+                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
+                            <span><?php if(!empty($arrContentValues['source']['type'])): echo $this->helperClass->getReadableContentName($arrContentValues['source']['type']); else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
+                        </td>
+                        <td></td>
+                        <td class="content icon">
+                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
+                            <span><?php if(!empty($arrContentValues['target']['type'])): echo $this->helperClass->getReadableContentName($arrContentValues['target']['type']); else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
+                        </td>
+                        <td align="center" class="diff">
+                            <?php if ($arrContentValues['state'] == 'diff' && in_array('tl_content', $this->arrAllowedTables)): ?>
+                                <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrContentValues['id']; ?>&table=tl_content&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" /></a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <?php endforeach; ?>
 
         <div class="bottom submit_container">
             <input class="tl_submit" name="transfer" type="submit" value="<?php echo $this->forwardValue; ?>" />
