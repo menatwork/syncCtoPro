@@ -139,10 +139,10 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     public function checkSyncTo()
     {
-        // If automode return true, always.
+        // If automode return false, always.
         if ($this->arrSyncSettings['automode'])
         {
-            return true;
+            return false;
         }
 
         return $this->checkSync();
