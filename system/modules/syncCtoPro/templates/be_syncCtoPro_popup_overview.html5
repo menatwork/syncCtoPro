@@ -63,12 +63,12 @@
                     <?php endif; ?>
                     </td>
                     <td class="page icon">
-                        <img src="<?php echo $this->path . '/' . $arrPageValues['source']['site_image']; ?>" alt="" />
+                        <img src="<?php echo  $this->path . '/' . (($arrPageValues['delete'] == true) ? 'system/themes/default/images/regular.gif' : $arrPageValues['source']['site_image']); ?>" alt="" />
                         <span><?php if(!empty($arrPageValues['source']['title'])): echo $arrPageValues['source']['title']; else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
                     <td></td>
                     <td class="page icon">
-                        <img src="<?php echo $this->path . '/' . $arrPageValues['target']['site_image'] ?>" alt="" />
+                        <img src="<?php echo $this->path . '/' . (($arrPageValues['delete'] == true) ? 'system/themes/default/images/regular.gif' : $arrPageValues['target']['site_image']); ?>" alt="" />
                         <span><?php if(!empty($arrPageValues['target']['title'])): echo $arrPageValues['target']['title']; else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
                     <td align="center" class="diff">
