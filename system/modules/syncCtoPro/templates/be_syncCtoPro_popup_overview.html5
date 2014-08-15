@@ -17,7 +17,7 @@
             <input class="tl_submit" name="delete" type="submit" value="<?php echo $GLOBALS['TL_LANG']['MSC']['updateRemove']; ?>" />
         </div>
 
-        <?php if (!(empty($this->arrAllPageValues) || empty($this->arrAllArticleValues) || empty($this->arrAllContentValues))): ?>
+        <?php if (!(empty($this->arrAllPageValues) && empty($this->arrAllArticleValues) && empty($this->arrAllContentValues))): ?>
         <h2><?php echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['normal_content']; ?></h2>
         <table class="comparelist" id="comparelist_tree">
             <colgroup>
