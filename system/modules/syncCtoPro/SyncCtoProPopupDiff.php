@@ -580,8 +580,17 @@ class SyncCtoProPopupDiff extends Backend
                             $strFullTitle = 'Unknown';
                         }
 
-                        $arrData['parent_information']                           = $arrParentData;
+                        $arrData['parent_information']                                   = $arrParentData;
                         $arrAdditionalContentReorder[$strTable][$strFullTitle]['data'][] = $arrData;
+                    }
+                }
+                // Unknown
+                else
+                {
+                    foreach ($arrContentData as $strKey => $arrData)
+                    {
+                        $arrData['parent_information']                               = 'Unknown';
+                        $arrAdditionalContentReorder[$strTable]['Unknown']['data'][] = $arrData;
                     }
                 }
             }
