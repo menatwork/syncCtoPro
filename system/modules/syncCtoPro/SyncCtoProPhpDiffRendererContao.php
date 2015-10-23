@@ -10,7 +10,14 @@
  * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
  */
 
-require_once TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff/Renderer/Html/Array.php';
+if(file_exists(TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff/Renderer/Html/Array.php')) {
+    require_once TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff/Renderer/Html/Array.php';
+} elseif(file_exists(TL_ROOT . '/vendor/phpspec/php-diff/lib/Diff/Renderer/Html/Array.php')) {
+    require_once TL_ROOT . '/vendor/phpspec/php-diff/lib/Diff/Renderer/Html/Array.php';
+}else {
+    throw new \RuntimeException('Could not find the Renderer Class.');
+}
+
 
 class Diff_Renderer_Html_Contao extends Diff_Renderer_Html_Array
 {
