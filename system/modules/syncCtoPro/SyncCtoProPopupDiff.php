@@ -31,7 +31,13 @@ if (!is_file($dir . '/system/initialize.php'))
 define('TL_MODE', 'BE');
 require($dir . '/system/initialize.php');
 
-require_once TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff.php';
+if(file_exists(TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff.php')) {
+    require_once TL_ROOT . '/system/modules/core/vendor/phpdiff/Diff.php';
+} elseif(file_exists(TL_ROOT . '/vendor/phpspec/php-diff/lib/Diff.php')) {
+    require_once TL_ROOT . '/vendor/phpspec/php-diff/lib/Diff.php';
+}else {
+    throw new \RuntimeException('Could not find the Diff Class.');
+}
 require_once TL_ROOT . '/system/modules/syncCtoPro/SyncCtoProPhpDiffRendererContao.php';
 
 /**
