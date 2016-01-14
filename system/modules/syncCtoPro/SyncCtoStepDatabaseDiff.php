@@ -3,7 +3,7 @@
 /**
  * Contao Open Source CMS
  *
- * @copyright  MEN AT WORK 2013 
+ * @copyright  MEN AT WORK 2013
  * @package    syncCto Pro
  * @license    EULA
  * @filesource
@@ -15,7 +15,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * @var SyncCtoModuleClient 
+     * @var SyncCtoModuleClient
      */
     protected $objSyncCtoClient;
 
@@ -25,17 +25,17 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     protected $objStepPool;
 
     /**
-     * @var ContentData 
+     * @var ContentData
      */
     protected $objData;
 
     /**
-     * @var array 
+     * @var array
      */
     protected $arrListFile;
 
     /**
-     * @var array 
+     * @var array
      */
     protected $arrListCompare;
 
@@ -51,15 +51,15 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
     /**
      * Extended communication include the basic communication
-     * 
-     * @var SyncCtoProCommunicationClient 
+     *
+     * @var SyncCtoProCommunicationClient
      */
     protected $objSyncCtoProCommunicationClient;
 
     /**
      * Ext. database class for pro.
-     * 
-     * @var SyncCtoProDatabase 
+     *
+     * @var SyncCtoProDatabase
      */
     protected $objSyncCtoProDatabase;
 
@@ -69,7 +69,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     protected $objSyncCtoHelper;
 
     /**
-     * @var SyncCtoStepPagesSelection 
+     * @var SyncCtoStepPagesSelection
      */
     protected static $objInstance = null;
 
@@ -190,34 +190,6 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     // Hook - Additional Functions
     ////////////////////////////////////////////////////////////////////////////
 
-    /**
-     * Hook for create the hash values for client
-     *
-     * @param SyncCtoModuleClient $syncCtoClient
-     * @param int $intClientID
-     * @return void
-     */
-    public function remoteUpdateHashes(SyncCtoModuleClient $syncCtoClient, $intClientID)
-    {
-        // Set Basic
-        $this->setSyncCto($syncCtoClient);
-
-        try
-        {
-            // Call function
-            $this->refreshHashes();
-
-            // Set info
-            $this->objData->setDescription($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['step_1']['description_2']);
-        }
-        catch (Exception $exc)
-        {
-            $strHTML = $this->objData->getHtml();
-            $strHTML = '<p> There was an error for SyncCto Pro: ' . $exc->getMessage() . '</p>';
-            $this->objData->setHtml($strHTML);
-        }
-    }
-
     public function localeUpdateTimestamp(SyncCtoModuleClient $syncCtoClient, $intClientID)
     {
         // Set Basic
@@ -234,7 +206,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         catch (Exception $exc)
         {
             $strHTML = $this->objData->getHtml();
-            $strHTML = '<p> There was an error for SyncCto Pro: ' . $exc->getMessage() . '</p>';
+            $strHTML .= '<p> There was an error for SyncCto Pro: ' . $exc->getMessage() . '</p>';
             $this->objData->setHtml($strHTML);
         }
     }

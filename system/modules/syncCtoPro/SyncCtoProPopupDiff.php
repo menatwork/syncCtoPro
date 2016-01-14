@@ -58,17 +58,17 @@ class SyncCtoProPopupDiff extends Backend
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * @var SyncCtoCommunicationClient 
+     * @var SyncCtoCommunicationClient
      */
     protected $objSyncCtoCommunicationClient;
 
     /**
-     * @var SyncCtoProCommunicationClient 
+     * @var SyncCtoProCommunicationClient
      */
     protected $objSyncCtoProCommunicationClient;
 
     /**
-     * @var SyncCtoProDatabase 
+     * @var SyncCtoProDatabase
      */
     protected $objSyncCtoProDatabase;
 
@@ -83,83 +83,83 @@ class SyncCtoProPopupDiff extends Backend
 
     /**
      * ID for the client.
-     * 
-     * @var integer 
+     *
+     * @var integer
      */
     protected $intClientID;
 
     /**
      * Direction To|From
-     * 
-     * @var string 
+     *
+     * @var string
      */
     protected $strDirection;
 
     /**
      * Name of tabel for the check
-     * 
-     * @var string 
+     *
+     * @var string
      */
     protected $strTable;
 
     /**
      * Id of the row
-     * 
-     * @var integer 
+     *
+     * @var integer
      */
     protected $intRowId;
 
     /**
      * Viewmode, overview or detail view
-     * 
-     * @var string 
+     *
+     * @var string
      */
     protected $strViewMode = self::VIEWMODE_OVERVIEW;
 
     /**
      * Cleint settings
-     * 
-     * @var array 
+     *
+     * @var array
      */
     protected $arrSyncSettings = array();
 
     /**
      * A list with all extern data
-     * 
-     * @var array 
+     *
+     * @var array
      */
     protected $arrExternData;
 
     /**
      * A list with all local data
-     * 
-     * @var array 
+     *
+     * @var array
      */
     protected $arrLocalData;
 
     /**
-     * @var array 
+     * @var array
      */
     protected $strContentData;
 
     /**
      * Flag to show if we have an error
-     * 
-     * @var boolean 
+     *
+     * @var boolean
      */
     protected $blnError = false;
 
     /**
      * State for closing the lightbox/mediabox
-     * 
+     *
      * @var boolean
      */
     protected $blnClose = false;
 
     /**
      * A list with all errors
-     * 
-     * @var array 
+     *
+     * @var array
      */
     protected $arrError = array();
 
@@ -324,7 +324,7 @@ class SyncCtoProPopupDiff extends Backend
         $GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/mootao/Mootao.js';
         $GLOBALS['TL_JAVASCRIPT'][] = 'assets/contao/js/core.js';
         $GLOBALS['TL_JAVASCRIPT'][] = 'system/modules/syncCto/assets/js/compare.js';
-        
+
         // Template work
         $this->popupTemplate->theme    = $this->getTheme();
         $this->popupTemplate->base     = $this->Environment->base;
@@ -349,7 +349,7 @@ class SyncCtoProPopupDiff extends Backend
 
     /**
      * Create the overview
-     * 
+     *
      * @return void
      */
     protected function renderOverview()
@@ -362,7 +362,7 @@ class SyncCtoProPopupDiff extends Backend
         // Submit with fields
         if (array_key_exists("transfer", $_POST) && !(empty($arrTransferIds) && empty($arrDeleteClientIds)))
         {
-            // Run each field for transfer         
+            // Run each field for transfer
             foreach ((array) $arrTransferIds as $mixTransferId)
             {
                 $arrTransferId = trimsplit("::", $mixTransferId);
@@ -370,7 +370,7 @@ class SyncCtoProPopupDiff extends Backend
                 $this->arrSyncSettings['syncCtoPro_transfer'][$arrTransferId[0]][$arrTransferId[1]] = $arrTransferId[1];
             }
 
-            // Run each field for delete         
+            // Run each field for delete
             foreach ((array) $arrDeleteClientIds as $mixDeleteId)
             {
                 $arrDeleteId = trimsplit("::", $mixDeleteId);
@@ -392,7 +392,7 @@ class SyncCtoProPopupDiff extends Backend
         // Submit for delete
         else if (array_key_exists("delete", $_POST) && !empty($arrDeleteIds))
         {
-            // Run each field            
+            // Run each field
             foreach ($arrDeleteIds as $mixDeleteId)
             {
                 $mixDeleteId = trimsplit("::", $mixDeleteId);
@@ -428,7 +428,7 @@ class SyncCtoProPopupDiff extends Backend
             }
         }
 
-        // Sorting 
+        // Sorting
         uasort($arrAllPageValues, array($this, 'sortByPid'));
         uasort($arrAllArticleValues, array($this, 'sortByPid'));
         uasort($arrAllContentValues, array($this, 'sortByPid'));
@@ -652,7 +652,7 @@ class SyncCtoProPopupDiff extends Backend
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Search for differences and generate the 
+     * Search for differences and generate the
      * detail page.
      */
     protected function runDiff($arrLocalData, $arrExternData, $blnReturn = false, $strTemplate = 'be_syncCtoPro_popup_detail')
@@ -975,7 +975,7 @@ class SyncCtoProPopupDiff extends Backend
             foreach ($arrLocData[$strTableName] as $mixID => $arrLocaleData)
             {
                 $this->intRowId = $arrLocaleData['id'];
-                
+
                 if ($strTableName == 'tl_page')
                 {
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLocaleData['title'], '-');
@@ -1244,9 +1244,9 @@ class SyncCtoProPopupDiff extends Backend
 
     /**
      * Get the humsn readable name of a content type.
-     * 
+     *
      * @param string $strType Type of content element.
-     * 
+     *
      * @return string Name for the content element.
      */
     public function getReadableContentName($strType)
@@ -1263,7 +1263,7 @@ class SyncCtoProPopupDiff extends Backend
                 return $GLOBALS['TL_LANG']['tl_content'][$strType];
             }
         }
-        
+
         // Check cte
         if (isset($GLOBALS['TL_LANG']['CTE']) && array_key_exists($strType, $GLOBALS['TL_LANG']['CTE']))
         {
@@ -1371,7 +1371,7 @@ class SyncCtoProPopupDiff extends Backend
                 $strReturn .= $value;
             }
         }
-        
+
         return $strReturn;
     }
 
@@ -1531,7 +1531,7 @@ class SyncCtoProPopupDiff extends Backend
 
     /**
      * Get a list with ignored fields for the hashes
-     * 
+     *
      * @param string $strTable Name of table
      * @return array
      */
@@ -1574,7 +1574,7 @@ class SyncCtoProPopupDiff extends Backend
 
     /**
      * Sorting array
-     * 
+     *
      * @param array $a
      * @param array $b
      * @return int
