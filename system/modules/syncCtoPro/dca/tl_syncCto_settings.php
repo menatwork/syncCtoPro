@@ -3,13 +3,13 @@
 /**
  * Contao Open Source CMS
  *
- * @copyright  MEN AT WORK 2014 
+ * @copyright  MEN AT WORK 2014
  * @package    syncCtoPro
  * @license    EULA
  * @filesource
  */
 
-$GLOBALS['TL_DCA']['tl_syncCto_settings']['palettes']['default'] .= ';{diff_legend:hide},syncCto_diff_blacklist,syncCto_sync_blacklist;{trigger_legend:hide},syncCto_trigger_refresh,syncCto_trigger_delete';
+$GLOBALS['TL_DCA']['tl_syncCto_settings']['palettes']['default'] .= ';{diff_legend:hide},syncCto_diff_blacklist,syncCto_sync_blacklist;';
 
 
 $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_diff_blacklist'] = array
@@ -89,36 +89,4 @@ $GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_sync_blacklist'] = 
     ),
     'load_callback' => array(array('SyncCtoProTableSettings', 'loadSyncBlacklist')),
     'save_callback' => array(array('SyncCtoProTableSettings', 'saveSyncBlacklist'))
-);
-
-$GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_refresh'] = array
-(
-    'label'         => &$GLOBALS['TL_LANG']['tl_syncCto_settings']['trigger_refresh'],
-    'exclude'       => true,
-    'inputType'     => 'checkbox',
-    'eval'          => array
-    (
-        'alwaysSave' => true,
-        'tl_class'   => 'w50'
-    ),
-    'save_callback' => array
-    (
-        array('SyncCtoProTableSettings', 'refreshTrigger')
-    )
-);
-
-$GLOBALS['TL_DCA']['tl_syncCto_settings']['fields']['syncCto_trigger_delete'] = array
-(
-    'label'         => &$GLOBALS['TL_LANG']['tl_syncCto_settings']['trigger_delete'],
-    'exclude'       => true,
-    'inputType'     => 'checkbox',
-    'eval'          => array
-    (
-        'alwaysSave' => true,
-        'tl_class'   => 'w50'
-    ),
-    'save_callback' => array
-    (
-        array('SyncCtoProTableSettings', 'deleteTrigger')
-    )
 );

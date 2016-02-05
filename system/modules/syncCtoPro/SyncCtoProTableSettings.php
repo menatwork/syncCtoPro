@@ -15,44 +15,6 @@
 class SyncCtoProTableSettings extends \Backend
 {
 
-    // Trigger update ----------------------------------------------------------
-
-    /**
-     * Refresh all triggers.
-     *
-     * @param type $mixValues
-     *
-     * @return boolean
-     */
-    public function refreshTrigger($mixValues)
-    {
-        // Only run if checked.
-        if($mixValues == true)
-        {
-            SyncCtoProDatabase::getInstance()->updateTriggerFromHook();
-        }
-
-        return false;
-    }
-
-    /**
-     * Remove all triggers from the tables.
-     *
-     * @param type $mixValues
-     *
-     * @return boolean
-     */
-    public function deleteTrigger($mixValues)
-    {
-        // Only run if checked.
-        if($mixValues == true)
-        {
-            SyncCtoProDatabase::getInstance()->removeTriggerFromHook();
-        }
-
-        return false;
-    }
-
     // Diff / Trigger ----------------------------------------------------------
 
     /**
@@ -60,19 +22,18 @@ class SyncCtoProTableSettings extends \Backend
      * user values.
      *
      * @param array $mixValues
+     *
      * @return array
      */
     public function loadDiffBlacklist($mixValues)
     {
-        $mixValues = (array) deserialize($mixValues);
-        $arrReturn = array();
+        $mixValues      = (array)deserialize($mixValues);
+        $arrReturn      = array();
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] as $strTableName => $arrValues)
-        {
-            foreach ($arrValues as $strField)
-            {
+        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] as $strTableName => $arrValues) {
+            foreach ($arrValues as $strField) {
                 $arrReturn[] = array(
                     'table' => $strTableName,
                     'entry' => $strField
@@ -83,12 +44,10 @@ class SyncCtoProTableSettings extends \Backend
         }
 
         // Unset basic settings
-        foreach ($mixValues as $key => $arrValues)
-        {
+        foreach ($mixValues as $key => $arrValues) {
             $strCheckValue = $arrValues['table'] . '::' . $arrValues['entry'];
 
-            if (in_array($strCheckValue, $arrKnownValues))
-            {
+            if (in_array($strCheckValue, $arrKnownValues)) {
                 unset($mixValues[$key]);
             }
         }
@@ -105,29 +64,26 @@ class SyncCtoProTableSettings extends \Backend
      * user values.
      *
      * @param array $mixValues
+     *
      * @return array
      */
     public function saveDiffBlacklist($mixValues)
     {
-        $mixValues      = (array) deserialize($mixValues);
+        $mixValues      = (array)deserialize($mixValues);
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] as $strTableName => $arrValues)
-        {
-            foreach ($arrValues as $strField)
-            {
+        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] as $strTableName => $arrValues) {
+            foreach ($arrValues as $strField) {
                 $arrKnownValues[] = $strTableName . '::' . $strField;
             }
         }
 
         // Unset basic settings
-        foreach ($mixValues as $key => $arrValues)
-        {
+        foreach ($mixValues as $key => $arrValues) {
             $strCheckValue = $arrValues['table'] . '::' . $arrValues['entry'];
 
-            if (in_array($strCheckValue, $arrKnownValues))
-            {
+            if (in_array($strCheckValue, $arrKnownValues)) {
                 unset($mixValues[$key]);
             }
         }
@@ -143,19 +99,18 @@ class SyncCtoProTableSettings extends \Backend
      * user values.
      *
      * @param array $mixValues
+     *
      * @return array
      */
     public function loadSyncBlacklist($mixValues)
     {
-        $mixValues = (array) deserialize($mixValues);
-        $arrReturn = array();
+        $mixValues      = (array)deserialize($mixValues);
+        $arrReturn      = array();
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] as $strTableName => $arrValues)
-        {
-            foreach ($arrValues as $strField)
-            {
+        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] as $strTableName => $arrValues) {
+            foreach ($arrValues as $strField) {
                 $arrReturn[] = array(
                     'table' => $strTableName,
                     'entry' => $strField
@@ -166,12 +121,10 @@ class SyncCtoProTableSettings extends \Backend
         }
 
         // Unset basic settings
-        foreach ($mixValues as $key => $arrValues)
-        {
+        foreach ($mixValues as $key => $arrValues) {
             $strCheckValue = $arrValues['table'] . '::' . $arrValues['entry'];
 
-            if (in_array($strCheckValue, $arrKnownValues))
-            {
+            if (in_array($strCheckValue, $arrKnownValues)) {
                 unset($mixValues[$key]);
             }
         }
@@ -188,30 +141,27 @@ class SyncCtoProTableSettings extends \Backend
      * user values.
      *
      * @param array $mixValues
+     *
      * @return array
      */
     public function saveSyncBlacklist($mixValues)
     {
-        $mixValues      = (array) deserialize($mixValues);
+        $mixValues      = (array)deserialize($mixValues);
         $arrKnownValues = array();
-        $arrReturn = array();
+        $arrReturn      = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] as $strTableName => $arrValues)
-        {
-            foreach ($arrValues as $strField)
-            {
+        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] as $strTableName => $arrValues) {
+            foreach ($arrValues as $strField) {
                 $arrKnownValues[] = $strTableName . '::' . $strField;
             }
         }
 
         // Unset basic settings
-        foreach ($mixValues as $key => $arrValues)
-        {
+        foreach ($mixValues as $key => $arrValues) {
             $strCheckValue = $arrValues['table'] . '::' . $arrValues['entry'];
 
-            if (!in_array($strCheckValue, $arrKnownValues))
-            {
+            if (!in_array($strCheckValue, $arrKnownValues)) {
                 $arrReturn[] = $arrValues;
             }
         }

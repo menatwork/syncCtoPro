@@ -1,0 +1,62 @@
+{
+	"version":"1.2.3",
+	"name":"menatwork/synccto-pro",
+	"description":"Synchronize multiple contao installations with each other",
+	"keywords":["backup","synchronization","management","diff","pro"],
+	"type":"contao-module",
+	"homepage":"http://www.men-at-work.de",
+	"license":"LGPL-3.0+",
+	"authors":[
+		{
+			"name":"Andreas Isaak",
+			"email":"isaak@men-at-work.de",
+			"homepage":"http://www.men-at-work.de",
+			"role":"Developer"
+		},
+		{
+			"name":"Stefan Heimes",
+			"email":"heimes@men-at-work.de",
+			"homepage":"http://www.men-at-work.de",
+			"role":"Developer"
+		},
+		{
+			"name":"David Maack",
+			"email":"maack@men-at-work.de",
+			"homepage":"http://www.men-at-work.de",
+			"role":"Developer"
+		}
+	],
+	"support":{
+		"email":"contao@men-at-work.de",
+		"issues":"https://github.com/menatwork/syncCto/issues",
+		"wiki":"https://github.com/menatwork/syncCto/wiki",
+		"irc":"irc://irc.freenode.org/contao.dev",
+		"source":"https://github.com/menatwork/syncCto"
+	},
+	"require":{
+		"php":">=5.3",
+		"contao/core":">=3.2,<4.0",
+		"contao-community-alliance/composer-installer":"*",
+		"menatwork/contao-multicolumnwizard":"~3.2",
+		"menatwork/ctocommunication":"~2.0",
+	},
+	"autoload":{
+		"classmap":["system/"]
+	},
+	"replace":{
+		"contao-legacy/syncCtoPro":"*"
+	},
+	"extra":{
+		"contao":{
+			"sources":{
+				"system/modules/syncCtoPro":"system/modules/syncCtoPro"
+			}
+		},
+		"runonce":[
+				"system/modules/syncCtoPro/config/runonce.php"
+			],
+		"branch-alias":{
+			"dev-master": "1.2.x-dev"
+		}
+	}
+}

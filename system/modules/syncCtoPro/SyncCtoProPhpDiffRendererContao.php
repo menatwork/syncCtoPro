@@ -2,9 +2,9 @@
 
 /**
  * Contao Open Source CMS
- * 
+ *
  * Copyright (C) 2005-2013 Leo Feyer
- * 
+ *
  * @package Diff
  * @link    https://contao.org
  * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL
@@ -57,7 +57,7 @@ class Diff_Renderer_Html_Contao extends Diff_Renderer_Html_Array
             // indicating a significant portion of the code has been collapsed
             if ($i > 0)
             {
-				$html .= '<tr><td class="skipped">…</td></tr>';
+                $html .= '<tr><td class="skipped">…</td></tr>';
             }
 
             foreach ($blocks as $change)

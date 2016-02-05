@@ -3,7 +3,7 @@
 /**
  * Contao Open Source CMS
  *
- * @copyright  MEN AT WORK 2013 
+ * @copyright  MEN AT WORK 2013
  * @package    syncCto Pro
  * @license    EULA
  * @filesource
@@ -19,12 +19,12 @@ class SyncCtoProCommunicationClient
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * @var SyncCtoProCommunicationClient 
+     * @var SyncCtoProCommunicationClient
      */
     protected static $objInstance = null;
 
     /**
-     * @var SyncCtoCommunicationClient 
+     * @var SyncCtoCommunicationClient
      */
     protected $objSyncCtoCommunicationClient;
 
@@ -46,8 +46,7 @@ class SyncCtoProCommunicationClient
      */
     public static function getInstance()
     {
-        if (!is_object(self::$objInstance))
-        {
+        if (!is_object(self::$objInstance)) {
             self::$objInstance = new self();
         }
 
@@ -56,9 +55,12 @@ class SyncCtoProCommunicationClient
 
     /**
      * Call the basic communication class
-     * 
+     *
      * @param string $name function name
-     * @param mix $arguments
+     *
+     * @param mixed  $arguments
+     *
+     * @return mixed The result from the parent class.
      */
     public function __call($name, $arguments)
     {
@@ -71,9 +73,9 @@ class SyncCtoProCommunicationClient
 
     /**
      * Import a single export (SE) into db on client side.
-     * 
+     *
      * @param string $strPath Path on client side
-     * 
+     *
      * @return mixed
      */
     public function importDatabaseSE($strPath)
@@ -85,17 +87,17 @@ class SyncCtoProCommunicationClient
             ),
         );
 
-        return $this->runServer('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData);
+        return $this->run('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData);
     }
 
     /**
      * Return a xml file with a db dump
-     * 
-     * @param string $strPath Path for saving the file
-     * @param string $strTable Name of table
-     * @param array $arrIds lsit of ids
-     * @param array $arrFields list of field names
-     * 
+     *
+     * @param string $strPath   Path for saving the file
+     * @param string $strTable  Name of table
+     * @param array  $arrIds    lsit of ids
+     * @param array  $arrFields list of field names
+     *
      * @return string save name
      */
     public function exportDatabaseSE($strPath, $strTable, $arrIds = null, $arrFields = null)
@@ -119,15 +121,15 @@ class SyncCtoProCommunicationClient
             ),
         );
 
-        return $this->runServer('SYNCCTOPRO_DATABASE_SE_EXPORT', $arrData);
+        return $this->run('SYNCCTOPRO_DATABASE_SE_EXPORT', $arrData);
     }
 
     /**
      * Get hashes for a special tablenmae and/or special ids
-     * 
+     *
      * @param string $strTable Name of Table
-     * @param array $arrIds List with IDs
-     * 
+     * @param array  $arrIds   List with IDs
+     *
      * @return array List with hashes
      */
     public function getHashValueFor($strTable, $arrIds = array())
@@ -143,15 +145,15 @@ class SyncCtoProCommunicationClient
             )
         );
 
-        return $this->runServer('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData);
+        return $this->run('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData);
     }
 
     /**
      * Get hashes for a special tablenmae and/or special ids
-     * 
+     *
      * @param string $strTable Name of Table
-     * @param array $arrIds List with IDs
-     * 
+     * @param array  $arrIds   List with IDs
+     *
      * @return array List with hashes
      */
     public function deleteEntries($strTable, $arrIds = array())
@@ -167,56 +169,27 @@ class SyncCtoProCommunicationClient
             )
         );
 
-        return $this->runServer('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData);
+        return $this->run('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData);
     }
 
     /**
      * Check the ER
-     * 
+     *
      * @return boolean
      */
     public function checkER()
     {
-        return $this->runServer('SYNCCTOPRO_CHECK_ER');
+        return $this->run('SYNCCTOPRO_CHECK_ER');
     }
 
     /**
      * Check the ER
-     * 
+     *
      * @return boolean
      */
     public function checkHash()
     {
-        return $this->runServer('SYNCCTOPRO_CHECK_HASH');
-    }
-    
-    /**
-     * Refresh all hashes from client
-     * 
-     * @return void
-     */
-    public function updateSpecialTriggers($blnPage, $blnArticle, $blnContent, $blnUpdate = false)
-    {
-        $arrData = array(
-            array(
-                "name"  => "page",
-                "value" => $blnPage,
-            ),
-            array(
-                "name"  => "article",
-                "value" => $blnArticle,
-            ),
-            array(
-                "name"  => "content",
-                "value" => $blnContent,
-            ),
-            array(
-                "name"  => "update",
-                "value" => $blnUpdate,
-            ),
-        );        
-        
-        return $this->runServer('SYNCCTOPRO_REFRESH_HASHES', $arrData);
+        return $this->run('SYNCCTOPRO_CHECK_HASH');
     }
 
 }
