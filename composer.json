@@ -1,6 +1,6 @@
 {
 	"version":"1.2.4",
-	"name":"menatwork/synccto-pro",
+	"name":"menatwork/syncctopro",
 	"description":"Synchronize multiple contao installations with each other",
 	"keywords":["backup","synchronization","management","diff","pro"],
 	"type":"contao-module",
@@ -35,10 +35,7 @@
 	},
 	"require":{
 		"php":">=5.3",
-		"contao/core":">=3.2,<4.0",
-		"contao-community-alliance/composer-installer":"*",
-		"menatwork/contao-multicolumnwizard":"~3.2",
-		"menatwork/ctocommunication":"~2.0",
+		"menatwork/synccto":">=2.6,<3.1"
 	},
 	"autoload":{
 		"classmap":["system/"]
@@ -54,9 +51,6 @@
 		},
 		"runonce":[
 				"system/modules/syncCtoPro/config/runonce.php"
-			],
-		"branch-alias":{
-			"dev-master": "1.2.x-dev"
-		}
+		]
 	}
 }
