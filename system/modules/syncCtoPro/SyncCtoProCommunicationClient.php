@@ -87,7 +87,7 @@ class SyncCtoProCommunicationClient
             ),
         );
 
-        return $this->run('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData);
+        return $this->runServer('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData);
     }
 
     /**
@@ -121,7 +121,7 @@ class SyncCtoProCommunicationClient
             ),
         );
 
-        return $this->run('SYNCCTOPRO_DATABASE_SE_EXPORT', $arrData);
+        return $this->runServer('SYNCCTOPRO_DATABASE_SE_EXPORT', $arrData);
     }
 
     /**
@@ -145,7 +145,7 @@ class SyncCtoProCommunicationClient
             )
         );
 
-        return $this->run('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData);
+        return $this->runServer('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData);
     }
 
     /**
@@ -169,7 +169,7 @@ class SyncCtoProCommunicationClient
             )
         );
 
-        return $this->run('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData);
+        return $this->runServer('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData);
     }
 
     /**
@@ -179,7 +179,7 @@ class SyncCtoProCommunicationClient
      */
     public function checkER()
     {
-        return $this->run('SYNCCTOPRO_CHECK_ER');
+        return $this->runServer('SYNCCTOPRO_CHECK_ER');
     }
 
     /**
@@ -189,7 +189,7 @@ class SyncCtoProCommunicationClient
      */
     public function checkHash()
     {
-        return $this->run('SYNCCTOPRO_CHECK_HASH');
+        return $this->runServer('SYNCCTOPRO_CHECK_HASH');
     }
 
 }
