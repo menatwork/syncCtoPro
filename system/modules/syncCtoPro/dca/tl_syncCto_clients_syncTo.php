@@ -11,7 +11,13 @@
 
 $GLOBALS['TL_DCA']['tl_syncCto_clients_syncTo']['palettes']['__selector__'][] = 'database_check';
 
-$GLOBALS['TL_DCA']['tl_syncCto_clients_syncTo']['subpalettes']['database_check'] = 'database_pages_check';
+// Check if we alread have a value in the subpallettes.
+$currentSubPalettes = $GLOBALS['TL_DCA']['tl_syncCto_clients_syncTo']['subpalettes']['database_check'];
+if(empty($currentSubPalettes)){
+    $GLOBALS['TL_DCA']['tl_syncCto_clients_syncTo']['subpalettes']['database_check']  = 'database_pages_check'; 
+} else {
+    $GLOBALS['TL_DCA']['tl_syncCto_clients_syncTo']['subpalettes']['database_check']  = sprintf("%s,database_pages_check", $currentSubPalettes); 
+}
 
 $GLOBALS['TL_DCA']['tl_syncCto_clients_syncTo']['fields']['database_check']['eval']['submitOnChange'] = 'true';
 
