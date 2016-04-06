@@ -60,7 +60,7 @@ class SyncCtoProCommunicationClient
      *
      * @param mixed  $arguments
      *
-     * @return mixed The result from the parent class.
+     * @return mixed
      */
     public function __call($name, $arguments)
     {
@@ -87,16 +87,21 @@ class SyncCtoProCommunicationClient
             ),
         );
 
-        return $this->run('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData);
+        return $this
+            ->objSyncCtoCommunicationClient
+            ->run('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData);
     }
 
     /**
-     * Return a xml file with a db dump
+     * Return a xml file with a db dump.
      *
-     * @param string $strPath   Path for saving the file
-     * @param string $strTable  Name of table
-     * @param array  $arrIds    lsit of ids
-     * @param array  $arrFields list of field names
+     * @param string $strPath   Path for saving the file.
+     *
+     * @param string $strTable  Name of table.
+     *
+     * @param array  $arrIds    list of ids.
+     *
+     * @param array  $arrFields list of field names.
      *
      * @return string save name
      */
@@ -121,14 +126,17 @@ class SyncCtoProCommunicationClient
             ),
         );
 
-        return $this->run('SYNCCTOPRO_DATABASE_SE_EXPORT', $arrData);
+        return $this
+            ->objSyncCtoCommunicationClient
+            ->run('SYNCCTOPRO_DATABASE_SE_EXPORT', $arrData);
     }
 
     /**
      * Get hashes for a special tablenmae and/or special ids
      *
      * @param string $strTable Name of Table
-     * @param array  $arrIds   List with IDs
+     *
+     * @param array $arrIds List with IDs
      *
      * @return array List with hashes
      */
@@ -145,14 +153,17 @@ class SyncCtoProCommunicationClient
             )
         );
 
-        return $this->run('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData);
+        return $this
+            ->objSyncCtoCommunicationClient
+            ->run('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData);
     }
 
     /**
      * Get hashes for a special tablenmae and/or special ids
      *
      * @param string $strTable Name of Table
-     * @param array  $arrIds   List with IDs
+     *
+     * @param array $arrIds List with IDs
      *
      * @return array List with hashes
      */
@@ -169,7 +180,9 @@ class SyncCtoProCommunicationClient
             )
         );
 
-        return $this->run('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData);
+        return $this
+            ->objSyncCtoCommunicationClient
+            ->run('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData);
     }
 
     /**
@@ -179,7 +192,9 @@ class SyncCtoProCommunicationClient
      */
     public function checkER()
     {
-        return $this->run('SYNCCTOPRO_CHECK_ER');
+        return $this
+            ->objSyncCtoCommunicationClient
+            ->run('SYNCCTOPRO_CHECK_ER');
     }
 
     /**
@@ -189,7 +204,9 @@ class SyncCtoProCommunicationClient
      */
     public function checkHash()
     {
-        return $this->run('SYNCCTOPRO_CHECK_HASH');
+        return $this
+            ->objSyncCtoCommunicationClient
+            ->run('SYNCCTOPRO_CHECK_HASH');
     }
 
 }
