@@ -632,8 +632,8 @@ class SyncCtoProPopupDiff extends Backend
 
         // Get server Pages
         $arrElement = \Database::getInstance()
-                ->query('SELECT ' . implode(", ", $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
-                ->fetchAllAssoc();
+            ->query('SELECT ' . implode(", ", $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
+            ->fetchAllAssoc();
 
         $arrElementHashes = $this->objSyncCtoProDatabase->getHashValueFor($strTable, array());
 
@@ -657,6 +657,7 @@ class SyncCtoProPopupDiff extends Backend
      */
     protected function runDiff($arrLocalData, $arrExternData, $blnReturn = false, $strTemplate = 'be_syncCtoPro_popup_detail')
     {
+
         $strContent = "";
         $blnFlip    = false;
 
@@ -778,7 +779,7 @@ class SyncCtoProPopupDiff extends Backend
         // Check each field a make if diff if not empty
         foreach ($arrDataForDiff as $strField => $arrValues)
         {
-            // only check array if we have enough other entries
+            // Only check array if we have enough other entries
             if ( $strContent != '' || ($strContent == '' && $strField != $arrLastKeys) )
             {
                 // Check for empty data
@@ -801,9 +802,16 @@ class SyncCtoProPopupDiff extends Backend
                 }
             }
 
-            if (empty($arrValues['server']['data']) == true && empty($arrValues['client']['data']) == true)
+            // Special handling for '0' and ''.
+            foreach($arrValues as $side => $data)
             {
-                continue;
+                if($data['data'] == 0){
+                    $arrValues[$side]['data'] = 'Value (0)';
+                }
+
+                if($data['data'] == ''){
+                    $arrValues[$side]['data'] = 'Value ()';
+                }
             }
 
             // Get field name
@@ -983,20 +991,20 @@ class SyncCtoProPopupDiff extends Backend
                 elseif ($strTableName == 'tl_article')
                 {
                     $arrLookupPage = \Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
-                            ->execute($arrLocaleData['pid'])
-                            ->fetchAllAssoc();
+                        ->execute($arrLocaleData['pid'])
+                        ->fetchAllAssoc();
 
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLookupPage[0]['title'], '-');
                 }
                 else if ($strTableName == 'tl_content' && ($arrLocaleData['ptable'] == 'tl_article' || $arrLocaleData['ptable'] == ''))
                 {
                     $arrLookupArticle = \Database::getInstance()->prepare('SELECT pid,title FROM tl_article WHERE id =?')
-                            ->execute($arrLocaleData['pid'])
-                            ->fetchAllAssoc();
+                        ->execute($arrLocaleData['pid'])
+                        ->fetchAllAssoc();
 
                     $arrLookupPage = \Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
-                            ->execute($arrLookupArticle[0]['pid'])
-                            ->fetchAllAssoc();
+                        ->execute($arrLookupArticle[0]['pid'])
+                        ->fetchAllAssoc();
 
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'], $arrLookupPage[0]['title'], $arrLookupArticle[0]['title']);
                 }
@@ -1324,14 +1332,14 @@ class SyncCtoProPopupDiff extends Backend
         if (is_array($mixID))
         {
             return \Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id IN (" . implode(", ", $mixID) . ")")
-                            ->execute()
-                            ->fetchAllAssoc();
+                ->execute()
+                ->fetchAllAssoc();
         }
         else
         {
             return \Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id = ?")
-                            ->execute($mixID)
-                            ->fetchAllAssoc();
+                ->execute($mixID)
+                ->fetchAllAssoc();
         }
     }
 
