@@ -758,13 +758,27 @@ class SyncCtoProPopupDiff extends Backend
             // Try to solve the problem for the ... binary uuid things.
             if (strlen($mixValuesServer) == 16 && in_array($arrFieldMeta[$strField]['type'], array('binary', 'tinyblob', 'mediumblob', 'blob', 'longblob')))
             {
-                $mixValuesServer = @\String::binToUuid($mixValuesServer);
+                if (version_compare(VERSION . '.' . BUILD, '3.5.5', '>='))
+                {
+                    $mixValuesServer = @\StringUtil::binToUuid($mixValuesServer);
+                }
+                else
+                {
+                    $mixValuesServer = @\String::binToUuid($mixValuesServer);
+                }
             }
 
             // Try to solve the problem for the ... binary uuid things.
             if (strlen($mixValuesClient) == 16 && in_array($arrFieldMeta[$strField]['type'], array('binary', 'tinyblob', 'mediumblob', 'blob', 'longblob')))
             {
-                $mixValuesClient = @\String::binToUuid($mixValuesClient);
+                if (version_compare(VERSION . '.' . BUILD, '3.5.5', '>='))
+                {
+                    $mixValuesClient = @\StringUtil::binToUuid($mixValuesClient);
+                }
+                else
+                {
+                    $mixValuesClient = @\String::binToUuid($mixValuesClient);
+                }
             }
 
             // Save for later operations

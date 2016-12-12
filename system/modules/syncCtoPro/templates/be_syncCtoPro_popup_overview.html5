@@ -125,7 +125,7 @@
                         <span><?php if(!empty($arrContentValues['source']['type'])): echo $this->helperClass->getReadableContentName($arrContentValues['source']['type']); else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
                     <td></td>
-                    <td class="content icon"> 
+                    <td class="content icon">
                         <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
                         <span><?php if(!empty($arrContentValues['target']['type'])): echo $this->helperClass->getReadableContentName($arrContentValues['target']['type']); else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
@@ -181,7 +181,11 @@
                     <tr>
                         <td class="checkbox"> </td>
                         <td class="page icon">
-                            <span title="<?php echo $mixTitle; ?>"><?php echo \String::substr($mixTitle, 50); ?></span>
+                            <?php if (version_compare(VERSION . '.' . BUILD, '3.5.5', '>=')): ?>
+                                <span title="<?php echo $mixTitle; ?>"><?php echo \StringUtil::substr($mixTitle, 50); ?></span>
+                            <?php else: ?>
+                                <span title="<?php echo $mixTitle; ?>"><?php echo \String::substr($mixTitle, 50); ?></span>
+                            <?php endif; ?>
                         </td>
                         <td></td>
                         <td class="page icon"></td>
