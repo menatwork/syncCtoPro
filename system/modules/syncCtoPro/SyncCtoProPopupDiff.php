@@ -657,7 +657,6 @@ class SyncCtoProPopupDiff extends Backend
      */
     protected function runDiff($arrLocalData, $arrExternData, $blnReturn = false, $strTemplate = 'be_syncCtoPro_popup_detail')
     {
-
         $strContent = "";
         $blnFlip    = false;
 
@@ -819,11 +818,11 @@ class SyncCtoProPopupDiff extends Backend
             // Special handling for '0' and ''.
             foreach($arrValues as $side => $data)
             {
-                if($data['data'] == 0){
+                if($data['data'] === 0 || $data['data'] === '0'){
                     $arrValues[$side]['data'] = 'Value (0)';
                 }
 
-                if($data['data'] == ''){
+                if($data['data'] === ''){
                     $arrValues[$side]['data'] = 'Value ()';
                 }
             }
