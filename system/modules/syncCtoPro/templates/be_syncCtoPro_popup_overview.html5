@@ -182,9 +182,15 @@
                         <td class="checkbox"> </td>
                         <td class="page icon">
                             <?php if (version_compare(VERSION . '.' . BUILD, '3.5.5', '>=')): ?>
-                                <span title="<?php echo $mixTitle; ?>"><?php echo \StringUtil::substr($mixTitle, 50); ?></span>
+                                <?php $shortTitle = \StringUtil::substr($mixTitle, 50); ?>
                             <?php else: ?>
-                                <span title="<?php echo $mixTitle; ?>"><?php echo \String::substr($mixTitle, 50); ?></span>
+                                <?php $shortTitle = \String::substr($mixTitle, 50); ?>
+                            <?php endif; ?>
+
+                            <?php if($strPTable == 'tl_news' || $strPTable == 'tl_calendar_events' ): ?>
+                                <span title="<?php echo $mixTitle; ?>"><?php echo $shortTitle; ?> (Autor: <?php echo $arrElements['meta']['author']['name']; ?>)</span>
+                            <?php else: ?>
+                                <span title="<?php echo $mixTitle; ?>"><?php echo $shortTitle; ?></span>
                             <?php endif; ?>
                         </td>
                         <td></td>

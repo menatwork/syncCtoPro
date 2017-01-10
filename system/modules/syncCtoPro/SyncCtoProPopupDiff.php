@@ -536,58 +536,79 @@ class SyncCtoProPopupDiff extends Backend
                     foreach ($arrContentData as $strKey => $arrData)
                     {
                         $intPid        = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
-                        $arrParentData = $this->getParentData($intPid, 'tl_calendar_events', 'tl_calendar', 'title', 'title');
+                        $arrParentData = $this->getParentData(
+                            $intPid,
+                            'tl_calendar_events',
+                            'tl_calendar',
+                            'title',
+                            'title'
+                        );
+
+                        // Get the author.
+                        $author = \Database::getInstance()
+                            ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_calendar_events WHERE id = ?)')
+                            ->execute($arrParentData['middle_id']);
 
                         // Rebuild array.
-                        if (empty($arrParentData))
-                        {
+                        if (empty($arrParentData)) {
                             $strFullTitle = 'Unknown';
-                        }
-                        elseif (isset($arrParentData['head']))
-                        {
+                        } elseif (isset($arrParentData['head']) && isset($arrParentData['middle'])) {
                             $strFullTitle = sprintf('%s - %s', $arrParentData['head'], $arrParentData['middle']);
-                        }
-                        elseif (isset($arrParentData['middle']))
-                        {
+                        } elseif (isset($arrParentData['middle'])) {
                             $strFullTitle = sprintf('%s', $arrParentData['middle']);
-                        }
-                        else
-                        {
-                            $strFullTitle = 'Unknown';
-                        }
-
-                        $arrData['parent_information']                           = $arrParentData;
-                        $arrAdditionalContentReorder[$strTable][$strFullTitle]['data'][] = $arrData;
-                    }
-                }
-                // News
-                elseif ($strTable == 'tl_news')
-                {
-                    foreach ($arrContentData as $strKey => $arrData)
-                    {
-                        $intPid        = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
-                        $arrParentData = $this->getParentData($intPid, 'tl_news', 'tl_news_archive', 'headline', 'title');
-
-                        // Rebuild array.
-                        if (empty($arrParentData))
-                        {
-                            $strFullTitle = 'Unknown';
-                        }
-                        elseif (isset($arrParentData['head']))
-                        {
-                            $strFullTitle = sprintf('%s - %s', $arrParentData['head'], $arrParentData['middle']);
-                        }
-                        elseif (isset($arrParentData['middle']))
-                        {
-                            $strFullTitle = sprintf('%s', $arrParentData['middle']);
-                        }
-                        else
-                        {
+                        } else {
                             $strFullTitle = 'Unknown';
                         }
 
                         $arrData['parent_information']                                   = $arrParentData;
                         $arrAdditionalContentReorder[$strTable][$strFullTitle]['data'][] = $arrData;
+
+                        // Add all data.
+                        $arrAdditionalContentReorder[$strTable][$strFullTitle]['meta'] = array(
+                            'archive_id' => $arrParentData['head_id'],
+                            'news_id'    => $arrParentData['middle_id'],
+                            'author'     => $author->fetchAssoc()
+                        );
+                    }
+                }
+                // News
+                elseif ($strTable == 'tl_news')
+                {
+                    foreach ($arrContentData as $strKey => $arrData) {
+                        $intPid        = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
+                        $arrParentData = $this->getParentData(
+                            $intPid,
+                            'tl_news',
+                            'tl_news_archive',
+                            'headline',
+                            'title'
+                        );
+
+                        // Get the author.
+                        $author = \Database::getInstance()
+                            ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_news WHERE id = ?)')
+                            ->execute($arrParentData['middle_id']);
+
+                        // Rebuild array.
+                        if (empty($arrParentData)) {
+                            $strFullTitle = 'Unknown';
+                        } elseif (isset($arrParentData['head']) && isset($arrParentData['middle'])) {
+                            $strFullTitle = sprintf('%s - %s', $arrParentData['head'], $arrParentData['middle']);
+                        } elseif (isset($arrParentData['middle'])) {
+                            $strFullTitle = sprintf('%s', $arrParentData['middle']);
+                        } else {
+                            $strFullTitle = 'Unknown';
+                        }
+
+                        $arrData['parent_information']                                   = $arrParentData;
+                        $arrAdditionalContentReorder[$strTable][$strFullTitle]['data'][] = $arrData;
+
+                        // Add all data.
+                        $arrAdditionalContentReorder[$strTable][$strFullTitle]['meta'] = array(
+                            'archive_id' => $arrParentData['head_id'],
+                            'news_id'    => $arrParentData['middle_id'],
+                            'author'     => $author->fetchAssoc()
+                        );
                     }
                 }
                 // Unknown
@@ -1239,7 +1260,8 @@ class SyncCtoProPopupDiff extends Backend
             return $arrReturn;
         }
 
-        $arrReturn['middle'] = $objMiddleTable->$strMiddleField;
+        $arrReturn['middle']    = $objMiddleTable->$strMiddleField;
+        $arrReturn['middle_id'] = $objMiddleTable->id;
 
         // Check if the head table exists.
         if ($strHeadTable == null || !\Database::getInstance()->tableExists($strHeadTable))
@@ -1257,7 +1279,8 @@ class SyncCtoProPopupDiff extends Backend
             return $arrReturn;
         }
 
-        $arrReturn['head'] = $objHeadTable->$strHeadField;
+        $arrReturn['head']    = $objHeadTable->$strHeadField;
+        $arrReturn['head_id'] = $objHeadTable->id;
 
         return $arrReturn;
     }
