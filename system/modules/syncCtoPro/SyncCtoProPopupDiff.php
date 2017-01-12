@@ -623,6 +623,17 @@ class SyncCtoProPopupDiff extends Backend
             }
         }
 
+        // Add the authors.
+        foreach ($arrAllArticleValues as $key => $values )
+        {
+            // Get the author.
+            $author = \Database::getInstance()
+                ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_article WHERE id = ?)')
+                ->execute($values['id']);
+
+            $arrAllArticleValues[$key]['author'] = $author->fetchAssoc();
+        }
+
         // Template
         $objOverviewTemplate = new \BackendTemplate('be_syncCtoPro_popup_overview');
 

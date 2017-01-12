@@ -93,7 +93,7 @@
                     </td>
                     <td class="article icon">
                         <img src="<?php echo $this->path; ?>/system/themes/default/images/article.gif" alt="" />
-                        <span><?php if(!empty($arrArticleValues['source']['title'])): echo $arrArticleValues['source']['title']; else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
+                        <span><?php if(!empty($arrArticleValues['source']['title'])): echo $arrArticleValues['source']['title']; else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?> (Autor: <?php echo $arrArticleValues['author']['name']; ?>)</span>
                     </td>
                     <td></td>
                     <td class="article icon">
