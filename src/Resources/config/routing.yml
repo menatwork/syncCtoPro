@@ -1,0 +1,3 @@
+maw.sync_cto_pro.popup_database:
+  path:     /syncCto/pro/databasePopup
+  defaults: { _controller: MenAtWork\SyncCtoPro\Controller\Diff::runAction, _scope: backend, _token_check: true }

@@ -1,3 +1,6 @@
+<?php
+    use MenAtWork\SyncCtoPro\Controller\Diff;
+?>
 <script>
     function mySubmit(strName)
     {
@@ -7,7 +10,7 @@
 </script>
 <div id="tl_listing" class="tl_listing_container">
 
-<form id="db_form" action="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_OVERVIEW; ?>" method="post">
+<form id="db_form" action="<?php echo $this->base; ?>syncCto/pro/databasePopup?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=<?php echo Diff::VIEWMODE_OVERVIEW; ?>" method="post">
     <div class="formbody">
         <input type="hidden" name="FORM_SUBMIT" value="<?php echo $this->formId; ?>" />
         <input type="hidden" name="REQUEST_TOKEN" value="<?php echo REQUEST_TOKEN; ?>">
@@ -42,9 +45,9 @@
                         <?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?>
                     </th>
                     <th class="diff">
-                        <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo SyncCtoProPopupDiff::VIEWMODE_ALL ?>" />
+                        <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo Diff::VIEWMODE_ALL ?>" />
                         <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo Environment::getInstance()->request; ?>" OnClick="mySubmit('showall'); return false;">
-                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" />
+                            <img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/diff.gif" alt="" />
                         </a>
                     </th>
                 </tr>
@@ -73,7 +76,7 @@
                     </td>
                     <td align="center" class="diff">
                     <?php if ($arrPageValues['state'] == 'diff' && in_array('tl_page', $this->arrAllowedTables)): ?>
-                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrPageValues['id']; ?>&table=tl_page&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" /></a>
+                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>syncCto/pro/databasePopup?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrPageValues['id']; ?>&table=tl_page&view=<?php echo Diff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/diff.gif" alt="" /></a>
                     <?php endif; ?>
                     </td>
                 </tr>
@@ -102,7 +105,7 @@
                     </td>
                     <td align="center" class="diff">
                     <?php if ($arrArticleValues['state'] == 'diff' && in_array('tl_article', $this->arrAllowedTables)): ?>
-                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrArticleValues['id']; ?>&table=tl_article&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" /></a>
+                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>syncCto/pro/databasePopup?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrArticleValues['id']; ?>&table=tl_article&view=<?php echo Diff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/diff.gif" alt="" /></a>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -121,17 +124,17 @@
                     <?php endif; ?>
                     </td>
                     <td class="content icon">
-                        <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
+                        <img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/content.png" alt="" />
                         <span><?php if(!empty($arrContentValues['source']['type'])): echo $this->helperClass->getReadableContentName($arrContentValues['source']['type']); else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
                     <td></td>
                     <td class="content icon">
-                        <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
+                        <img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/content.png" alt="" />
                         <span><?php if(!empty($arrContentValues['target']['type'])): echo $this->helperClass->getReadableContentName($arrContentValues['target']['type']); else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
                     <td align="center" class="diff">
                     <?php if ($arrContentValues['state'] == 'diff' && in_array('tl_content', $this->arrAllowedTables)): ?>
-                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrContentValues['id']; ?>&table=tl_content&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" /></a>
+                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>syncCto/pro/databasePopup?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrContentValues['id']; ?>&table=tl_content&view=<?php echo Diff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/diff.gif" alt="" /></a>
                     <?php endif; ?>
                     </td>
                 </tr>
@@ -169,9 +172,9 @@
                     <?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?>
                 </th>
                 <th class="diff">
-                    <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo SyncCtoProPopupDiff::VIEWMODE_ALL ?>" />
-                    <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo Environment::getInstance()->request; ?>" OnClick="mySubmit('showall'); return false;">
-                        <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" />
+                    <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo Diff::VIEWMODE_ALL ?>" />
+                    <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo Environment::get('request'); ?>" OnClick="mySubmit('showall'); return false;">
+                        <img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/diff.gif" alt="" />
                     </a>
                 </th>
             </tr>
@@ -211,17 +214,17 @@
                             <?php endif; ?>
                         </td>
                         <td class="content icon">
-                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
+                            <img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/content.png" alt="" />
                             <span><?php if(!empty($arrContentValues['source']['type'])): echo $this->helperClass->getReadableContentName($arrContentValues['source']['type']); else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                         </td>
                         <td></td>
                         <td class="content icon">
-                            <img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/content.png" alt="" />
+                            <img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/content.png" alt="" />
                             <span><?php if(!empty($arrContentValues['target']['type'])): echo $this->helperClass->getReadableContentName($arrContentValues['target']['type']); else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                         </td>
                         <td align="center" class="diff">
                             <?php if ($arrContentValues['state'] == 'diff' && in_array('tl_content', $this->arrAllowedTables)): ?>
-                                <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrContentValues['id']; ?>&table=tl_content&view=<?php echo SyncCtoProPopupDiff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/system/modules/syncCtoPro/assets/icons/diff.gif" alt="" /></a>
+                                <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo $this->base; ?>syncCto/pro/databasePopup?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&row_id=<?php echo $arrContentValues['id']; ?>&table=tl_content&view=<?php echo Diff::VIEWMODE_DETAIL; ?>"><img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/diff.gif" alt="" /></a>
                             <?php endif; ?>
                         </td>
                     </tr>
