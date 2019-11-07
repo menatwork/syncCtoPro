@@ -355,22 +355,18 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
                     break;
 
                 case $i++: // 2
-                    $this->checkSystem(true);
-                    break;
-
-                case $i++: // 3
                     $this->generateDataForPageTree();
                     break;
 
-                case $i++: // 4
+                case $i++: // 3
                     $this->loadFilesForPageTree();
                     break;
 
-                case $i++: // 5
+                case $i++: // 4
                     $this->checkRun();
                     break;
 
-                case $i++: // 6
+                case $i++: // 5
                     if ($this->arrSyncSettings['automode'])
                     {
                         $this->runAutoDiff();
@@ -381,19 +377,19 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
                     }
                     break;
 
-                case $i++: // 7
+                case $i++: // 6
                     $this->generateLocalUpdateFiles();
                     break;
 
-                case $i++: // 8
+                case $i++: // 7
                     $this->sendUpdateFiles();
                     break;
 
-                case $i++: // 9
+                case $i++: // 8
                     $this->importExtern();
                     break;
 
-                case $i++: // 10
+                case $i++: // 9
 //                    $this->refreshTimestamps();
                     $this->setNextStep();
                     break;
