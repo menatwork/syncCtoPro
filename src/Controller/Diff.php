@@ -16,6 +16,7 @@ use Contao\BackendTemplate;
 use Contao\BackendUser;
 use Contao\Environment;
 use Contao\Input;
+use Contao\ModuleLoader;
 use Contao\Session;
 use Contao\System;
 use Diff_Renderer_Html_Contao;
@@ -1019,7 +1020,7 @@ class Diff
         }
 
         // Get MM name
-        if (in_array('metamodels', $this->Config->getActiveModules()) && preg_match("/^mm_/i", $strName)) {
+        if (in_array('metamodels', ModuleLoader::getActive()) && preg_match("/^mm_/i", $strName)) {
             try {
                 if (!is_null(\MetaModels\Factory::byTableName($strName))) {
                     $objDCABuilder     = \MetaModels\Dca\MetaModelDcaBuilder::getInstance();
