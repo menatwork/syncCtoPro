@@ -1496,7 +1496,7 @@ class Diff
     public function getPageIcon($arrPage)
     {
         $sub   = 0;
-        $image = $arrPage['type'] . '.gif';
+        $image = $arrPage['type'] . '.svg';
 
         // Page not published or not active
         if (!$arrPage['published'] || $arrPage['start'] && $arrPage['start'] > time() || $arrPage['stop'] && $arrPage['stop'] < time()) {
@@ -1520,15 +1520,15 @@ class Diff
         }
 
 
-        if (file_exists(TL_ROOT . '/system/themes/' . Backend::getTheme() . '/images/' . $image)) {
-            return 'system/themes/' . Backend::getTheme() . '/images/' . $image;
+        if (file_exists(TL_ROOT . '/system/themes/' . Backend::getTheme() . '/icons/' . $image)) {
+            return 'system/themes/' . Backend::getTheme() . '/icons/' . $image;
         }
 
-        if (file_exists(TL_ROOT . '/system/themes/default/images/' . $image)) {
-            return 'system/themes/default/images/' . $image;
+        if (file_exists(TL_ROOT . '/system/themes/flexible/icons/' . $image)) {
+            return 'system/themes/flexible/icons/' . $image;
         }
 
-        return 'system/themes/default/images/regular.gif';
+        return 'system/themes/flexible/icons/regular.svg';
     }
 
 }

@@ -39,7 +39,7 @@
                         <?php echo $GLOBALS['TL_LANG']['MSC']['server']; ?>
                     </th>
                     <th class="direction">
-                        <img src="<?php echo $this->Environment->base; ?>system/modules/syncCto/assets/images/steps/iconSync<?php echo $this->direction; ?>.png" alt="" />
+                        <img src="<?php echo $this->Environment->base; ?>bundles/synccto/images/steps/iconSync<?php echo $this->direction; ?>.png" alt="" />
                     </th>
                     <th class="client">
                         <?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?>
@@ -66,12 +66,12 @@
                     <?php endif; ?>
                     </td>
                     <td class="page icon">
-                        <img src="<?php echo  $this->path . '/' . (($arrPageValues['delete'] == true) ? 'system/themes/default/images/regular.gif' : $arrPageValues['source']['site_image']); ?>" alt="" />
+                        <img src="<?php echo  $this->path . '/' . (($arrPageValues['delete'] == true) ? 'system/themes/flexible/icons/regular.svg' : $arrPageValues['source']['site_image']); ?>" alt="" />
                         <span><?php if(!empty($arrPageValues['source']['title'])): echo $arrPageValues['source']['title']; else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
                     <td></td>
                     <td class="page icon">
-                        <img src="<?php echo $this->path . '/' . (($arrPageValues['delete'] == true) ? 'system/themes/default/images/regular.gif' : $arrPageValues['target']['site_image']); ?>" alt="" />
+                        <img src="<?php echo $this->path . '/' . (($arrPageValues['delete'] == true) ? 'system/themes/flexible/icons/regular.svg' : $arrPageValues['target']['site_image']); ?>" alt="" />
                         <span><?php if(!empty($arrPageValues['target']['title'])): echo $arrPageValues['target']['title']; else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
                     <td align="center" class="diff">
@@ -95,12 +95,12 @@
                     <?php endif; ?>
                     </td>
                     <td class="article icon">
-                        <img src="<?php echo $this->path; ?>/system/themes/default/images/article.gif" alt="" />
+                        <img src="<?php echo $this->path; ?>/system/themes/flexible/icons/article.svg" alt="" />
                         <span><?php if(!empty($arrArticleValues['source']['title'])): echo $arrArticleValues['source']['title']; else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?> (Autor: <?php echo $arrArticleValues['author']['name']; ?>)</span>
                     </td>
                     <td></td>
                     <td class="article icon">
-                        <img src="<?php echo $this->path; ?>/system/themes/default/images/article.gif" alt="" />
+                        <img src="<?php echo $this->path; ?>/system/themes/flexible/icons/article.svg" alt="" />
                         <span><?php if(!empty($arrArticleValues['target']['title'])): echo $arrArticleValues['target']['title']; else: echo $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['missing']; endif; ?></span>
                     </td>
                     <td align="center" class="diff">
@@ -166,7 +166,7 @@
                     <?php echo $GLOBALS['TL_LANG']['MSC']['server']; ?>
                 </th>
                 <th class="direction">
-                    <img src="<?php echo $this->Environment->base; ?>system/modules/syncCto/assets/images/steps/iconSync<?php echo $this->direction; ?>.png" alt="" />
+                    <img src="<?php echo $this->Environment->base; ?>bundles/synccto/images/steps/iconSync<?php echo $this->direction; ?>.png" alt="" />
                 </th>
                 <th class="client">
                     <?php echo $GLOBALS['TL_LANG']['MSC']['client']; ?>

@@ -485,7 +485,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         {
             // Get Client information
             $arrClientInformation = SyncCtoCommunicationClient::getInstance()->getClientData();
-            $strAddress           = $arrClientInformation['address'] . $arrClientInformation['path'];
+            $strAddress           = $arrClientInformation['address'] . ':' . $arrClientInformation['port'] . '/ctoCommunication';
 
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);

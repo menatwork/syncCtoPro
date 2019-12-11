@@ -341,6 +341,7 @@ class SyncCtoProDatabase extends \Backend
                             case 'mediumblob':
                             case 'longblob':
                                 $objXml->writeAttribute("type", "blob");
+                                $objXml->writeCdata(base64_encode($arrDatabaseFieldsMeta[$strField]['default']));
                                 break;
 
                             case 'tinyint':
@@ -350,6 +351,7 @@ class SyncCtoProDatabase extends \Backend
                             case 'integer':
                             case 'bigint':
                                 $objXml->writeAttribute("type", "int");
+                                $objXml->text($arrDatabaseFieldsMeta[$strField]['default']);
                                 break;
 
                             case 'float':
@@ -358,6 +360,7 @@ class SyncCtoProDatabase extends \Backend
                             case 'decimal':
                             case 'numeric':
                                 $objXml->writeAttribute("type", "decimal");
+                                $objXml->text($arrDatabaseFieldsMeta[$strField]['default']);
                                 break;
 
                             case 'date':
@@ -366,6 +369,7 @@ class SyncCtoProDatabase extends \Backend
                             case 'time':
                             case 'year':
                                 $objXml->writeAttribute("type", "date");
+                                $objXml->text($arrDatabaseFieldsMeta[$strField]['default']);
                                 break;
 
                             case 'char':
@@ -377,14 +381,14 @@ class SyncCtoProDatabase extends \Backend
                             case 'enum':
                             case 'set':
                                 $objXml->writeAttribute("type", "text");
+                                $objXml->writeCdata(base64_encode($arrDatabaseFieldsMeta[$strField]['default']));
                                 break;
 
                             default:
                                 $objXml->writeAttribute("type", "default");
+                                $objXml->writeCdata(base64_encode($arrDatabaseFieldsMeta[$strField]['default']));
                                 break;
                         }
-
-                        $objXml->writeCdata($arrDatabaseFieldsMeta[$strField]['default']);
                     }
                 } // Write data.
                 else {
