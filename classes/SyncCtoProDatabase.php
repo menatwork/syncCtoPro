@@ -327,71 +327,13 @@ class SyncCtoProDatabase extends \Backend
                     $objXml->writeAttribute('onlyInsert', true);
                 }
 
-                // Write empty data.
-                if ($mixvalue == '') {
-                    if ($arrDatabaseFieldsMeta[$strField]['default'] === null) {
-                        $objXml->writeAttribute("type", "null");
-                        $objXml->text('');
-                    } else {
-                        switch (strtolower($arrDatabaseFieldsMeta[$strField]['type'])) {
-                            case 'binary':
-                            case 'varbinary':
-                            case 'blob':
-                            case 'tinyblob':
-                            case 'mediumblob':
-                            case 'longblob':
-                                $objXml->writeAttribute("type", "blob");
-                                $objXml->writeCdata(base64_encode($arrDatabaseFieldsMeta[$strField]['default']));
-                                break;
-
-                            case 'tinyint':
-                            case 'smallint':
-                            case 'mediumint':
-                            case 'int':
-                            case 'integer':
-                            case 'bigint':
-                                $objXml->writeAttribute("type", "int");
-                                $objXml->text($arrDatabaseFieldsMeta[$strField]['default']);
-                                break;
-
-                            case 'float':
-                            case 'double':
-                            case 'real':
-                            case 'decimal':
-                            case 'numeric':
-                                $objXml->writeAttribute("type", "decimal");
-                                $objXml->text($arrDatabaseFieldsMeta[$strField]['default']);
-                                break;
-
-                            case 'date':
-                            case 'datetime':
-                            case 'timestamp':
-                            case 'time':
-                            case 'year':
-                                $objXml->writeAttribute("type", "date");
-                                $objXml->text($arrDatabaseFieldsMeta[$strField]['default']);
-                                break;
-
-                            case 'char':
-                            case 'varchar':
-                            case 'text':
-                            case 'tinytext':
-                            case 'mediumtext':
-                            case 'longtext':
-                            case 'enum':
-                            case 'set':
-                                $objXml->writeAttribute("type", "text");
-                                $objXml->writeCdata(base64_encode($arrDatabaseFieldsMeta[$strField]['default']));
-                                break;
-
-                            default:
-                                $objXml->writeAttribute("type", "default");
-                                $objXml->writeCdata(base64_encode($arrDatabaseFieldsMeta[$strField]['default']));
-                                break;
-                        }
-                    }
-                } // Write data.
-                else {
+                if ($mixvalue === null) {
+                    $objXml->writeAttribute("type", "null");
+                    $objXml->writeCdata();
+                } elseif ($mixvalue === '') {
+                    $objXml->writeAttribute("type", "empty");
+                    $objXml->writeCdata();
+                } else {
                     switch (strtolower($arrDatabaseFieldsMeta[$strField]['type'])) {
                         case 'binary':
                         case 'varbinary':
@@ -541,8 +483,10 @@ class SyncCtoProDatabase extends \Backend
                 case XMLReader::TEXT:
                 case XMLReader::CDATA:
                     if ($blnInData) {
-                        if (in_array($strCurrentAttributeType, array("null", "empty"))) {
-                            // Nothing to do
+                        if (in_array($strCurrentAttributeType, array("null"))) {
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = null;
+                        } elseif (in_array($strCurrentAttributeType, array("empty"))) {
+                            $arrData['data'][$intI]['insert'][$strCurrentAttribute] = '';
                         } elseif (in_array($strCurrentAttributeType, array("text", "blob", "default"))) {
                             $mixValue                                               = base64_decode($objXMLReader->value);
                             $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $mixValue;
