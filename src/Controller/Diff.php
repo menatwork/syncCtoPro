@@ -35,8 +35,8 @@ class Diff
     ////////////////////////////////////////////////////////////////////////////
 
     const VIEWMODE_OVERVIEW = 'overview';
-    const VIEWMODE_DETAIL   = 'detail';
-    const VIEWMODE_ALL      = 'all';
+    const VIEWMODE_DETAIL = 'detail';
+    const VIEWMODE_ALL = 'all';
 
     ////////////////////////////////////////////////////////////////////////////
     // Objects
@@ -61,6 +61,11 @@ class Diff
      * @var BackendTemplate
      */
     protected $popupTemplate;
+
+    /**
+     * @var SyncCtoHelper
+     */
+    protected $objSyncCtoHelper;
 
     ////////////////////////////////////////////////////////////////////////////
     // Vars
@@ -153,6 +158,139 @@ class Diff
     ////////////////////////////////////////////////////////////////////////////
 
     /**
+     * Check if a list of id's is allowed.
+     *
+     * @param array  $ids      List of ids.
+     *
+     * @param string $table    Name of table if given.
+     *
+     * @param false  $combined Flag if combined id or not.
+     *
+     * @return array The cleared list.
+     */
+    protected function cleanIds($ids, $table = '', $combined = false)
+    {
+        $return = [];
+        foreach ($ids as $key => $value){
+            $allowed = true;
+            if($combined == true){
+                $allowed = $this->isCombinedIdAllowed($value);
+            } else {
+                $allowed = $this->isIdAllowed($value, $table);
+            }
+
+            if($allowed){
+                $return[] = $value;
+            }
+        }
+
+        return $return;
+    }
+
+    /**
+     * Check if a combined id is allowed.
+     *
+     * @param string $id The combined id.
+     *
+     * @return bool Ture => Yes | False => No.
+     */
+    protected function isCombinedIdAllowed($id)
+    {
+        $values = \explode('::', $id);
+
+        return $this->isIdAllowed($values[0], $values[1]);
+    }
+
+    /**
+     * Check if the id is allowed.
+     *
+     * @param string $strTable Name of the table.
+     *
+     * @param string $id       Id of the element in the table.
+     *
+     * @return bool Ture => Yes | False => No.
+     */
+    protected function isIdAllowed($strTable, $id)
+    {
+        $allowedIds = $this->getAllowedIds($strTable);
+
+        if ($allowedIds === []) {
+            return true;
+        }
+
+        if (\in_array($id, $allowedIds)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * If a user is not an admin check if there is a list of allowed pages.
+     *
+     * @param string $strTable Name of the table to get the ids.
+     *
+     * @return array List of Id's based on the table.
+     */
+    protected function getAllowedIds($strTable)
+    {
+        $user           = \BackendUser::getInstance();
+        $allowedPageIds = $user->syncCto_pagemounts;
+
+        if ($user->isAdmin) {
+            return [];
+        }
+
+        if (empty($allowedPageIds)) {
+            return [];
+        }
+
+        switch ($strTable) {
+            case 'tl_page':
+                return \array_values($allowedPageIds);
+                break;
+
+            case 'tl_article':
+                return \Contao\Database::getInstance()
+                    ->prepare(
+                        \sprintf(
+                            'SELECT id FROM tl_article WHERE pid IN (%s)',
+                            \implode(', ', \array_fill(0, \count($allowedPageIds), '?'))
+                        )
+                    )
+                    ->execute($allowedPageIds)
+                    ->fetchEach('id');
+                break;
+
+            case 'tl_content':
+                $articleIds = \Contao\Database::getInstance()
+                    ->prepare(
+                        \sprintf(
+                            'SELECT id FROM tl_article WHERE pid IN (%s)',
+                            \implode(', ', \array_fill(0, \count($allowedPageIds), '?'))
+                        )
+                    )
+                    ->execute($allowedPageIds)
+                    ->fetchEach('id');
+
+                return \Contao\Database::getInstance()
+                    ->prepare(
+                        \sprintf(
+                            'SELECT id FROM tl_content WHERE pid IN (%s)',
+                            \implode(', ', \array_fill(0, \count($articleIds), '?'))
+                        )
+                    )
+                    ->execute($articleIds)
+                    ->fetchEach('id');
+                break;
+
+            default:
+                return [];
+                break;
+        }
+    }
+
+    /**
      * Load the template list and go through the steps
      */
     public function runAction()
@@ -205,6 +343,13 @@ class Diff
 
                 // Detail diff
                 case self::VIEWMODE_DETAIL:
+                    // This should never be happen.
+                    if(!$this->isIdAllowed($this->strTable, $this->intRowId)){
+                        throw new \RuntimeException(
+                            'Access for ' . $this->strTable . ' and id ' . $this->intRowId . ' is not allowed.'
+                        );
+                    }
+
                     $arrExtData = $this->loadExternDataFor($this->strTable, $this->intRowId);
                     $arrLocData = $this->loadLocalDataFor($this->strTable, $this->intRowId);
 
@@ -484,8 +629,8 @@ class Diff
 
                         // Get the author.
                         $author = \Database::getInstance()
-                                           ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_calendar_events WHERE id = ?)')
-                                           ->execute($arrParentData['middle_id']);
+                            ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_calendar_events WHERE id = ?)')
+                            ->execute($arrParentData['middle_id']);
 
                         // Rebuild array.
                         if (empty($arrParentData)) {
@@ -522,8 +667,8 @@ class Diff
 
                         // Get the author.
                         $author = \Database::getInstance()
-                                           ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_news WHERE id = ?)')
-                                           ->execute($arrParentData['middle_id']);
+                            ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_news WHERE id = ?)')
+                            ->execute($arrParentData['middle_id']);
 
                         // Rebuild array.
                         if (empty($arrParentData)) {
@@ -560,8 +705,8 @@ class Diff
         foreach ($arrAllArticleValues as $key => $values) {
             // Get the author.
             $author = \Database::getInstance()
-                               ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_article WHERE id = ?)')
-                               ->execute($values['id']);
+                ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_article WHERE id = ?)')
+                ->execute($values['id']);
 
             $arrAllArticleValues[$key]['author'] = $author->fetchAssoc();
         }
@@ -585,6 +730,7 @@ class Diff
         $this->strContentData = $objOverviewTemplate->parse();
     }
 
+
     protected function renderElementsPart($strTable, $arrFields)
     {
         // Get all data / load helper
@@ -592,22 +738,36 @@ class Diff
 
         // Read client pages
         $arrClientElement       = $this->objSyncCtoProDatabase->readXML($arrFilePathes[$strTable]);
-        $arrClientElementHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor($strTable);
+        $arrClientElementHashes = $this
+            ->objSyncCtoProCommunicationClient
+            ->getHashValueFor($strTable, $this->getAllowedIds($strTable));
 
         // Get server Pages
         $arrElement = \Database::getInstance()
-                               ->query('SELECT ' . implode(", ",
-                                       $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
-                               ->fetchAllAssoc();
+            ->query('SELECT ' . implode(", ",
+                    $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
+            ->fetchAllAssoc();
 
-        $arrElementHashes = $this->objSyncCtoProDatabase->getHashValueFor($strTable, array());
+        $arrElementHashes = $this
+            ->objSyncCtoProDatabase
+            ->getHashValueFor($strTable, $this->getAllowedIds($strTable));
 
         if (array_key_exists($strTable, (array)$this->arrSyncSettings['syncCtoPro_delete'])) {
-            return $this->buildTree($arrElement, $arrElementHashes, $arrClientElement['data'], $arrClientElementHashes,
-                (array)$this->arrSyncSettings['syncCtoPro_delete'][$strTable]);
+            return $this->buildTree(
+                $arrElement,
+                $arrElementHashes,
+                $arrClientElement['data'],
+                $arrClientElementHashes,
+                (array)$this->arrSyncSettings['syncCtoPro_delete'][$strTable]
+            );
         } else {
-            return $this->buildTree($arrElement, $arrElementHashes, $arrClientElement['data'], $arrClientElementHashes,
-                array());
+            return $this->buildTree(
+                $arrElement,
+                $arrElementHashes,
+                $arrClientElement['data'],
+                $arrClientElementHashes,
+                array()
+            );
         }
     }
 
@@ -861,6 +1021,7 @@ class Diff
         $arrLocData = array();
 
         $arrTransferData = (array)\Input::post('transfer_ids');
+        $arrTransferData = $this->cleanIds($arrTransferData, '', true);
         $arrDeleteData   = (array)\Input::post('delete_client_ids');
 
         // Get table and id
@@ -915,19 +1076,19 @@ class Diff
                         $arrLocaleData['title'], '-');
                 } elseif ($strTableName == 'tl_article') {
                     $arrLookupPage = \Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
-                                              ->execute($arrLocaleData['pid'])
-                                              ->fetchAllAssoc();
+                        ->execute($arrLocaleData['pid'])
+                        ->fetchAllAssoc();
 
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
                         $arrLookupPage[0]['title'], '-');
                 } elseif ($strTableName == 'tl_content' && ($arrLocaleData['ptable'] == 'tl_article' || $arrLocaleData['ptable'] == '')) {
                     $arrLookupArticle = \Database::getInstance()->prepare('SELECT pid,title FROM tl_article WHERE id =?')
-                                                 ->execute($arrLocaleData['pid'])
-                                                 ->fetchAllAssoc();
+                        ->execute($arrLocaleData['pid'])
+                        ->fetchAllAssoc();
 
                     $arrLookupPage = \Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
-                                              ->execute($arrLookupArticle[0]['pid'])
-                                              ->fetchAllAssoc();
+                        ->execute($arrLookupArticle[0]['pid'])
+                        ->fetchAllAssoc();
 
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
                         $arrLookupPage[0]['title'], $arrLookupArticle[0]['title']);
@@ -1118,8 +1279,8 @@ class Diff
 
         // Get the middle table
         $objMiddleTable = \Database::getInstance()
-                                   ->prepare('SELECT id, pid, ' . $strMiddleField . ' FROM ' . $strMiddleTable . ' WHERE id=?')
-                                   ->execute($intId);
+            ->prepare('SELECT id, pid, ' . $strMiddleField . ' FROM ' . $strMiddleTable . ' WHERE id=?')
+            ->execute($intId);
 
         if ($objMiddleTable->count() == 0) {
             return $arrReturn;
@@ -1135,8 +1296,8 @@ class Diff
 
         // Get the main table.
         $objHeadTable = \Database::getInstance()
-                                 ->prepare('SELECT id, ' . $strHeadField . ' FROM ' . $strHeadTable . ' WHERE id=?')
-                                 ->execute($objMiddleTable->pid);
+            ->prepare('SELECT id, ' . $strHeadField . ' FROM ' . $strHeadTable . ' WHERE id=?')
+            ->execute($objMiddleTable->pid);
 
         if ($objHeadTable->count() == 0) {
             return $arrReturn;
@@ -1223,12 +1384,12 @@ class Diff
         if (is_array($mixID)) {
             return \Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id IN (" . implode(", ",
                     $mixID) . ")")
-                            ->execute()
-                            ->fetchAllAssoc();
+                ->execute()
+                ->fetchAllAssoc();
         } else {
             return \Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id = ?")
-                            ->execute($mixID)
-                            ->fetchAllAssoc();
+                ->execute($mixID)
+                ->fetchAllAssoc();
         }
     }
 

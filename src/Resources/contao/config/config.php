@@ -14,6 +14,11 @@
  */
 $GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncCtoPro/assets/icons/iconClients.png';
 
+/**
+ * Permissions
+ */
+$GLOBALS['TL_PERMISSIONS'][] = 'syncCto_force_diff';
+$GLOBALS['TL_PERMISSIONS'][] = 'syncCto_pagemounts';
 
 /**
  * Hooks

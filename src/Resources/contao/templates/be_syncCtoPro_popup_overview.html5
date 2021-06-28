@@ -54,7 +54,7 @@
             </thead>
             <tbody>
             <?php foreach ($this->arrAllPageValues as $mixPageKey => $arrPageValues): ?>
-                <tr>
+                <tr <?php if($arrPageValues['blocked']): ?>class="blocked" style="background-color: red" <?php endif ?>>
                     <td class="checkbox">
                     <?php if ($arrPageValues['state'] == 'diff' && in_array('tl_page', $this->arrAllowedTables)): ?>
                         <input type="checkbox" name="delete_ids[]" value="tl_page::<?php echo $arrPageValues['id']; ?>" class="tl_checkbox checkbox"/>
