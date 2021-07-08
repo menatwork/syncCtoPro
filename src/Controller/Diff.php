@@ -245,6 +245,11 @@ class Diff
             return [];
         }
 
+        // Get the pages and the child pages.
+        $pageIds = $allowedPageIds;
+        $this->getAllPages($allowedPageIds, $pageIds);
+        $allowedPageIds = \array_unique(\array_values($pageIds));
+
         switch ($strTable) {
             case 'tl_page':
                 return \array_values($allowedPageIds);
@@ -287,6 +292,36 @@ class Diff
             default:
                 return [];
                 break;
+        }
+    }
+
+    /**
+     * Try to fetch all the pages.
+     *
+     * @param array $ids List of ID's
+     *
+     * @param array $return The list of all allowed id's
+     *
+     * @return void
+     */
+    protected function getAllPages($ids, &$return)
+    {
+        if (empty($ids)) {
+            return;
+        }
+
+        foreach ($ids as $id) {
+            $pages = \Contao\Database::getInstance()
+                ->prepare('SELECT id FROM tl_page WHERE pid = ?')
+                ->execute($id)
+                ->fetchEach('id');
+
+            if (empty($pages)) {
+                continue;
+            }
+
+            $return = \array_merge($return, $pages);
+            $this->getAllPages($pages, $return);
         }
     }
 
