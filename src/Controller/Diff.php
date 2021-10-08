@@ -184,7 +184,9 @@ class Diff
         System::loadLanguageFile('tl_content');
         System::loadLanguageFile("tl_syncCto_database");
         System::loadLanguageFile('tl_syncCtoPro_steps');
-        System::loadLanguageFile($this->strTable);
+        if(!empty($this->strTable)){
+            System::loadLanguageFile($this->strTable);
+        }
 
         // Run.
         if (\Input::post('showall') == self::VIEWMODE_ALL) {
