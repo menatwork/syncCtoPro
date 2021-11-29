@@ -234,8 +234,11 @@ class Diff
      */
     protected function getAllowedIds($strTable)
     {
-        $user           = \BackendUser::getInstance();
-        $allowedPageIds = $user->syncCto_pagemounts;
+        $user               = \BackendUser::getInstance();
+        $allowedPageIds     = $user->syncCto_pagemounts;
+        $allowedNewsArchive = $user->news;
+        $allowedCalendars   = $user->calendars;
+        $allowedModules     = $user->modules;
 
         if ($user->isAdmin) {
             return [];
@@ -268,6 +271,7 @@ class Diff
                 break;
 
             case 'tl_content':
+                // --- Page content
                 $articleIds = \Contao\Database::getInstance()
                     ->prepare(
                         \sprintf(
@@ -278,15 +282,86 @@ class Diff
                     ->execute($allowedPageIds)
                     ->fetchEach('id');
 
-                return \Contao\Database::getInstance()
+                $pageContentIds = \Contao\Database::getInstance()
                     ->prepare(
                         \sprintf(
-                            'SELECT id FROM tl_content WHERE pid IN (%s)',
+                            'SELECT id FROM tl_content WHERE pid IN (%s) AND (ptable = "tl_article" OR ptable = "")',
                             \implode(', ', \array_fill(0, \count($articleIds), '?'))
                         )
                     )
                     ->execute($articleIds)
                     ->fetchEach('id');
+
+                // --- News content
+                $newsContentIds = [];
+                if(!empty($allowedNewsArchive) && \is_array($allowedNewsArchive)){
+                    $newsIds =\Contao\Database::getInstance()
+                        ->prepare(
+                            \sprintf(
+                                'SELECT id FROM tl_news WHERE pid IN (%s)',
+                                \implode(', ', \array_fill(0, \count($allowedNewsArchive), '?'))
+                            )
+                        )
+                        ->execute($allowedNewsArchive)
+                        ->fetchEach('id');
+
+                    $newsContentIds = \Contao\Database::getInstance()
+                        ->prepare(
+                            \sprintf(
+                                'SELECT id FROM tl_content WHERE ptable = "tl_news" AND pid IN (%s)',
+                                \implode(', ', \array_fill(0, \count($newsIds), '?'))
+                            )
+                        )
+                        ->execute($newsIds)
+                        ->fetchEach('id');
+                }
+
+                // --- Calendars content
+                $calendarsContentIds = [];
+                if(!empty($allowedCalendars) && \is_array($allowedCalendars)){
+                    $calendarsIds =\Contao\Database::getInstance()
+                        ->prepare(
+                            \sprintf(
+                                'SELECT id FROM tl_calendar_events WHERE pid IN (%s)',
+                                \implode(', ', \array_fill(0, \count($allowedCalendars), '?'))
+                            )
+                        )
+                        ->execute($allowedCalendars)
+                        ->fetchEach('id');
+
+                    $calendarsContentIds = \Contao\Database::getInstance()
+                        ->prepare(
+                            \sprintf(
+                                'SELECT id FROM tl_content WHERE ptable = "tl_calendar_events" AND pid IN (%s)',
+                                \implode(', ', \array_fill(0, \count($calendarsIds), '?'))
+                            )
+                        )
+                        ->execute($calendarsIds)
+                        ->fetchEach('id');
+                }
+
+                // --- Rocksolid Slider
+                $rocksolidSliderContentIds = [];
+                if(!empty($allowedModules) && \in_array('rocksolid_slider', $allowedModules)){
+                    $rocksolidSliderContentIds = \Contao\Database::getInstance()
+                        ->prepare('SELECT id FROM tl_content WHERE ptable = "tl_rocksolid_slide"')
+                        ->execute()
+                        ->fetchEach('id');
+                }
+
+                // --- Unknown
+                $unknownContentIds = \Contao\Database::getInstance()
+                    ->prepare('SELECT id FROM tl_content WHERE ptable NOT IN ("", "tl_article", "tl_rocksolid_slide", "tl_calendar_events", "tl_news")')
+                    ->execute()
+                    ->fetchEach('id');
+
+                return \array_merge(
+                    $pageContentIds,
+                    $newsContentIds,
+                    $calendarsContentIds,
+                    $rocksolidSliderContentIds,
+                    $unknownContentIds
+                );
                 break;
 
             default:
@@ -294,6 +369,8 @@ class Diff
                 break;
         }
     }
+
+
 
     /**
      * Try to fetch all the pages.
@@ -431,13 +508,10 @@ class Diff
         $GLOBALS['TL_JAVASCRIPT'] = [];
 
         // Set stylesheets
-        $GLOBALS['TL_CSS'][] = 'system/themes/' . Backend::getTheme() . '/basic.css';
         $GLOBALS['TL_CSS'][] = 'bundles/synccto/css/compare.css';
         $GLOBALS['TL_CSS'][] = 'bundles/syncctopro/css/diff.css';
 
         // Set javascript
-        $GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/js/mootools-core.min.js';
-        $GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/js/mootools-more.min.js';
         $GLOBALS['TL_JAVASCRIPT'][] = 'bundles/synccto/js/compare.js';
 
         // Set wrapper template information
