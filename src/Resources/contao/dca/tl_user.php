@@ -27,7 +27,7 @@ $GLOBALS['TL_DCA']['tl_user']['fields']['syncCto_force_diff'] = [
     'label'     => &$GLOBALS['TL_LANG']['tl_user']['syncCto_force_diff'],
     'exclude'   => true,
     'inputType' => 'checkbox',
-    'sql'       => 'varchar(10)'
+    'sql'       => 'varchar(32)'
 ];
 
 $GLOBALS['TL_DCA']['tl_user']['fields']['syncCto_pagemounts'] = [
