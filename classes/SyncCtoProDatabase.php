@@ -329,10 +329,10 @@ class SyncCtoProDatabase extends \Backend
 
                 if ($mixvalue === null) {
                     $objXml->writeAttribute("type", "null");
-                    $objXml->writeCdata();
+                    $objXml->writeCdata('');
                 } elseif ($mixvalue === '') {
                     $objXml->writeAttribute("type", "empty");
-                    $objXml->writeCdata();
+                    $objXml->writeCdata('');
                 } else {
                     switch (strtolower($arrDatabaseFieldsMeta[$strField]['type'])) {
                         case 'binary':
