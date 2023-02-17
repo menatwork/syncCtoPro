@@ -1686,9 +1686,18 @@ class Diff
                 'target' => array_merge($arrTargetPages[$intID] ?? [], $arrTargetHashes[$intID] ?? [])
             );
 
-            if (!$this->isIdAllowed($strTable, $intID)) {
+            if (
+                $strTable == 'tl_content'
+                && !$this->isIdAllowed('tl_article', $arrTargetPages[$intID]['pid'])
+            ) {
                 $arrReturn[$intID]['state'] = 'ignored';
-                continue;
+            }
+
+            if (
+                $strTable == 'tl_article'
+                && !$this->isIdAllowed('tl_page', $arrTargetPages[$intID]['pid'])
+            ) {
+                $arrReturn[$intID]['state'] = 'ignored';
             }
 
             if (in_array($intID, $arrIgnoredIds)) {
