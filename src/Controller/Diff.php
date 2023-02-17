@@ -1634,18 +1634,32 @@ class Diff
             }
 
             // Set all other information
-            if (array_key_exists($intID, $arrTargetPages) && array_key_exists($intID, $arrTargetHashes)) {
+            if (
+                array_key_exists($intID, $arrTargetPages)
+                && array_key_exists($intID, $arrTargetHashes)
+                && array_key_exists($intID, $arrSourceHashes)
+            ) {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID]);
-            } elseif (array_key_exists($intID, $arrTargetPages) && !array_key_exists($intID, $arrTargetHashes)) {
+            } elseif (
+                array_key_exists($intID, $arrTargetPages)
+                && !array_key_exists($intID, $arrTargetHashes)
+                && array_key_exists($intID, $arrSourceHashes)
+            ) {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = $arrTargetPages[$intID];
-            } elseif (!array_key_exists($intID, $arrTargetPages) && array_key_exists($intID, $arrTargetHashes)) {
+            } elseif (
+                !array_key_exists($intID, $arrTargetPages)
+                && array_key_exists($intID, $arrTargetHashes)
+                && array_key_exists($intID, $arrSourceHashes)
+            ) {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = $arrTargetHashes[$intID];
-            } else {
+            } elseif (array_key_exists($intID, $arrSourceHashes)) {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = array();
+            } else {
+                $arrReturn[$intID]['state'] = 'ignored';
             }
 
             // Set state ignored if in list
@@ -1659,14 +1673,22 @@ class Diff
         }
 
         foreach ($arrMissingServer as $intID) {
-            $arrReturn[$intID] = array(
-                'id'     => $intID,
-                'pid'    => $arrTargetPages[$intID]['pid'],
-                'state'  => 'diff',
-                'delete' => true,
-                'source' => array(),
-                'target' => array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID])
-            );
+            if (
+                array_key_exists($intID, $arrTargetPages)
+                && array_key_exists($intID, $arrTargetHashes)
+            ) {
+
+                $arrReturn[$intID] = array(
+                    'id'     => $intID,
+                    'pid'    => $arrTargetPages[$intID]['pid'],
+                    'state'  => 'diff',
+                    'delete' => true,
+                    'source' => array(),
+                    'target' => array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID])
+                );
+            } else {
+                $arrReturn[$intID]['state'] = 'ignored';
+            }
 
             if (in_array($intID, $arrIgnoredIds)) {
                 $arrReturn[$intID]['state'] = 'ignored';
