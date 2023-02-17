@@ -171,15 +171,15 @@ class Diff
     protected function cleanIds($ids, $table = '', $combined = false)
     {
         $return = [];
-        foreach ($ids as $key => $value){
+        foreach ($ids as $key => $value) {
             $allowed = true;
-            if($combined == true){
+            if ($combined == true) {
                 $allowed = $this->isCombinedIdAllowed($value);
             } else {
                 $allowed = $this->isIdAllowed($value, $table);
             }
 
-            if($allowed){
+            if ($allowed) {
                 $return[] = $value;
             }
         }
@@ -294,8 +294,8 @@ class Diff
 
                 // --- News content
                 $newsContentIds = [];
-                if(!empty($allowedNewsArchive) && \is_array($allowedNewsArchive)){
-                    $newsIds =\Contao\Database::getInstance()
+                if (!empty($allowedNewsArchive) && \is_array($allowedNewsArchive)) {
+                    $newsIds = \Contao\Database::getInstance()
                         ->prepare(
                             \sprintf(
                                 'SELECT id FROM tl_news WHERE pid IN (%s)',
@@ -318,8 +318,8 @@ class Diff
 
                 // --- Calendars content
                 $calendarsContentIds = [];
-                if(!empty($allowedCalendars) && \is_array($allowedCalendars)){
-                    $calendarsIds =\Contao\Database::getInstance()
+                if (!empty($allowedCalendars) && \is_array($allowedCalendars)) {
+                    $calendarsIds = \Contao\Database::getInstance()
                         ->prepare(
                             \sprintf(
                                 'SELECT id FROM tl_calendar_events WHERE pid IN (%s)',
@@ -342,7 +342,7 @@ class Diff
 
                 // --- Rocksolid Slider
                 $rocksolidSliderContentIds = [];
-                if(!empty($allowedModules) && \in_array('rocksolid_slider', $allowedModules)){
+                if (!empty($allowedModules) && \in_array('rocksolid_slider', $allowedModules)) {
                     $rocksolidSliderContentIds = \Contao\Database::getInstance()
                         ->prepare('SELECT id FROM tl_content WHERE ptable = "tl_rocksolid_slide"')
                         ->execute()
@@ -371,11 +371,10 @@ class Diff
     }
 
 
-
     /**
      * Try to fetch all the pages.
      *
-     * @param array $ids List of ID's
+     * @param array $ids    List of ID's
      *
      * @param array $return The list of all allowed id's
      *
@@ -434,7 +433,7 @@ class Diff
         System::loadLanguageFile('tl_content');
         System::loadLanguageFile("tl_syncCto_database");
         System::loadLanguageFile('tl_syncCtoPro_steps');
-        if(!empty($this->strTable)){
+        if (!empty($this->strTable)) {
             System::loadLanguageFile($this->strTable);
         }
 
@@ -458,7 +457,7 @@ class Diff
                 // Detail diff
                 case self::VIEWMODE_DETAIL:
                     // This should never be happen.
-                    if(!$this->isIdAllowed($this->strTable, $this->intRowId)){
+                    if (!$this->isIdAllowed($this->strTable, $this->intRowId)) {
                         throw new \RuntimeException(
                             'Access for ' . $this->strTable . ' and id ' . $this->intRowId . ' is not allowed.'
                         );
@@ -869,7 +868,8 @@ class Diff
                 $arrElementHashes,
                 $arrClientElement['data'],
                 $arrClientElementHashes,
-                (array)$this->arrSyncSettings['syncCtoPro_delete'][$strTable]
+                (array)$this->arrSyncSettings['syncCtoPro_delete'][$strTable],
+                $strTable
             );
         } else {
             return $this->buildTree(
@@ -877,7 +877,8 @@ class Diff
                 $arrElementHashes,
                 $arrClientElement['data'],
                 $arrClientElementHashes,
-                array()
+                array(),
+                $strTable
             );
         }
     }
@@ -1596,7 +1597,8 @@ class Diff
         $arrSourceHashes,
         $arrTargetPages,
         $arrTargetHashes,
-        $arrIgnoredIds = array()
+        $arrIgnoredIds = array(),
+        $strTable = ''
     ) {
         // Set id as key
         $arrSourcePages = $this->rebuildArray($arrSourcePages);
@@ -1610,7 +1612,6 @@ class Diff
         $arrMissingServer = array_diff($arrKeysTarget, $arrKeysSource);
 
         $arrReturn = array();
-
         foreach ($arrSourcePages as $intID => $mixValues) {
             // Set ID
             $arrReturn[$intID]['id']     = $intID;
@@ -1619,6 +1620,12 @@ class Diff
             // Set pid
             if (array_key_exists('pid', $mixValues)) {
                 $arrReturn[$intID]['pid'] = $mixValues['pid'];
+            }
+
+            // Don't run in pages which aren't allowed.
+            if ($strTable == 'tl_page' && !$this->isIdAllowed($strTable, $intID)) {
+                $arrReturn[$intID]['state'] = 'ignored';
+                continue;
             }
 
             // Set sorting
@@ -1634,32 +1641,29 @@ class Diff
             }
 
             // Set all other information
-            if (
+            if (!\array_key_exists($intID, $arrTargetHashes) && !\array_key_exists($intID, $arrSourceHashes)) {
+                // Just stop handling it can be a missing data set
+            } else if (
                 array_key_exists($intID, $arrTargetPages)
                 && array_key_exists($intID, $arrTargetHashes)
-                && array_key_exists($intID, $arrSourceHashes)
             ) {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID]);
             } elseif (
                 array_key_exists($intID, $arrTargetPages)
                 && !array_key_exists($intID, $arrTargetHashes)
-                && array_key_exists($intID, $arrSourceHashes)
             ) {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = $arrTargetPages[$intID];
             } elseif (
                 !array_key_exists($intID, $arrTargetPages)
                 && array_key_exists($intID, $arrTargetHashes)
-                && array_key_exists($intID, $arrSourceHashes)
             ) {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = $arrTargetHashes[$intID];
-            } elseif (array_key_exists($intID, $arrSourceHashes)) {
+            } else {
                 $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
                 $arrReturn[$intID]['target'] = array();
-            } else {
-                $arrReturn[$intID]['state'] = 'ignored';
             }
 
             // Set state ignored if in list
@@ -1673,21 +1677,18 @@ class Diff
         }
 
         foreach ($arrMissingServer as $intID) {
-            if (
-                array_key_exists($intID, $arrTargetPages)
-                && array_key_exists($intID, $arrTargetHashes)
-            ) {
+            $arrReturn[$intID] = array(
+                'id'     => $intID,
+                'pid'    => $arrTargetPages[$intID]['pid'],
+                'state'  => 'diff',
+                'delete' => true,
+                'source' => array(),
+                'target' => array_merge($arrTargetPages[$intID] ?? [], $arrTargetHashes[$intID] ?? [])
+            );
 
-                $arrReturn[$intID] = array(
-                    'id'     => $intID,
-                    'pid'    => $arrTargetPages[$intID]['pid'],
-                    'state'  => 'diff',
-                    'delete' => true,
-                    'source' => array(),
-                    'target' => array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID])
-                );
-            } else {
+            if (!$this->isIdAllowed($strTable, $intID)) {
                 $arrReturn[$intID]['state'] = 'ignored';
+                continue;
             }
 
             if (in_array($intID, $arrIgnoredIds)) {
