@@ -1600,6 +1600,9 @@ class Diff
         $arrIgnoredIds = array(),
         $strTable = ''
     ) {
+        // Get a list of allowed ID's
+        $allowedIds = $this->getAllowedIds($strTable);
+
         // Set id as key
         $arrSourcePages = $this->rebuildArray($arrSourcePages);
         $arrTargetPages = $this->rebuildArray($arrTargetPages);
@@ -1623,7 +1626,7 @@ class Diff
             }
 
             // Don't run in pages which aren't allowed.
-            if ($strTable == 'tl_page' && !$this->isIdAllowed($strTable, $intID)) {
+            if ($strTable == 'tl_page' && !empty($allowedIds) && !\in_array($intID, $allowedIds)) {
                 $arrReturn[$intID]['state'] = 'ignored';
                 continue;
             }
@@ -1676,6 +1679,18 @@ class Diff
             $arrReturn[$intID]['target']['site_image'] = $this->getPageIcon($arrReturn[$intID]['target']);
         }
 
+        if(!empty($arrMissingServer)){
+            if ($strTable == 'tl_content'){
+                // Get a list of allowed ID's
+                $allowedIdsArticle = $this->getAllowedIds('tl_article');
+            }
+
+            if ($strTable == 'tl_article'){
+                // Get a list of allowed ID's
+                $allowedIdsPage = $this->getAllowedIds('tl_page');
+            }
+        }
+
         foreach ($arrMissingServer as $intID) {
             $arrReturn[$intID] = array(
                 'id'     => $intID,
@@ -1688,14 +1703,16 @@ class Diff
 
             if (
                 $strTable == 'tl_content'
-                && !$this->isIdAllowed('tl_article', $arrTargetPages[$intID]['pid'])
+                && !empty($allowedIdsArticle)
+                && !\in_array($arrTargetPages[$intID]['pid'], $allowedIdsArticle)
             ) {
                 $arrReturn[$intID]['state'] = 'ignored';
             }
 
             if (
                 $strTable == 'tl_article'
-                && !$this->isIdAllowed('tl_page', $arrTargetPages[$intID]['pid'])
+                && !empty($allowedIdsPage)
+                && !\in_array($arrTargetPages[$intID]['pid'], $allowedIdsPage)
             ) {
                 $arrReturn[$intID]['state'] = 'ignored';
             }
@@ -1834,5 +1851,4 @@ class Diff
 
         return 'system/themes/flexible/icons/regular.svg';
     }
-
 }
