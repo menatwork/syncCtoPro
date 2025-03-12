@@ -646,6 +646,9 @@ class Diff
         $arrPageNeeded    = array();
 
         $arrAllowedTables = $this->arrSyncSettings['syncCtoPro_tables_checked'];
+        if($arrAllowedTables === null) {
+            $arrAllowedTables = array();
+        }
 
         // Clean up content
         foreach ($arrAllContentValues as $key => $value) {
