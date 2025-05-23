@@ -9,10 +9,12 @@
  * @filesource
  */
 
+use Contao\Backend;
+
 /**
  * Class for syncCto settings
  */
-class SyncCtoProTableSettings extends \Backend
+class SyncCtoProTableSettings extends Backend
 {
 
     // Diff / Trigger ----------------------------------------------------------
@@ -21,18 +23,23 @@ class SyncCtoProTableSettings extends \Backend
      * Return a list with default values and
      * user values.
      *
-     * @param array $mixValues
+     * @param string|array|null $mixValues
      *
      * @return array
      */
-    public function loadDiffBlacklist($mixValues)
+    public function loadDiffBlacklist(string|array|null $mixValues): array
     {
-        $mixValues      = (array)deserialize($mixValues);
-        $arrReturn      = array();
+        if ($mixValues === null) {
+            $mixValues = array();
+        } elseif (!is_array($mixValues)) {
+            $mixValues = (array) unserialize($mixValues);
+        }
+
+        $arrReturn = array();
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] as $strTableName => $arrValues) {
+        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] ?? [] as $strTableName => $arrValues) {
             foreach ($arrValues as $strField) {
                 $arrReturn[] = array(
                     'table' => $strTableName,
@@ -52,28 +59,30 @@ class SyncCtoProTableSettings extends \Backend
             }
         }
 
-        // Merge
-        $arrReturn = array_merge($arrReturn, $mixValues);
-
-        // Return
-        return $arrReturn;
+        // Merge return.
+        return array_merge($arrReturn, $mixValues);
     }
 
     /**
      * Return a list with default values and
      * user values.
      *
-     * @param array $mixValues
+     * @param string|array|null $mixValues
      *
-     * @return array
+     * @return string
      */
-    public function saveDiffBlacklist($mixValues)
+    public function saveDiffBlacklist(string|array|null $mixValues): string
     {
-        $mixValues      = (array)deserialize($mixValues);
+        if ($mixValues === null) {
+            $mixValues = array();
+        } elseif (!is_array($mixValues)) {
+            $mixValues = (array) unserialize($mixValues);
+        }
+
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] as $strTableName => $arrValues) {
+        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] ?? [] as $strTableName => $arrValues) {
             foreach ($arrValues as $strField) {
                 $arrKnownValues[] = $strTableName . '::' . $strField;
             }
@@ -98,18 +107,23 @@ class SyncCtoProTableSettings extends \Backend
      * Return a list with default values and
      * user values.
      *
-     * @param array $mixValues
+     * @param string|array|null $mixValues
      *
      * @return array
      */
-    public function loadSyncBlacklist($mixValues)
+    public function loadSyncBlacklist(string|array|null $mixValues): array
     {
-        $mixValues      = (array)deserialize($mixValues);
-        $arrReturn      = array();
+        if ($mixValues === null) {
+            $mixValues = array();
+        } elseif (!is_array($mixValues)) {
+            $mixValues = (array) unserialize($mixValues);
+        }
+
+        $arrReturn = array();
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] as $strTableName => $arrValues) {
+        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] ?? [] as $strTableName => $arrValues) {
             foreach ($arrValues as $strField) {
                 $arrReturn[] = array(
                     'table' => $strTableName,
@@ -130,28 +144,30 @@ class SyncCtoProTableSettings extends \Backend
         }
 
         // Merge
-        $arrReturn = array_merge($arrReturn, $mixValues);
-
-        // Return
-        return $arrReturn;
+        return array_merge($arrReturn, $mixValues);
     }
 
     /**
      * Return a list with default values and
      * user values.
      *
-     * @param array $mixValues
+     * @param string|array|null $mixValues
      *
-     * @return array
+     * @return string
      */
-    public function saveSyncBlacklist($mixValues)
+    public function saveSyncBlacklist(string|array|null $mixValues): string
     {
-        $mixValues      = (array)deserialize($mixValues);
+        if ($mixValues === null) {
+            $mixValues = array();
+        } elseif (!is_array($mixValues)) {
+            $mixValues = (array) unserialize($mixValues);
+        }
+
         $arrKnownValues = array();
-        $arrReturn      = array();
+        $arrReturn = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] as $strTableName => $arrValues) {
+        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] ?? [] as $strTableName => $arrValues) {
             foreach ($arrValues as $strField) {
                 $arrKnownValues[] = $strTableName . '::' . $strField;
             }

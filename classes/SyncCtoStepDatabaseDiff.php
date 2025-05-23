@@ -1,5 +1,11 @@
 <?php
 
+use Contao\Backend;
+use Contao\BackendTemplate;
+use Contao\Database;
+use Contao\System;
+use MenAtWork\SyncCto\Controller\ClientController;
+
 /**
  * Contao Open Source CMS
  *
@@ -8,7 +14,7 @@
  * @license    EULA
  * @filesource
  */
-class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
+class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 {
     ////////////////////////////////////////////////////////////////////////////
     // Vars / Objects
@@ -111,9 +117,9 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * @param \SyncCtoModuleClient $syncCtoClient
+     * @param SyncCtoModuleClient|ClientController $syncCtoClient
      */
-    public function setSyncCto(SyncCtoModuleClient $syncCtoClient)
+    public function setSyncCto(SyncCtoModuleClient|ClientController $syncCtoClient)
     {
         $this->objSyncCtoClient = $syncCtoClient;
 
@@ -336,7 +342,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
             $this->objSyncCtoClient->setRefresh(true);
             $this->objSyncCtoClient->addStep();
 
-            $this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
+            //$this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
         }
     }
 
@@ -439,7 +445,8 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
         $this->objSyncCtoClient->setRefresh(false);
 
-        $this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
+
+        //$this->log(vsprintf("Error on synchronization client ID %s with msg: %s", array($this->Input->get("id"), $exc->getMessage())), __CLASS__ . " " . __FUNCTION__, "ERROR");
     }
 
     /**
@@ -619,7 +626,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
 
         // Get server Pages
-        $arrPages =\Database::getInstance()
+        $arrPages = Database::getInstance()
                 ->query('SELECT id, pid, title, sorting, published, start, stop, type, hide, protected FROM tl_page ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -632,7 +639,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientArticleHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_article');
 
         // Get server article
-        $arrArticle =\Database::getInstance()
+        $arrArticle = Database::getInstance()
                 ->query('SELECT title, id, pid FROM tl_article ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -645,7 +652,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientContentHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_content');
 
         // Get server article
-        $arrContent =\Database::getInstance()
+        $arrContent = Database::getInstance()
                 ->query('SELECT type, id, pid FROM tl_content ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -684,7 +691,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
      *
      * @return type
      */
-    protected function showPopup($strDirection)
+    protected function showPopup($strDirection): void
     {
         if (array_key_exists("forward", $_POST))
         {
@@ -713,11 +720,15 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         }
 
         // Template
-        $objTemp              = new BackendTemplate('be_syncCtoPro_form');
-        $objTemp->id          = $this->objSyncCtoClient->getClientID();
-        $objTemp->step        = $this->objSyncCtoClient->getStep();
-        $objTemp->direction   = $strDirection;
+        $objTemp = new BackendTemplate('be_syncCtoPro_form');
+        $objTemp->id = $this->objSyncCtoClient->getClientID();
+        $objTemp->step = $this->objSyncCtoClient->getStep();
+        $objTemp->direction = $strDirection;
         $objTemp->helperClass = $this;
+        $objTemp->requestToken = System::getContainer()
+                                       ->get('contao.csrf.token_manager')
+                                       ->getDefaultTokenValue()
+        ;
 
         // Set output
         $this->objData->setHtml($this->replaceInsertTags($objTemp->parse()));
@@ -745,7 +756,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientPageHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_page');
 
         // Get server Pages
-        $arrPages =\Database::getInstance()
+        $arrPages = Database::getInstance()
                 ->query('SELECT title, id, pid FROM tl_page ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -758,7 +769,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientArticleHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_article');
 
         // Get server article
-        $arrArticle =\Database::getInstance()
+        $arrArticle = Database::getInstance()
                 ->query('SELECT title, id, pid FROM tl_article ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -771,7 +782,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $arrClientContentHashes = $this->objSyncCtoProCommunicationClient->getHashValueFor('tl_content');
 
         // Get server article
-        $arrContent =\Database::getInstance()
+        $arrContent = Database::getInstance()
                 ->query('SELECT type, id, pid FROM tl_content ORDER BY pid, id')
                 ->fetchAllAssoc();
 
@@ -790,8 +801,6 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         $this->objStepPool->step++;
 
         $this->objSyncCtoClient->setRefresh(true);
-
-        return;
     }
 
     /**
@@ -876,7 +885,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
         // Article
 
-        $arrResultArticles =\Database::getInstance()
+        $arrResultArticles = Database::getInstance()
                 ->prepare('SELECT id FROM tl_article WHERE pid IN(' . implode(', ', $arrPages) . ')')
                 ->execute()
                 ->fetchAllAssoc();
@@ -888,7 +897,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
 
         // Content Elements
 
-        $arrResultContentElements =\Database::getInstance()
+        $arrResultContentElements = Database::getInstance()
                 ->prepare('SELECT id FROM tl_content WHERE pid IN(' . implode(', ', $arrArticles) . ')')
                 ->execute()
                 ->fetchAllAssoc();
@@ -1188,7 +1197,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         }
 
         $arrUserSettings = array();
-        foreach ((array) deserialize($GLOBALS['TL_CONFIG']['syncCto_sync_blacklist']) as $key => $value)
+        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_sync_blacklist']) as $key => $value)
         {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }

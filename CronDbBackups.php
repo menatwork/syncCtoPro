@@ -95,18 +95,18 @@ class CronDbBackups extends Backend
 
             if (empty($arrTables))
             {
-                $this->log("No tables found for syncCto auto DB backup.", __CLASS__ . " | " . __FUNCTION__, 'CRON');
+                //$this->log("No tables found for syncCto auto DB backup.", __CLASS__ . " | " . __FUNCTION__, 'CRON');
                 return;
             }
 
             // Run dump
             $this->objSyncCtoDatabase->runDump(array_keys($arrTables), false);
             
-            $this->log("Finished syncCto auto DB backup." , __CLASS__ . " | " . __FUNCTION__, 'CRON');
+            //$this->log("Finished syncCto auto DB backup." , __CLASS__ . " | " . __FUNCTION__, 'CRON');
         }
         catch (Exception $exc)
         {
-            $this->log("Error by db backup with msg: " . $exc->getMessage(), __CLASS__ . " | " . __FUNCTION__, 'CRON');
+            //$this->log("Error by db backup with msg: " . $exc->getMessage(), __CLASS__ . " | " . __FUNCTION__, 'CRON');
         }
     }
 
