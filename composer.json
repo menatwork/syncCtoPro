@@ -34,7 +34,8 @@
     "source": "https://github.com/menatwork/syncCto"
   },
   "require": {
-    "php": ">=7.0",
+    "php": ">=8.0",
+    "ext-zlib": "*",
     "menatwork/synccto": "^4.0.0"
   },
   "autoload": {

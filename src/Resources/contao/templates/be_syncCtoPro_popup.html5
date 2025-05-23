@@ -2,7 +2,7 @@
 <html lang="<?php echo $this->language; ?>">
 <head>
     <meta charset="<?php echo $this->charset; ?>">
-    <title><?php echo $this->title; ?> - Contao Open Source CMS <?php echo VERSION; ?></title>
+    <title><?php echo $this->title; ?> - Contao Open Source CMS</title>
     <base href="<?php echo $this->base; ?>">
     <meta name="generator" content="Contao Open Source CMS">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,shrink-to-fit=no">
@@ -21,19 +21,19 @@
     <?= $this->javascripts ?>
 
 </head>
-<body class="<?php echo $this->ua; ?>">
+<body class="<?= $this->ua ?> popup">
 
-<div id="container">
+<div id="container" class="cf">
     <div id="main">
         <?php if ($this->close): ?>
-        <img src="<?php echo $this->Environment->base; ?>bundles/synccto/images/steps/iconWork.gif" alt="" />
-        <script>
-            window.addEvent("domready",function(){
-                window.parent.document.getElement('input[name=forward]').click();
-            });
-        </script>
+        <img src="<?php echo $this->Environment->base; ?>bundles/synccto/images/steps/iconWork.gif" alt=""/>
+            <script>
+                window.addEvent("domready", function () {
+                    window.parent.document.getElement('input[name=forward]').click();
+                });
+            </script>
         <?php elseif ($this->error && count($this->arrError) != 0): ?>
-        <?php foreach ($this->arrError AS $error): ?>
+        <?php foreach ($this->arrError as $error): ?>
             <p class="tl_error"><?php echo $error; ?></p>
         <?php endforeach; ?>
         <?php else: ?>
@@ -41,5 +41,7 @@
         <?php endif; ?>
     </div>
 </div>
+
 </body>
 </html>
+

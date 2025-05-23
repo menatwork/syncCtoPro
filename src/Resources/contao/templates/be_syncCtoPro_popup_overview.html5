@@ -1,5 +1,7 @@
 <?php
-    use MenAtWork\SyncCtoPro\Controller\Diff;
+use Contao\BackendUser;
+use Contao\Environment;
+use MenAtWork\SyncCtoPro\Controller\Diff;
 ?>
 <script>
     function mySubmit(strName)
@@ -13,7 +15,7 @@
 <form id="db_form" action="<?php echo $this->base; ?>syncCto/pro/databasePopup?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=<?php echo Diff::VIEWMODE_OVERVIEW; ?>" method="post">
     <div class="formbody">
         <input type="hidden" name="FORM_SUBMIT" value="<?php echo $this->formId; ?>" />
-        <input type="hidden" name="REQUEST_TOKEN" value="<?php echo REQUEST_TOKEN; ?>">
+        <input type="hidden" name="REQUEST_TOKEN" value="<?= $this->requestToken; ?>">
 
         <div class="submit_container">
             <input class="tl_submit" name="transfer" type="submit" value="<?php echo $this->forwardValue; ?>" />
@@ -46,7 +48,7 @@
                     </th>
                     <th class="diff">
                         <input class="tl_submit hidden" id="showall" name="showall" type="submit" value="<?php echo Diff::VIEWMODE_ALL ?>" />
-                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo Environment::getInstance()->request; ?>" OnClick="mySubmit('showall'); return false;">
+                        <a title="<?php echo $GLOBALS['TL_LANG']['MSC']['show_differences']; ?>" href="<?php echo Environment::get('request'); ?>" OnClick="mySubmit('showall'); return false;">
                             <img src="<?php echo $this->path; ?>/bundles/syncctopro/icons/diff.gif" alt="" />
                         </a>
                     </th>

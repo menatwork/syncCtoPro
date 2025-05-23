@@ -1,3 +1,8 @@
+<?php
+
+use Contao\BackendUser;
+
+?>
 <div id="tl_listing" class="tl_listing_container">
 
     <div class="submit_container">

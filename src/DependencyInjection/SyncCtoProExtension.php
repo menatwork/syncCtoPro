@@ -2,11 +2,9 @@
 
 namespace MenAtWork\SyncCtoPro\DependencyInjection;
 
-use Symfony\Component\Config\FileLocator;
+use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
-use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
-use Symfony\Component\HttpKernel\DependencyInjection\ConfigurableExtension;
 
 /**
  * Class SyncCtoProExtension
@@ -16,19 +14,9 @@ use Symfony\Component\HttpKernel\DependencyInjection\ConfigurableExtension;
 class SyncCtoProExtension extends Extension
 {
     /**
-     * The config files.
-     *
-     * @var array
-     */
-    private $files = [
-//        'listener.yml',
-//        'services.yml',
-    ];
-
-    /**
      * {@inheritdoc}
      */
-    public function getAlias()
+    public function getAlias(): string
     {
         return 'syncctopro-bundle';
     }
@@ -36,7 +24,7 @@ class SyncCtoProExtension extends Extension
     /**
      * Loads a specific configuration.
      *
-     * @throws \InvalidArgumentException When provided tag is not defined in this extension
+     * @throws InvalidArgumentException When provided tag is not defined in this extension
      */
     public function load(array $configs, ContainerBuilder $container)
     {

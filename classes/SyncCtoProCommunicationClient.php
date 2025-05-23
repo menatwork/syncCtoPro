@@ -24,9 +24,9 @@ class SyncCtoProCommunicationClient
     protected static $objInstance = null;
 
     /**
-     * @var SyncCtoCommunicationClient
+     * @var null|SyncCtoCommunicationClient
      */
-    protected $objSyncCtoCommunicationClient;
+    protected ?SyncCtoCommunicationClient $objSyncCtoCommunicationClient;
 
     ////////////////////////////////////////////////////////////////////////////
     // Core
@@ -89,24 +89,31 @@ class SyncCtoProCommunicationClient
 
         return $this
             ->objSyncCtoCommunicationClient
-            ->run('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData);
+            ->run('SYNCCTOPRO_DATABASE_SE_IMPORT', $arrData)
+        ;
     }
 
     /**
      * Return a xml file with a db dump.
      *
-     * @param string $strPath   Path for saving the file.
+     * @param string     $strPath   Path for saving the file.
      *
-     * @param string $strTable  Name of table.
+     * @param string     $strTable  Name of table.
      *
-     * @param array  $arrIds    list of ids.
+     * @param array|null $arrIds    list of ids.
      *
-     * @param array  $arrFields list of field names.
+     * @param array|null $arrFields list of field names.
      *
      * @return string save name
+     *
+     * @throws Exception
      */
-    public function exportDatabaseSE($strPath, $strTable, $arrIds = null, $arrFields = null)
-    {
+    public function exportDatabaseSE(
+        string $strPath,
+        string $strTable,
+        array  $arrIds = null,
+        array  $arrFields = null
+    ): string {
         $arrData = array(
             array(
                 "name"  => "path",
@@ -128,7 +135,8 @@ class SyncCtoProCommunicationClient
 
         return $this
             ->objSyncCtoCommunicationClient
-            ->run('SYNCCTOPRO_DATABASE_SE_EXPORT', $arrData);
+            ->run('SYNCCTOPRO_DATABASE_SE_EXPORT', $arrData)
+        ;
     }
 
     /**
@@ -136,12 +144,16 @@ class SyncCtoProCommunicationClient
      *
      * @param string $strTable Name of Table
      *
-     * @param array $arrIds List with IDs
+     * @param array  $arrIds   List with IDs
      *
      * @return array List with hashes
+     *
+     * @throws Exception
      */
-    public function getHashValueFor($strTable, $arrIds = array())
-    {
+    public function getHashValueFor(
+        string $strTable,
+        array  $arrIds = array()
+    ): array {
         $arrData = array(
             array(
                 "name"  => "table",
@@ -155,7 +167,8 @@ class SyncCtoProCommunicationClient
 
         return $this
             ->objSyncCtoCommunicationClient
-            ->run('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData);
+            ->run('SYNCCTOPRO_DATABASE_GET_HASHES', $arrData)
+        ;
     }
 
     /**
@@ -163,12 +176,16 @@ class SyncCtoProCommunicationClient
      *
      * @param string $strTable Name of Table
      *
-     * @param array $arrIds List with IDs
+     * @param array  $arrIds   List with IDs
      *
      * @return array List with hashes
+     *
+     * @throws Exception
      */
-    public function deleteEntries($strTable, $arrIds = array())
-    {
+    public function deleteEntries(
+        string $strTable,
+        array  $arrIds = array()
+    ): array {
         $arrData = array(
             array(
                 "name"  => "table",
@@ -182,31 +199,35 @@ class SyncCtoProCommunicationClient
 
         return $this
             ->objSyncCtoCommunicationClient
-            ->run('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData);
+            ->run('SYNCCTOPRO_DATABASE_SE_DELETE', $arrData)
+        ;
     }
 
     /**
      * Check the ER
      *
      * @return boolean
+     * @throws Exception
      */
-    public function checkER()
+    public function checkER(): bool
     {
         return $this
             ->objSyncCtoCommunicationClient
-            ->run('SYNCCTOPRO_CHECK_ER');
+            ->run('SYNCCTOPRO_CHECK_ER')
+        ;
     }
 
     /**
      * Check the ER
      *
      * @return boolean
+     * @throws Exception
      */
-    public function checkHash()
+    public function checkHash(): bool
     {
         return $this
             ->objSyncCtoCommunicationClient
-            ->run('SYNCCTOPRO_CHECK_HASH');
+            ->run('SYNCCTOPRO_CHECK_HASH')
+        ;
     }
-
 }
