@@ -1,5 +1,4 @@
 {
-  "version": "2.1.12",
   "name": "menatwork/syncctopro",
   "description": "Synchronize multiple contao installations with each other",
   "keywords": [
