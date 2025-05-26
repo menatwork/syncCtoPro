@@ -15,51 +15,63 @@
 $GLOBALS['BE_MOD']['syncCto']['synccto_clients']['icon'] = 'system/modules/syncCtoPro/assets/icons/iconClients.png';
 
 /**
+ * Permissions
+ */
+$GLOBALS['TL_PERMISSIONS'][] = 'syncCto_force_diff';
+$GLOBALS['TL_PERMISSIONS'][] = 'syncCto_pagemounts';
+
+/**
  * Hooks
  */
-$GLOBALS['TL_HOOKS']['syncAdditionalFunctions'][]   = array('SyncCtoStepDatabaseDiff', 'localeUpdateTimestamp');
-$GLOBALS['TL_HOOKS']['syncDBUpdateBeforeDrop'][]    = array('SyncCtoProSystem', 'preventBlacklistValues');
+$GLOBALS['TL_HOOKS']['syncAdditionalFunctions'][] = array('SyncCtoStepDatabaseDiff', 'localeUpdateTimestamp');
+$GLOBALS['TL_HOOKS']['syncDBUpdateBeforeDrop'][]  = array('SyncCtoProSystem', 'preventBlacklistValues');
 
 /**
  * Ignored fields for trigger / hash
  */
-$GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['trigger_blacklist'], array
-(
-    'all' => array
-    (
-        'id',
-        'tstamp',
-        'syncCto_hash',
-        'PRIMARY'
-    ),
-    'tl_page' => array
-    (
-        'dns',
-    ),
-));
+$GLOBALS['SYC_CONFIG']['trigger_blacklist'] = array_merge_recursive(
+    (array)($GLOBALS['SYC_CONFIG']['trigger_blacklist'] ?? [])
+    , array(
+        'all'     => array
+        (
+            'id',
+            'tstamp',
+            'syncCto_hash',
+            'PRIMARY'
+        ),
+        'tl_page' => array
+        (
+            'dns',
+        ),
+    )
+);
 
 /**
  * Ignored fields for sync
  */
-$GLOBALS['SYC_CONFIG']['sync_blacklist'] = array_merge_recursive((array) $GLOBALS['SYC_CONFIG']['sync_blacklist'], array
-(
-    'all' => array
-    (
-        'PRIMARY',
-    ),
-    'tl_page' => array
-    (
-        'dns',
-    ),
-));
+$GLOBALS['SYC_CONFIG']['sync_blacklist'] = array_merge_recursive(
+    (array)($GLOBALS['SYC_CONFIG']['sync_blacklist'] ?? []),
+    array(
+        'all'     => array
+        (
+            'PRIMARY',
+        ),
+        'tl_page' => array
+        (
+            'dns',
+        ),
+    )
+);
 
 /**
  * Ignored tables for sync database
  */
-$GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge((array) $GLOBALS['SYC_CONFIG']['table_hidden'], array
-(
-    'tl_synccto_diff'
-));
+$GLOBALS['SYC_CONFIG']['table_hidden'] = array_merge(
+    (array)($GLOBALS['SYC_CONFIG']['table_hidden'] ?? []),
+    array(
+        'tl_synccto_diff'
+    )
+);
 
 /**
  * CtoCommunication RPC Calls

@@ -1,8 +1,17 @@
-<script>    
+<?php
+$url = sprintf(
+    '%ssyncCto/pro/databasePopup?id=%s&direction=%s&language=%s&view=overview',
+    $this->Environment->base,
+    $this->id,
+    $this->direction,
+    BackendUser::getInstance()->language
+);
+?>
+<script>
     function openSyncCtoProPopUp()
     {
         var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-        Backend.openModalIframe({'width':850,'height':(h / 100 * 90),'title':'<?php echo $GLOBALS['TL_LANG']['tl_syncCto_sync']['popup']; ?> - Pro','url':'<?php echo $this->Environment->base; ?>system/modules/syncCtoPro/SyncCtoProPopupDiff.php?id=<?php echo $this->id; ?>&direction=<?php echo $this->direction; ?>&language=<?php echo BackendUser::getInstance()->language ?>&view=overview'});
+        Backend.openModalIframe({'width':850,'height':(h / 100 * 90),'title':'<?php echo $GLOBALS['TL_LANG']['tl_syncCto_sync']['popup']; ?> - Pro','url':'<?= $url; ?>'});
     }
     
     window.addEvent("domready",function(){

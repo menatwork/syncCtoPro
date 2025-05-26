@@ -69,7 +69,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     protected $objSyncCtoHelper;
 
     /**
-     * @var SyncCtoStepPagesSelection
+     * @var SyncCtoStepDatabaseDiff
      */
     protected static $objInstance = null;
 
@@ -94,7 +94,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     }
 
     /**
-     * @return SyncCtoStepPagesSelection
+     * @return SyncCtoStepDatabaseDiff
      */
     public static function getInstance()
     {
@@ -110,6 +110,9 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
     // Setter / Getter
     ////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * @param \SyncCtoModuleClient $syncCtoClient
+     */
     public function setSyncCto(SyncCtoModuleClient $syncCtoClient)
     {
         $this->objSyncCtoClient = $syncCtoClient;
@@ -347,27 +350,23 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
             $i = 1;
             switch ($this->objStepPool->step)
             {
-                case $i++:
+                case $i++: // 1
                     $this->showBasicStep();
                     break;
 
-                case $i++:
-                    $this->checkSystem(true);
-                    break;
-
-                case $i++:
+                case $i++: // 2
                     $this->generateDataForPageTree();
                     break;
 
-                case $i++:
+                case $i++: // 3
                     $this->loadFilesForPageTree();
                     break;
 
-                case $i++:
+                case $i++: // 4
                     $this->checkRun();
                     break;
 
-                case $i++:
+                case $i++: // 5
                     if ($this->arrSyncSettings['automode'])
                     {
                         $this->runAutoDiff();
@@ -378,19 +377,19 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
                     }
                     break;
 
-                case $i++:
+                case $i++: // 6
                     $this->generateLocalUpdateFiles();
                     break;
 
-                case $i++:
+                case $i++: // 7
                     $this->sendUpdateFiles();
                     break;
 
-                case $i++:
+                case $i++: // 8
                     $this->importExtern();
                     break;
 
-                case $i++:
+                case $i++: // 9
 //                    $this->refreshTimestamps();
                     $this->setNextStep();
                     break;
@@ -486,7 +485,7 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         {
             // Get Client information
             $arrClientInformation = SyncCtoCommunicationClient::getInstance()->getClientData();
-            $strAddress           = $arrClientInformation['address'] . $arrClientInformation['path'];
+            $strAddress           = $arrClientInformation['address'] . ':' . $arrClientInformation['port'] . '/ctoCommunication';
 
             // Skip if no tables are selected
             $this->objData->setState(SyncCtoEnum::WORK_SKIPPED);
@@ -588,7 +587,6 @@ class SyncCtoStepDatabaseDiff extends \Backend implements InterfaceSyncCtoStep
         foreach ($arrFilePathes as $strType => $strFilePath)
         {
             $strSavePath = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'], basename($strFilePath));
-
             $blnResponse = $this->objSyncCtoProCommunicationClient->getFile($strFilePath, $strSavePath);
 
             // Check if we have the file
