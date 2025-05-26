@@ -40,9 +40,6 @@
 	"autoload":{
 		"classmap":["system/"]
 	},
-	"replace":{
-		"contao-legacy/syncCtoPro":"*"
-	},
 	"extra":{
 		"contao":{
 			"sources":{
