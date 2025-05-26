@@ -4,6 +4,7 @@ namespace MenAtWork\SyncCtoPro;
 
 use MenAtWork\SyncCtoPro\DependencyInjection\SyncCtoProExtension;
 use Symfony\Component\Console\Application;
+use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
 /**
@@ -13,13 +14,10 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
  */
 class SyncCtoProBundle extends Bundle
 {
-    const SCOPE_BACKEND  = 'backend';
-    const SCOPE_FRONTEND = 'frontend';
-
     /**
      * {@inheritdoc}
      */
-    public function getContainerExtension()
+    public function getContainerExtension(): ?ExtensionInterface
     {
         return new SyncCtoProExtension();
     }

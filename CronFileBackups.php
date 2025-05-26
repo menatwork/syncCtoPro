@@ -73,7 +73,7 @@ class CronFileBackups extends Backend
                 $booFirstRun = true;
                 if (!$this->objSyncCtoFile->generateChecksumFileAsXML($strXMLPath, true, true, SyncCtoEnum::FILEINFORMATION_SMALL))
                 {
-                    $this->log("Error by creating filelist.", __CLASS__ . " | " . __FUNCTION__, TL_CRON);
+                    //$this->log("Error by creating filelist.", __CLASS__ . " | " . __FUNCTION__, TL_CRON);
                 }
             }
 
@@ -121,7 +121,7 @@ class CronFileBackups extends Backend
         }
         catch (Exception $exc)
         {
-            $this->log("Error by file backup with msg: " . $exc->getMessage(), __CLASS__ . " | " . __FUNCTION__, TL_CRON);
+            //$this->log("Error by file backup with msg: " . $exc->getMessage(), __CLASS__ . " | " . __FUNCTION__, TL_CRON);
         }
     }
 

@@ -1,5 +1,10 @@
 <?php
 
+use Contao\Backend;
+use Contao\Database;
+use Contao\File;
+use Contao\StringUtil;
+
 /**
  * Contao Open Source CMS
  *
@@ -8,18 +13,19 @@
  * @license    EULA
  * @filesource
  */
-class SyncCtoProDatabase extends \Backend
+class SyncCtoProDatabase extends Backend
 {
-
     /**
-     * @var SyncCtoHelper
+     * @var ?SyncCtoHelper
      */
-    protected $objSyncCtoHelper;
+    protected ?SyncCtoHelper $objSyncCtoHelper;
 
     /**
      * @var SyncCtoProDatabase
      */
     protected static $objInstance = null;
+
+    private int|float $intMaxMemoryUsage;
 
     /**
      * Construct
@@ -32,8 +38,12 @@ class SyncCtoProDatabase extends \Backend
         $this->objSyncCtoHelper = SyncCtoHelper::getInstance();
 
         // Get Max mem usages
-        $this->intMaxMemoryUsage = intval(str_replace(array("m", "M", "k", "K"),
-            array("000000", "000000", "000", "000"), ini_get('memory_limit')));
+        $this->intMaxMemoryUsage = intval(
+            str_replace(
+                array("m", "M", "k", "K"),
+                array("000000", "000000", "000", "000"), ini_get('memory_limit')
+            )
+        );
         $this->intMaxMemoryUsage = $this->intMaxMemoryUsage / 100 * 80;
 
         // Load languages
@@ -42,9 +52,9 @@ class SyncCtoProDatabase extends \Backend
     }
 
     /**
-     * @return SyncCtoProDatabase
+     * @return SyncCtoProDatabase|null
      */
-    public static function getInstance()
+    public static function getInstance(): ?SyncCtoProDatabase
     {
         if (!is_object(self::$objInstance)) {
             self::$objInstance = new self();
@@ -57,18 +67,20 @@ class SyncCtoProDatabase extends \Backend
     // Delete Functions
     ////////////////////////////////////////////////////////////////////////////
 
-    public function deleteEntries($strTable, $arrIds = array())
+    public function deleteEntries($strTable, $arrIds = array()): bool
     {
         if (empty($arrIds)) {
             return false;
         }
 
-        if (!\Database::getInstance()->tableExists($strTable)) {
+        if (!Database::getInstance()->tableExists($strTable)) {
             return false;
         }
 
         $strQuery = "DELETE FROM $strTable WHERE id IN (" . implode(", ", $arrIds) . ")";
-        \Database::getInstance()->query($strQuery);
+        Database::getInstance()->query($strQuery);
+
+        return true;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -79,15 +91,21 @@ class SyncCtoProDatabase extends \Backend
      * Get data for table x for fields y and id z
      * as gzip file.
      *
-     * @param string $strPath   Path for writing the file, if empty a tmp path will be created
-     * @param string $strTable  Name of Table
-     * @param array  $arrIds    List of ids
-     * @param array  $arrFields List of fields
+     * @param string     $strPath   Path for writing the file, if empty a tmp path will be created
+     * @param string     $strTable  Name of Table
+     * @param array|null $arrIds    List of ids
+     * @param array|null $arrFields List of fields
+     * @param array      $arrOnlyInsert
      *
      * @return boolean|string
      */
-    public function getDataForAsFile($strPath, $strTable, $arrIds = null, $arrFields = null, $arrOnlyInsert = array())
-    {
+    public function getDataForAsFile(
+        string $strPath,
+        string $strTable,
+        array  $arrIds = null,
+        array  $arrFields = null,
+        array  $arrOnlyInsert = array()
+    ): bool|string {
         $objData = $this->getDataFor($strTable, $arrIds, $arrFields);
 
         if ($objData === false) {
@@ -97,8 +115,10 @@ class SyncCtoProDatabase extends \Backend
         if (empty($strPath)) {
             // Write some tempfiles
             $strRandomToken = substr(md5(time() . " | " . rand(0, 65535)), 0, 8);
-            $strPath        = $this->objSyncCtoHelper->standardizePath($GLOBALS['SYC_PATH']['tmp'],
-                "SyncCto-SE-$strRandomToken-" . standardize($strTable) . ".gzip");
+            $strPath = $this->objSyncCtoHelper->standardizePath(
+                $GLOBALS['SYC_PATH']['tmp'],
+                "SyncCto-SE-$strRandomToken-" . StringUtil::standardize($strTable) . ".gzip"
+            );
         }
 
         return $this->writeXML($strPath, $objData, $strTable, $arrOnlyInsert);
@@ -107,15 +127,18 @@ class SyncCtoProDatabase extends \Backend
     /**
      * Get data for table x for fields y and id z.
      *
-     * @param string $strTable
-     * @param array  $arrIds
-     * @param array  $arrFields
+     * @param string     $strTable
+     * @param array|null $arrIds
+     * @param array|null $arrFields
      *
-     * @return boolean|\Database_Result
+     * @return Database\Result|bool
      */
-    public function getDataFor($strTable, $arrIds = null, $arrFields = null)
-    {
-        if (!\Database::getInstance()->tableExists($strTable)) {
+    public function getDataFor(
+        string $strTable,
+        array  $arrIds = null,
+        array  $arrFields = null
+    ): bool|Database\Result {
+        if (!Database::getInstance()->tableExists($strTable)) {
             return false;
         }
 
@@ -131,18 +154,19 @@ class SyncCtoProDatabase extends \Backend
             $strWhere = "WHERE id IN(" . implode(', ', $arrIds) . ")";
         }
 
-        $objData = \Database::getInstance()->query("SELECT $strFields FROM $strTable $strWhere ORDER BY id");
-
-        return $objData;
+        return Database::getInstance()->query("SELECT $strFields FROM $strTable $strWhere ORDER BY id");
     }
 
-    public function setDataForAsFile($strPath)
+    /**
+     * @throws Exception
+     */
+    public function setDataForAsFile($strPath): true|string
     {
         // Import
         $arrData = $this->readXML($strPath);
 
         // Error
-        if ($arrData === false) {
+        if (empty($arrData)) {
             throw new Exception('Error by reading the import file at ' . $strPath);
         }
 
@@ -156,10 +180,13 @@ class SyncCtoProDatabase extends \Backend
         return $mixSuccess;
     }
 
+    /**
+     * @throws Exception
+     */
     public function setDataFor($strTable, $arrData, $arrInsertFields)
     {
-        if (empty($strTable) || !\Database::getInstance()->tableExists($strTable)) {
-            throw new Exception('Error by import data. Unknown or empty tablename: ' . $arrData['table']);
+        if (empty($strTable) || !Database::getInstance()->tableExists($strTable)) {
+            throw new Exception('Error by import data. Unknown or empty table name: ' . $arrData['table']);
         }
 
         if (empty($arrData)) {
@@ -167,17 +194,16 @@ class SyncCtoProDatabase extends \Backend
         }
 
         // Check fields
-        $arrKnownFields = \Database::getInstance()->getFieldNames($strTable);
-
+        $arrKnownFields = Database::getInstance()->getFieldNames($strTable);
         if (($mixKey = array_search('PRIMARY', $arrKnownFields)) !== false) {
             unset($arrKnownFields[$mixKey]);
         }
 
-        $arrFieldsMissingInsert   = array_diff($arrKnownFields, $arrInsertFields);
+        $arrFieldsMissingInsert = array_diff($arrKnownFields, $arrInsertFields);
         $arrFieldsMissingDatabase = array_diff($arrInsertFields, $arrKnownFields);
 
         if (!empty($arrFieldsMissingInsert) || !empty($arrFieldsMissingInsert)) {
-            $strError = 'We have missin missing fields.';
+            $strError = 'We have missing fields.';
             $strError .= '|| Database:    ' . implode(", ", $arrFieldsMissingDatabase);
             $strError .= '|| Insert-File: ' . implode(", ", $arrFieldsMissingInsert);
 
@@ -185,7 +211,7 @@ class SyncCtoProDatabase extends \Backend
         }
 
         // Import
-        $arrKnownIDs = \Database::getInstance()->query("SELECT id FROM $strTable")->fetchEach('id');
+        $arrKnownIDs = Database::getInstance()->query("SELECT id FROM $strTable")->fetchEach('id');
 
         $arrUpdate = array();
         $arrInsert = array();
@@ -202,7 +228,6 @@ class SyncCtoProDatabase extends \Backend
         }
 
         $arrErrors = array();
-        $intCount  = 0;
 
         // Update
         foreach ($arrUpdate as $key => $arrValues) {
@@ -210,11 +235,10 @@ class SyncCtoProDatabase extends \Backend
                 $intID = $arrValues['id'];
                 unset($arrValues['id']);
 
-                \Database::getInstance()->prepare("UPDATE $strTable %s WHERE id=?")
-                         ->set($arrValues)
-                         ->execute($intID);
-
-                $intCount++;
+                Database::getInstance()->prepare("UPDATE $strTable %s WHERE id=?")
+                        ->set($arrValues)
+                        ->execute($intID)
+                ;
             } catch (Exception $e) {
                 $arrErrors[] = $e->getMessage();
             }
@@ -223,11 +247,10 @@ class SyncCtoProDatabase extends \Backend
         // Insert
         foreach ($arrInsert as $key => $arrValues) {
             try {
-                \Database::getInstance()->prepare("INSERT INTO $strTable %s")
-                         ->set($arrValues)
-                         ->execute();
-
-                $intCount++;
+                Database::getInstance()->prepare("INSERT INTO $strTable %s")
+                        ->set($arrValues)
+                        ->execute()
+                ;
             } catch (Exception $e) {
                 $arrErrors[] = $e->getMessage();
             }
@@ -257,11 +280,16 @@ class SyncCtoProDatabase extends \Backend
      * @param array           $arrOnlyInsert
      *
      * @return string
+     * @throws Exception
      */
-    public function writeXML($strPath, $objData, $strTable, $arrOnlyInsert = array())
-    {
+    public function writeXML(
+        string          $strPath,
+        Database\Result $objData,
+        string          $strTable,
+        array           $arrOnlyInsert = array()
+    ): string {
         // Get fields
-        $arrDatabaseFields = \Database::getInstance()->listFields($strTable);
+        $arrDatabaseFields = Database::getInstance()->listFields($strTable);
 
         $arrDatabaseFieldsMeta = array();
         foreach ($arrDatabaseFields as $value) {
@@ -278,7 +306,7 @@ class SyncCtoProDatabase extends \Backend
         $objGzFile->close();
 
         // Compression
-        $objGzFile = gzopen(TL_ROOT . "/" . $strPath, "wb");
+        $objGzFile = gzopen($this->objSyncCtoHelper->getContaoRoot() . "/" . $strPath, "wb");
 
         // Create XML File
         $objXml = new XMLWriter();
@@ -416,22 +444,22 @@ class SyncCtoProDatabase extends \Backend
      *
      * @throws Exception
      */
-    public function readXML($strImportPath)
+    public function readXML(string $strImportPath)
     {
         // Check we have a file
-        if (!file_exists(TL_ROOT . "/" . $strImportPath)) {
+        if (!file_exists($this->objSyncCtoHelper->getContaoRoot() . "/" . $strImportPath)) {
             throw new Exception('File not found: ' . $strImportPath);
         }
 
         // Write some tempfiles
         $strRandomToken = substr(md5(time() . " | " . rand(0, 65535)), 0, 8);
-        $strTempPath    = $this->objSyncCtoHelper->standardizePath(
+        $strTempPath = $this->objSyncCtoHelper->standardizePath(
             $GLOBALS['SYC_PATH']['tmp'],
             "SyncCtoPro-SE-$strRandomToken.xml"
         );
 
         // Unzip XML
-        $objGzFile = gzopen(TL_ROOT . "/" . $strImportPath, "r");
+        $objGzFile = gzopen($this->objSyncCtoHelper->getContaoRoot() . "/" . $strImportPath, "r");
 
         // Write xml file
         $objXMLFile = new File($strTempPath);
@@ -457,16 +485,16 @@ class SyncCtoProDatabase extends \Backend
             'fields' => array()
         );
 
-        $strCurrentAttribute     = '';
+        $strCurrentAttribute = '';
         $strCurrentAttributeType = '';
-        $blnOnlyInsert           = false;
-        $blnInData               = false;
-        $blnInTable              = false;
-        $intI                    = 0;
+        $blnOnlyInsert = false;
+        $blnInData = false;
+        $blnInTable = false;
+        $intI = 0;
 
         //  Check if the document is valid.
         $objXMLReaderValidate = new XMLReader();
-        $objXMLReaderValidate->open(TL_ROOT . "/" . $strTempPath);
+        $objXMLReaderValidate->open($this->objSyncCtoHelper->getContaoRoot() . "/" . $strTempPath);
         $objXMLReaderValidate->setParserProperty(XMLReader::VALIDATE, true);
         if (!$objXMLReaderValidate->isValid()) {
             throw new \RuntimeException('Not a valid XML.');
@@ -475,7 +503,7 @@ class SyncCtoProDatabase extends \Backend
 
         // Read XML
         $objXMLReader = new XMLReader();
-        $objXMLReader->open(TL_ROOT . "/" . $strTempPath);
+        $objXMLReader->open($this->objSyncCtoHelper->getContaoRoot() . "/" . $strTempPath);
 
         while ($objXMLReader->read()) {
             switch ($objXMLReader->nodeType) {
@@ -488,7 +516,7 @@ class SyncCtoProDatabase extends \Backend
                         } elseif (in_array($strCurrentAttributeType, array("empty"))) {
                             $arrData['data'][$intI]['insert'][$strCurrentAttribute] = '';
                         } elseif (in_array($strCurrentAttributeType, array("text", "blob", "default"))) {
-                            $mixValue                                               = base64_decode($objXMLReader->value);
+                            $mixValue = base64_decode($objXMLReader->value);
                             $arrData['data'][$intI]['insert'][$strCurrentAttribute] = $mixValue;
 
                             if (!$blnOnlyInsert) {
@@ -512,10 +540,10 @@ class SyncCtoProDatabase extends \Backend
                         // Start data
                         case 'data':
                             // Get meta data.
-                            $strCurrentAttribute                                    = $objXMLReader->getAttribute('name');
-                            $strCurrentAttributeType                                = $objXMLReader->getAttribute("type");
+                            $strCurrentAttribute = $objXMLReader->getAttribute('name');
+                            $strCurrentAttributeType = $objXMLReader->getAttribute("type");
                             $arrData['fields'][$objXMLReader->getAttribute('name')] = 1;
-                            $blnInData                                              = true;
+                            $blnInData = true;
 
                             // Check if we have only the insert mode for this field.
                             if ($objXMLReader->getAttribute('onlyInsert') == true) {
@@ -591,7 +619,7 @@ class SyncCtoProDatabase extends \Backend
     {
         // Get a list for ignored fields
         $arrFieldFilter = $this->getIgnoredFieldsFor($strTable);
-        $arrFields      = \Database::getInstance()->getFieldNames($strTable);
+        $arrFields = Database::getInstance()->getFieldNames($strTable);
         foreach ($arrFieldFilter as $strField) {
             if (($strKey = array_search($strField, $arrFields)) !== false) {
                 unset($arrFields[$strKey]);
@@ -618,15 +646,16 @@ class SyncCtoProDatabase extends \Backend
         }
 
         // Get data from the database.
-        $result = \Database::getInstance()
-                           ->prepare($sql)
-                           ->execute()
-                           ->fetchAllAssoc();
+        $result = Database::getInstance()
+                          ->prepare($sql)
+                          ->execute()
+                          ->fetchAllAssoc()
+        ;
 
         // Build a nice array.
         $return = array();
         foreach ($result as $row) {
-            $id          = $row['row_id'];
+            $id = $row['row_id'];
             $return[$id] = array_merge(array('table' => $strTable), $row);
         }
 
@@ -651,9 +680,11 @@ class SyncCtoProDatabase extends \Backend
             $this->runRemoveTrigger('tl_article');
             $this->runRemoveTrigger('tl_content');
         } catch (Exception $exc) {
-            $this->addErrorMessage($GLOBALS['TL_LANG']['ERR']['trigger_delete'] . '<br/>' . $GLOBALS['TL_LANG']['tl_syncCto_check']['trigger_information']);
-            $this->log('There was an error by deleting the triggers for SyncCtoPro. Error: ' . $exc->getMessage(),
-                __CLASS__ . " | " . __FUNCTION__, TL_ERROR);
+//            $this->addErrorMessage($GLOBALS['TL_LANG']['ERR']['trigger_delete'] . '<br/>' . $GLOBALS['TL_LANG']['tl_syncCto_check']['trigger_information']);
+//            $this->log(
+//                'There was an error by deleting the triggers for SyncCtoPro. Error: ' . $exc->getMessage(),
+//                __CLASS__ . " | " . __FUNCTION__, TL_ERROR
+//            );
         }
 
         return $mixValues;
@@ -668,15 +699,15 @@ class SyncCtoProDatabase extends \Backend
     {
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterUpdateHashRefresh`";
-        \Database::getInstance()->query($strQuery);
+        Database::getInstance()->query($strQuery);
 
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterInsertHashRefresh`";
-        \Database::getInstance()->query($strQuery);
+        Database::getInstance()->query($strQuery);
 
         // Drop
         $strQuery = "DROP TRIGGER IF EXISTS `" . $strTable . "_AfterDeleteHashRefresh`";
-        \Database::getInstance()->query($strQuery);
+        Database::getInstance()->query($strQuery);
     }
 
     /**
@@ -701,7 +732,7 @@ class SyncCtoProDatabase extends \Backend
         }
 
         $arrUserSettings = array();
-        foreach ((array)deserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value) {
+        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value) {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }
 

@@ -14,12 +14,18 @@ namespace MenAtWork\SyncCtoPro\Controller;
 use Contao\Backend;
 use Contao\BackendTemplate;
 use Contao\BackendUser;
+use Contao\Controller;
+use Contao\Database;
+use Contao\Date;
 use Contao\Environment;
 use Contao\Input;
 use Contao\ModuleLoader;
 use Contao\Session;
+use Contao\StringUtil;
 use Contao\System;
 use Diff_Renderer_Html_Contao;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use SyncCtoCommunicationClient;
 use SyncCtoHelper;
 use SyncCtoProCommunicationClient;
@@ -33,7 +39,6 @@ class Diff
     ////////////////////////////////////////////////////////////////////////////
     // Const
     ////////////////////////////////////////////////////////////////////////////
-
     const VIEWMODE_OVERVIEW = 'overview';
     const VIEWMODE_DETAIL = 'detail';
     const VIEWMODE_ALL = 'all';
@@ -153,6 +158,19 @@ class Diff
      */
     protected $arrError = array();
 
+    /**
+     * @var SessionInterface
+     */
+    private SessionInterface $session;
+
+    public function __construct()
+    {
+        $container = System::getContainer();
+        /** @var RequestStack $requestStack */
+        $requestStack = $container->get('request_stack');
+        $this->session = $requestStack->getSession();
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // System
     ////////////////////////////////////////////////////////////////////////////
@@ -234,7 +252,7 @@ class Diff
      */
     protected function getAllowedIds($strTable)
     {
-        $user               = \BackendUser::getInstance();
+        $user               = BackendUser::getInstance();
         $allowedPageIds     = $user->syncCto_pagemounts;
         $allowedNewsArchive = $user->news;
         $allowedCalendars   = $user->calendars;
@@ -259,7 +277,7 @@ class Diff
                 break;
 
             case 'tl_article':
-                return \Contao\Database::getInstance()
+                return Database::getInstance()
                     ->prepare(
                         \sprintf(
                             'SELECT id FROM tl_article WHERE pid IN (%s)',
@@ -272,7 +290,7 @@ class Diff
 
             case 'tl_content':
                 // --- Page content
-                $articleIds = \Contao\Database::getInstance()
+                $articleIds = Database::getInstance()
                     ->prepare(
                         \sprintf(
                             'SELECT id FROM tl_article WHERE pid IN (%s)',
@@ -282,7 +300,7 @@ class Diff
                     ->execute($allowedPageIds)
                     ->fetchEach('id');
 
-                $pageContentIds = \Contao\Database::getInstance()
+                $pageContentIds = Database::getInstance()
                     ->prepare(
                         \sprintf(
                             'SELECT id FROM tl_content WHERE pid IN (%s) AND (ptable = "tl_article" OR ptable = "")',
@@ -295,7 +313,7 @@ class Diff
                 // --- News content
                 $newsContentIds = [];
                 if (!empty($allowedNewsArchive) && \is_array($allowedNewsArchive)) {
-                    $newsIds = \Contao\Database::getInstance()
+                    $newsIds = Database::getInstance()
                         ->prepare(
                             \sprintf(
                                 'SELECT id FROM tl_news WHERE pid IN (%s)',
@@ -305,7 +323,7 @@ class Diff
                         ->execute($allowedNewsArchive)
                         ->fetchEach('id');
 
-                    $newsContentIds = \Contao\Database::getInstance()
+                    $newsContentIds = Database::getInstance()
                         ->prepare(
                             \sprintf(
                                 'SELECT id FROM tl_content WHERE ptable = "tl_news" AND pid IN (%s)',
@@ -319,7 +337,7 @@ class Diff
                 // --- Calendars content
                 $calendarsContentIds = [];
                 if (!empty($allowedCalendars) && \is_array($allowedCalendars)) {
-                    $calendarsIds = \Contao\Database::getInstance()
+                    $calendarsIds = Database::getInstance()
                         ->prepare(
                             \sprintf(
                                 'SELECT id FROM tl_calendar_events WHERE pid IN (%s)',
@@ -329,7 +347,7 @@ class Diff
                         ->execute($allowedCalendars)
                         ->fetchEach('id');
 
-                    $calendarsContentIds = \Contao\Database::getInstance()
+                    $calendarsContentIds = Database::getInstance()
                         ->prepare(
                             \sprintf(
                                 'SELECT id FROM tl_content WHERE ptable = "tl_calendar_events" AND pid IN (%s)',
@@ -343,14 +361,14 @@ class Diff
                 // --- Rocksolid Slider
                 $rocksolidSliderContentIds = [];
                 if (!empty($allowedModules) && \in_array('rocksolid_slider', $allowedModules)) {
-                    $rocksolidSliderContentIds = \Contao\Database::getInstance()
+                    $rocksolidSliderContentIds = Database::getInstance()
                         ->prepare('SELECT id FROM tl_content WHERE ptable = "tl_rocksolid_slide"')
                         ->execute()
                         ->fetchEach('id');
                 }
 
                 // --- Unknown
-                $unknownContentIds = \Contao\Database::getInstance()
+                $unknownContentIds = Database::getInstance()
                     ->prepare('SELECT id FROM tl_content WHERE ptable NOT IN ("", "tl_article", "tl_rocksolid_slide", "tl_calendar_events", "tl_news")')
                     ->execute()
                     ->fetchEach('id');
@@ -387,7 +405,7 @@ class Diff
         }
 
         foreach ($ids as $id) {
-            $pages = \Contao\Database::getInstance()
+            $pages = Database::getInstance()
                 ->prepare('SELECT id FROM tl_page WHERE pid = ?')
                 ->execute($id)
                 ->fetchEach('id');
@@ -407,11 +425,13 @@ class Diff
     public function runAction()
     {
         // Check user auth
-        BackendUser::getInstance()->authenticate();
+        if(empty(BackendUser::getInstance()->id)) {
+            throw new \RuntimeException('You are not logged in.');
+        }
 
         // Set language from get or user
         if (Input::get('language') != '') {
-            $GLOBALS['TL_LANGUAGE'] = \Input::get('language');
+            $GLOBALS['TL_LANGUAGE'] = Input::get('language');
         } else {
             $GLOBALS['TL_LANGUAGE'] = BackendUser::getInstance()->language;
         }
@@ -438,7 +458,7 @@ class Diff
         }
 
         // Run.
-        if (\Input::post('showall') == self::VIEWMODE_ALL) {
+        if (Input::post('showall') == self::VIEWMODE_ALL) {
             $this->strViewMode = self::VIEWMODE_ALL;
         }
 
@@ -513,6 +533,9 @@ class Diff
         // Set javascript
         $GLOBALS['TL_JAVASCRIPT'][] = 'bundles/synccto/js/compare.js';
 
+        // Setup.
+        \define('TL_ASSETS_URL', '');
+
         // Set wrapper template information
         $this->popupTemplate           = new BackendTemplate('be_syncCtoPro_popup');
         $this->popupTemplate->theme    = Backend::getTheme();
@@ -520,8 +543,7 @@ class Diff
         $this->popupTemplate->language = $GLOBALS['TL_LANGUAGE'];
         $this->popupTemplate->title    = $GLOBALS['TL_CONFIG']['websiteTitle'];
         $this->popupTemplate->charset  = $GLOBALS['TL_CONFIG']['characterSet'];
-        $this->popupTemplate->headline = basename(utf8_convert_encoding($this->strFile,
-            $GLOBALS['TL_CONFIG']['characterSet']));
+        $this->popupTemplate->headline = basename($this->strFile);
 
 
         // Set default information
@@ -544,11 +566,11 @@ class Diff
      */
     protected function initGetParams()
     {
-        $this->intClientID  = \Input::get('id');
-        $this->strDirection = \Input::get('direction');
-        $this->strTable     = \Input::get('table');
-        $this->intRowId     = \Input::get('row_id');
-        $this->strViewMode  = \Input::get('view');
+        $this->intClientID  = Input::get('id');
+        $this->strDirection = Input::get('direction');
+        $this->strTable     = Input::get('table');
+        $this->intRowId     = Input::get('row_id');
+        $this->strViewMode  = Input::get('view');
     }
 
     /**
@@ -571,9 +593,9 @@ class Diff
     protected function renderOverview()
     {
         // Get IDs
-        $arrTransferIds     = \Input::post('transfer_ids');
-        $arrDeleteClientIds = \Input::post('delete_client_ids');
-        $arrDeleteIds       = \Input::post('delete_ids');
+        $arrTransferIds     = Input::post('transfer_ids');
+        $arrDeleteClientIds = Input::post('delete_client_ids');
+        $arrDeleteIds       = Input::post('delete_ids');
 
         // Submit with fields
         if (array_key_exists("transfer", $_POST) && !(empty($arrTransferIds) && empty($arrDeleteClientIds))) {
@@ -605,7 +627,7 @@ class Diff
         elseif (array_key_exists("delete", $_POST) && !empty($arrDeleteIds)) {
             // Run each field
             foreach ($arrDeleteIds as $mixDeleteId) {
-                $mixDeleteId = trimsplit("::", $mixDeleteId);
+                $mixDeleteId = StringUtil::trimsplit("::", $mixDeleteId);
 
                 $this->arrSyncSettings['syncCtoPro_delete'][$mixDeleteId[0]][$mixDeleteId[1]] = $mixDeleteId[1];
             }
@@ -741,7 +763,7 @@ class Diff
                         );
 
                         // Get the author.
-                        $author = \Database::getInstance()
+                        $author = Database::getInstance()
                             ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_calendar_events WHERE id = ?)')
                             ->execute($arrParentData['middle_id']);
 
@@ -779,7 +801,7 @@ class Diff
                         );
 
                         // Get the author.
-                        $author = \Database::getInstance()
+                        $author = Database::getInstance()
                             ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_news WHERE id = ?)')
                             ->execute($arrParentData['middle_id']);
 
@@ -817,7 +839,7 @@ class Diff
         // Add the authors.
         foreach ($arrAllArticleValues as $key => $values) {
             // Get the author.
-            $author = \Database::getInstance()
+            $author = Database::getInstance()
                 ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_article WHERE id = ?)')
                 ->execute($values['id']);
 
@@ -825,15 +847,15 @@ class Diff
         }
 
         // Template
-        $objOverviewTemplate = new \BackendTemplate('be_syncCtoPro_popup_overview');
+        $objOverviewTemplate = new BackendTemplate('be_syncCtoPro_popup_overview');
 
         $objOverviewTemplate->arrAllPageValues           = $arrAllPageValues;
         $objOverviewTemplate->arrAllArticleValues        = $arrAllArticleValues;
         $objOverviewTemplate->arrAllContentValues        = $arrAllContentValues;
         $objOverviewTemplate->arrAdditionalContentValues = $arrAdditionalContentReorder;
         $objOverviewTemplate->arrAllowedTables           = $arrAllowedTables;
-        $objOverviewTemplate->base                       = \Environment::get('base');
-        $objOverviewTemplate->path                       = \Environment::get('path');
+        $objOverviewTemplate->base                       = Environment::get('base');
+        $objOverviewTemplate->path                       = Environment::get('path');
         $objOverviewTemplate->id                         = $this->intClientID;
         $objOverviewTemplate->direction                  = $this->strDirection;
         $objOverviewTemplate->headline                   = $GLOBALS['TL_LANG']['MSC']['show_differences'];
@@ -856,7 +878,7 @@ class Diff
             ->getHashValueFor($strTable, $this->getAllowedIds($strTable));
 
         // Get server Pages
-        $arrElement = \Database::getInstance()
+        $arrElement = Database::getInstance()
             ->query('SELECT ' . implode(", ",
                     $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
             ->fetchAllAssoc();
@@ -913,7 +935,7 @@ class Diff
         $arrFilterFields = $this->getIgnoredFieldsFor($this->strTable);
 
         // Load fields
-        \Contao\Controller::loadDataContainer($this->strTable);
+        Controller::loadDataContainer($this->strTable);
         $arrDcaFields = $GLOBALS['TL_DCA'][$this->strTable]['fields'];
 
         $arrDataForDiff = array();
@@ -925,7 +947,7 @@ class Diff
         }
 
         // Get fields
-        $fields = \Database::getInstance()->listFields($this->strTable);
+        $fields = Database::getInstance()->listFields($this->strTable);
 
         $arrFieldMeta = array();
 
@@ -961,11 +983,11 @@ class Diff
             }
 
             // Convert serialized arrays into strings
-            if (is_array(($tmp = deserialize($mixValuesServer))) && !is_array($mixValuesServer)) {
+            if (is_array(($tmp = unserialize($mixValuesServer))) && !is_array($mixValuesServer)) {
                 $mixValuesServer                              = $this->implode($tmp);
                 $arrDataForDiff[$strField]['server']['array'] = true;
             }
-            if (is_array(($tmp = deserialize($mixValuesClient))) && !is_array($mixValuesClient)) {
+            if (is_array(($tmp = unserialize($mixValuesClient))) && !is_array($mixValuesClient)) {
                 $mixValuesClient                              = $this->implode($tmp);
                 $arrDataForDiff[$strField]['client']['array'] = true;
             }
@@ -973,34 +995,38 @@ class Diff
 
             // Convert date fields
             if ($strCurrentFieldSettings['eval']['rgxp'] == 'date') {
-                $mixValuesServer = \Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $mixValuesServer ?: '');
-                $mixValuesClient = \Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $mixValuesClient ?: '');
+                $mixValuesServer = Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $mixValuesServer ?: '');
+                $mixValuesClient = Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $mixValuesClient ?: '');
             } elseif ($strCurrentFieldSettings['eval']['rgxp'] == 'time') {
-                $mixValuesServer = \Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $mixValuesServer ?: '');
-                $mixValuesClient = \Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $mixValuesClient ?: '');
+                $mixValuesServer = Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $mixValuesServer ?: '');
+                $mixValuesClient = Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $mixValuesClient ?: '');
             } elseif ($strCurrentFieldSettings['eval']['rgxp'] == 'datim') {
-                $mixValuesServer = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesServer ?: '');
-                $mixValuesClient = \Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesClient ?: '');
+                $mixValuesServer = Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesServer ?: '');
+                $mixValuesClient = Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesClient ?: '');
             }
 
             // Try to solve the problem for the ... binary uuid things.
-            if (strlen($mixValuesServer) == 16 && in_array($arrFieldMeta[$strField]['type'],
-                    array('binary', 'tinyblob', 'mediumblob', 'blob', 'longblob'))) {
-                if (version_compare(VERSION . '.' . BUILD, '3.5.5', '>=')) {
-                    $mixValuesServer = @\StringUtil::binToUuid($mixValuesServer);
-                } else {
-                    $mixValuesServer = @\String::binToUuid($mixValuesServer);
-                }
+            if (
+                strlen($mixValuesServer) == 16
+                && in_array(
+                    $arrFieldMeta[$strField]['type'],
+                    array('binary', 'tinyblob', 'mediumblob', 'blob', 'longblob'
+                    )
+                )
+            ) {
+                $mixValuesServer = StringUtil::binToUuid($mixValuesServer);
             }
 
             // Try to solve the problem for the ... binary uuid things.
-            if (strlen($mixValuesClient) == 16 && in_array($arrFieldMeta[$strField]['type'],
-                    array('binary', 'tinyblob', 'mediumblob', 'blob', 'longblob'))) {
-                if (version_compare(VERSION . '.' . BUILD, '3.5.5', '>=')) {
-                    $mixValuesClient = @\StringUtil::binToUuid($mixValuesClient);
-                } else {
-                    $mixValuesClient = @\String::binToUuid($mixValuesClient);
-                }
+            if (
+                strlen($mixValuesClient) == 16
+                && in_array(
+                    $arrFieldMeta[$strField]['type'],
+                    array('binary', 'tinyblob', 'mediumblob', 'blob', 'longblob'
+                    )
+                )
+            ) {
+                $mixValuesClient = StringUtil::binToUuid($mixValuesClient);
             }
 
             // Save for later operations
@@ -1063,7 +1089,7 @@ class Diff
             }
 
             if ($strField == 'sorting') {
-                $objMovedTemplate           = new \BackendTemplate('be_syncCtoPro_popup_detail_moved');
+                $objMovedTemplate           = new BackendTemplate('be_syncCtoPro_popup_detail_moved');
                 $objMovedTemplate->strField = $strHumanReadableField;
 
                 $intServerSorting = intval($arrValues['server']['data'][0]);
@@ -1080,7 +1106,7 @@ class Diff
 
                 $strContent .= $objMovedTemplate->parse();
             } elseif ($strField == 'pid') {
-                $objMovedTemplate           = new \BackendTemplate('be_syncCtoPro_popup_detail_moved');
+                $objMovedTemplate           = new BackendTemplate('be_syncCtoPro_popup_detail_moved');
                 $objMovedTemplate->strField = $strHumanReadableField;
                 $objMovedTemplate->strMoved = 'parent';
 
@@ -1103,7 +1129,7 @@ class Diff
         }
 
         // Set wrapper template information
-        $objDetailsTemplate = new \BackendTemplate($strTemplate);
+        $objDetailsTemplate = new BackendTemplate($strTemplate);
 
         $objDetailsTemplate->base         = Environment::get('base');
         $objDetailsTemplate->path         = Environment::get('path');
@@ -1135,9 +1161,9 @@ class Diff
         $arrExtData = array();
         $arrLocData = array();
 
-        $arrTransferData = (array)\Input::post('transfer_ids');
+        $arrTransferData = (array) Input::post('transfer_ids');
         $arrTransferData = $this->cleanIds($arrTransferData, '', true);
-        $arrDeleteData   = (array)\Input::post('delete_client_ids');
+        $arrDeleteData   = (array) Input::post('delete_client_ids');
 
         // Get table and id
         foreach ($arrTransferData as $value) {
@@ -1190,18 +1216,18 @@ class Diff
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
                         $arrLocaleData['title'], '-');
                 } elseif ($strTableName == 'tl_article') {
-                    $arrLookupPage = \Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
+                    $arrLookupPage = Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
                         ->execute($arrLocaleData['pid'])
                         ->fetchAllAssoc();
 
                     $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
                         $arrLookupPage[0]['title'], '-');
                 } elseif ($strTableName == 'tl_content' && ($arrLocaleData['ptable'] == 'tl_article' || $arrLocaleData['ptable'] == '')) {
-                    $arrLookupArticle = \Database::getInstance()->prepare('SELECT pid,title FROM tl_article WHERE id =?')
+                    $arrLookupArticle = Database::getInstance()->prepare('SELECT pid,title FROM tl_article WHERE id =?')
                         ->execute($arrLocaleData['pid'])
                         ->fetchAllAssoc();
 
-                    $arrLookupPage = \Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
+                    $arrLookupPage = Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
                         ->execute($arrLookupArticle[0]['pid'])
                         ->fetchAllAssoc();
 
@@ -1246,10 +1272,10 @@ class Diff
         }
 
         // Add Base template
-        $objBaseTemplate = new \BackendTemplate('be_syncCtoPro_popup_all');
+        $objBaseTemplate = new BackendTemplate('be_syncCtoPro_popup_all');
 
-        $objBaseTemplate->base      = \Environment::get('base');
-        $objBaseTemplate->path      = \Environment::get('path');
+        $objBaseTemplate->base      = Environment::get('base');
+        $objBaseTemplate->path      = Environment::get('path');
         $objBaseTemplate->id        = $this->intClientID;
         $objBaseTemplate->direction = $this->strDirection;
 
@@ -1271,7 +1297,7 @@ class Diff
      *
      * @param string $strName Name of table
      *
-     * @return string
+     * @return array
      */
     public function lookUpName($strName)
     {
@@ -1296,29 +1322,29 @@ class Diff
         }
 
         // Get MM name
-        if (in_array('metamodels', ModuleLoader::getActive()) && preg_match("/^mm_/i", $strName)) {
-            try {
-                if (!is_null(\MetaModels\Factory::byTableName($strName))) {
-                    $objDCABuilder     = \MetaModels\Dca\MetaModelDcaBuilder::getInstance();
-                    $objMetaModels     = \MetaModels\Factory::byTableName($strName);
-                    $arrDCA            = $objDCABuilder->getDca($objMetaModels->get('id'));
-                    $arrBackendcaption = deserialize($arrDCA['backendcaption']);
-
-                    $strReturn = $objMetaModels->getName();
-
-                    foreach ((array)$arrBackendcaption as $value) {
-                        if ($value['langcode'] == \BackendUser::getInstance()->language) {
-                            $strReturn = $value['label'];
-                            break;
-                        }
-                    }
-
-                    return $this->formateLookUpName($strName, $strReturn);
-                }
-            } catch (Exception $exc) {
-                // Nothing to do;
-            }
-        }
+//        if (in_array('metamodels', ModuleLoader::getActive()) && preg_match("/^mm_/i", $strName)) {
+//            try {
+//                if (!is_null(\MetaModels\Factory::byTableName($strName))) {
+//                    $objDCABuilder     = \MetaModels\Dca\MetaModelDcaBuilder::getInstance();
+//                    $objMetaModels     = \MetaModels\Factory::byTableName($strName);
+//                    $arrDCA            = $objDCABuilder->getDca($objMetaModels->get('id'));
+//                    $arrBackendcaption = deserialize($arrDCA['backendcaption']);
+//
+//                    $strReturn = $objMetaModels->getName();
+//
+//                    foreach ((array)$arrBackendcaption as $value) {
+//                        if ($value['langcode'] == \BackendUser::getInstance()->language) {
+//                            $strReturn = $value['label'];
+//                            break;
+//                        }
+//                    }
+//
+//                    return $this->formateLookUpName($strName, $strReturn);
+//                }
+//            } catch (Exception $exc) {
+//                // Nothing to do;
+//            }
+//        }
 
         // Little mapping for names
         if (is_array($GLOBALS['SYC_CONFIG']['database_mapping']) && key_exists($strName,
@@ -1388,12 +1414,12 @@ class Diff
         $arrReturn = array();
 
         // Check if the middle table exists.
-        if (!\Database::getInstance()->tableExists($strMiddleTable)) {
+        if (!Database::getInstance()->tableExists($strMiddleTable)) {
             return $arrReturn;
         }
 
         // Get the middle table
-        $objMiddleTable = \Database::getInstance()
+        $objMiddleTable = Database::getInstance()
             ->prepare('SELECT id, pid, ' . $strMiddleField . ' FROM ' . $strMiddleTable . ' WHERE id=?')
             ->execute($intId);
 
@@ -1405,12 +1431,12 @@ class Diff
         $arrReturn['middle_id'] = $objMiddleTable->id;
 
         // Check if the head table exists.
-        if ($strHeadTable == null || !\Database::getInstance()->tableExists($strHeadTable)) {
+        if ($strHeadTable == null || !Database::getInstance()->tableExists($strHeadTable)) {
             return $arrReturn;
         }
 
         // Get the main table.
-        $objHeadTable = \Database::getInstance()
+        $objHeadTable = Database::getInstance()
             ->prepare('SELECT id, ' . $strHeadField . ' FROM ' . $strHeadTable . ' WHERE id=?')
             ->execute($objMiddleTable->pid);
 
@@ -1497,12 +1523,12 @@ class Diff
     protected function loadLocalDataFor($strTable, $mixID)
     {
         if (is_array($mixID)) {
-            return \Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id IN (" . implode(", ",
+            return Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id IN (" . implode(", ",
                     $mixID) . ")")
                 ->execute()
                 ->fetchAllAssoc();
         } else {
-            return \Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id = ?")
+            return Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id = ?")
                 ->execute($mixID)
                 ->fetchAllAssoc();
         }
@@ -1548,7 +1574,7 @@ class Diff
      */
     protected function loadSyncSettings()
     {
-        $this->arrSyncSettings = Session::getInstance()->get("syncCto_SyncSettings_" . $this->intClientID);
+        $this->arrSyncSettings = $this->session->get("syncCto_SyncSettings_" . $this->intClientID);
 
         if (!is_array($this->arrSyncSettings)) {
             $this->arrSyncSettings = array();
@@ -1564,7 +1590,7 @@ class Diff
             $this->arrSyncSettings = array();
         }
 
-        Session::getInstance()->set("syncCto_SyncSettings_" . $this->intClientID, $this->arrSyncSettings);
+        $this->session->set("syncCto_SyncSettings_" . $this->intClientID, $this->arrSyncSettings);
     }
 
     public function rebuildArray($arrData)
@@ -1750,7 +1776,7 @@ class Diff
         }
 
         $arrUserSettings = array();
-        foreach ((array)deserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value) {
+        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value) {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }
 
@@ -1843,12 +1869,13 @@ class Diff
             $image = $arrPage['type'] . '_' . $sub . '.gif';
         }
 
+        $tlRoot = \SyncCtoHelper::getInstance()->getContaoRoot();
 
-        if (file_exists(TL_ROOT . '/system/themes/' . Backend::getTheme() . '/icons/' . $image)) {
+        if (file_exists($tlRoot . '/system/themes/' . Backend::getTheme() . '/icons/' . $image)) {
             return 'system/themes/' . Backend::getTheme() . '/icons/' . $image;
         }
 
-        if (file_exists(TL_ROOT . '/system/themes/flexible/icons/' . $image)) {
+        if (file_exists($tlRoot . '/system/themes/flexible/icons/' . $image)) {
             return 'system/themes/flexible/icons/' . $image;
         }
 
