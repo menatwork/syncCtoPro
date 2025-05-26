@@ -186,7 +186,7 @@ class SyncCtoProDatabase extends Backend
     public function setDataFor($strTable, $arrData, $arrInsertFields)
     {
         if (empty($strTable) || !Database::getInstance()->tableExists($strTable)) {
-            throw new Exception('Error by import data. Unknown or empty tablename: ' . $arrData['table']);
+            throw new Exception('Error by import data. Unknown or empty table name: ' . $arrData['table']);
         }
 
         if (empty($arrData)) {
@@ -195,7 +195,6 @@ class SyncCtoProDatabase extends Backend
 
         // Check fields
         $arrKnownFields = Database::getInstance()->getFieldNames($strTable);
-
         if (($mixKey = array_search('PRIMARY', $arrKnownFields)) !== false) {
             unset($arrKnownFields[$mixKey]);
         }
@@ -204,7 +203,7 @@ class SyncCtoProDatabase extends Backend
         $arrFieldsMissingDatabase = array_diff($arrInsertFields, $arrKnownFields);
 
         if (!empty($arrFieldsMissingInsert) || !empty($arrFieldsMissingInsert)) {
-            $strError = 'We have missin missing fields.';
+            $strError = 'We have missing fields.';
             $strError .= '|| Database:    ' . implode(", ", $arrFieldsMissingDatabase);
             $strError .= '|| Insert-File: ' . implode(", ", $arrFieldsMissingInsert);
 
@@ -229,7 +228,6 @@ class SyncCtoProDatabase extends Backend
         }
 
         $arrErrors = array();
-        $intCount = 0;
 
         // Update
         foreach ($arrUpdate as $key => $arrValues) {
@@ -241,8 +239,6 @@ class SyncCtoProDatabase extends Backend
                         ->set($arrValues)
                         ->execute($intID)
                 ;
-
-                $intCount++;
             } catch (Exception $e) {
                 $arrErrors[] = $e->getMessage();
             }
@@ -255,8 +251,6 @@ class SyncCtoProDatabase extends Backend
                         ->set($arrValues)
                         ->execute()
                 ;
-
-                $intCount++;
             } catch (Exception $e) {
                 $arrErrors[] = $e->getMessage();
             }

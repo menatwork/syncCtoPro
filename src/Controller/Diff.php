@@ -425,7 +425,7 @@ class Diff
     public function runAction()
     {
         // Check user auth
-        if(!empty(BackendUser::getInstance()->id)) {
+        if(empty(BackendUser::getInstance()->id)) {
             throw new \RuntimeException('You are not logged in.');
         }
 
@@ -533,6 +533,9 @@ class Diff
         // Set javascript
         $GLOBALS['TL_JAVASCRIPT'][] = 'bundles/synccto/js/compare.js';
 
+        // Setup.
+        \define('TL_ASSETS_URL', '');
+
         // Set wrapper template information
         $this->popupTemplate           = new BackendTemplate('be_syncCtoPro_popup');
         $this->popupTemplate->theme    = Backend::getTheme();
@@ -540,8 +543,7 @@ class Diff
         $this->popupTemplate->language = $GLOBALS['TL_LANGUAGE'];
         $this->popupTemplate->title    = $GLOBALS['TL_CONFIG']['websiteTitle'];
         $this->popupTemplate->charset  = $GLOBALS['TL_CONFIG']['characterSet'];
-        $this->popupTemplate->headline = basename(utf8_convert_encoding($this->strFile,
-            $GLOBALS['TL_CONFIG']['characterSet']));
+        $this->popupTemplate->headline = basename($this->strFile);
 
 
         // Set default information
@@ -852,8 +854,8 @@ class Diff
         $objOverviewTemplate->arrAllContentValues        = $arrAllContentValues;
         $objOverviewTemplate->arrAdditionalContentValues = $arrAdditionalContentReorder;
         $objOverviewTemplate->arrAllowedTables           = $arrAllowedTables;
-        $objOverviewTemplate->base                       = \Environment::get('base');
-        $objOverviewTemplate->path                       = \Environment::get('path');
+        $objOverviewTemplate->base                       = Environment::get('base');
+        $objOverviewTemplate->path                       = Environment::get('path');
         $objOverviewTemplate->id                         = $this->intClientID;
         $objOverviewTemplate->direction                  = $this->strDirection;
         $objOverviewTemplate->headline                   = $GLOBALS['TL_LANG']['MSC']['show_differences'];

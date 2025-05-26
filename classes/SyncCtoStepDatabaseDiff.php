@@ -199,7 +199,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
     // Hook - Additional Functions
     ////////////////////////////////////////////////////////////////////////////
 
-    public function localeUpdateTimestamp(SyncCtoModuleClient $syncCtoClient, $intClientID)
+    public function localeUpdateTimestamp(SyncCtoModuleClient|ClientController $syncCtoClient, $intClientID)
     {
         // Set Basic
         $this->setSyncCto($syncCtoClient);
@@ -284,7 +284,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         foreach ($arrTableTimestamp AS $location => $arrTimeStamps)
         {
             // Update timestamp
-            $mixLastTableTimestamp =\Database::getInstance()
+            $mixLastTableTimestamp = Database::getInstance()
                     ->prepare("SELECT " . $location . "_timestamp FROM tl_synccto_clients WHERE id=?")
                     ->limit(1)
                     ->execute($this->intClientID)
@@ -305,7 +305,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
             }
 
             // Search for old entries
-            $arrTables =\Database::getInstance()->listTables();
+            $arrTables =Database::getInstance()->listTables();
             foreach ($arrLastTableTimestamp as $key => $value)
             {
                 if (!in_array($key, $arrTables))
@@ -314,7 +314,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
                 }
             }
 
-           \Database::getInstance()
+           Database::getInstance()
                     ->prepare("UPDATE tl_synccto_clients SET " . $location . "_timestamp = ? WHERE id = ? ")
                     ->execute(serialize($arrLastTableTimestamp), $this->intClientID);
         }
@@ -731,7 +731,9 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         ;
 
         // Set output
-        $this->objData->setHtml($this->replaceInsertTags($objTemp->parse()));
+        /** @var \Contao\CoreBundle\InsertTag\InsertTagParser $insertTagParse */
+        $insertTagParse = System::getContainer()->get('contao.insert_tag.parser');
+        $this->objData->setHtml($insertTagParse->replace($objTemp->parse()));
         $this->objSyncCtoClient->setRefresh(false);
     }
 

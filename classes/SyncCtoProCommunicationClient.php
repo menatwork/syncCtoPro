@@ -185,7 +185,7 @@ class SyncCtoProCommunicationClient
     public function deleteEntries(
         string $strTable,
         array  $arrIds = array()
-    ): array {
+    ): string {
         $arrData = array(
             array(
                 "name"  => "table",
