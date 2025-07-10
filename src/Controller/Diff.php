@@ -542,7 +542,7 @@ class Diff
         $this->popupTemplate->base     = Environment::get('base');
         $this->popupTemplate->language = $GLOBALS['TL_LANGUAGE'];
         $this->popupTemplate->title    = $GLOBALS['TL_CONFIG']['websiteTitle'];
-        $this->popupTemplate->charset  = $GLOBALS['TL_CONFIG']['characterSet'];
+        $this->popupTemplate->charset  = \Contao\System::getContainer()->getParameter('kernel.charset');
         $this->popupTemplate->headline = basename($this->strFile);
 
 
@@ -995,14 +995,15 @@ class Diff
 
             // Convert date fields
             if ($strCurrentFieldSettings['eval']['rgxp'] == 'date') {
-                $mixValuesServer = Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $mixValuesServer ?: '');
-                $mixValuesClient = Date::parse($GLOBALS['TL_CONFIG']['dateFormat'], $mixValuesClient ?: '');
+
+                $mixValuesServer = Date::parse(\Contao\Config::get('dateFormat'), $mixValuesServer ?: '');
+                $mixValuesClient = Date::parse(\Contao\Config::get('dateFormat'), $mixValuesClient ?: '');
             } elseif ($strCurrentFieldSettings['eval']['rgxp'] == 'time') {
-                $mixValuesServer = Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $mixValuesServer ?: '');
-                $mixValuesClient = Date::parse($GLOBALS['TL_CONFIG']['timeFormat'], $mixValuesClient ?: '');
+                $mixValuesServer = Date::parse(\Contao\Config::get('timeFormat'), $mixValuesServer ?: '');
+                $mixValuesClient = Date::parse(\Contao\Config::get('timeFormat'), $mixValuesClient ?: '');
             } elseif ($strCurrentFieldSettings['eval']['rgxp'] == 'datim') {
-                $mixValuesServer = Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesServer ?: '');
-                $mixValuesClient = Date::parse($GLOBALS['TL_CONFIG']['datimFormat'], $mixValuesClient ?: '');
+                $mixValuesServer = Date::parse(\Contao\Config::get('datimFormat'), $mixValuesServer ?: '');
+                $mixValuesClient = Date::parse(\Contao\Config::get('datimFormat'), $mixValuesClient ?: '');
             }
 
             // Try to solve the problem for the ... binary uuid things.
