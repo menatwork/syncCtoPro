@@ -35,7 +35,7 @@ use MenAtWork\SyncCtoPro\Controller\Diff;
             <thead>
                 <tr>
                     <th class="checkbox">
-                        <input class="tl_checkbox" onclick="Backend.toggleCheckboxGroup(this, 'comparelist_tree')" type="checkbox" />
+                        <input class="tl_checkbox" onclick="toggleCheckboxGroup(this, '.comparelist tbody input[type=checkbox]')" type="checkbox" />
                     </th>
                     <th class="server">
                         <?php echo $GLOBALS['TL_LANG']['MSC']['server']; ?>
