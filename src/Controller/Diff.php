@@ -19,13 +19,10 @@ use Contao\Database;
 use Contao\Date;
 use Contao\Environment;
 use Contao\Input;
-use Contao\ModuleLoader;
-use Contao\Session;
 use Contao\StringUtil;
 use Contao\System;
 use Diff_Renderer_Html_Contao;
-use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use MenAtWork\SyncCto\Controller\APopUpController;
 use SyncCtoCommunicationClient;
 use SyncCtoHelper;
 use SyncCtoProCommunicationClient;
@@ -34,14 +31,14 @@ use SyncCtoProDatabase;
 /**
  * Class SyncCtoPopup
  */
-class Diff
+class Diff extends APopUpController
 {
     ////////////////////////////////////////////////////////////////////////////
     // Const
     ////////////////////////////////////////////////////////////////////////////
     const VIEWMODE_OVERVIEW = 'overview';
-    const VIEWMODE_DETAIL = 'detail';
-    const VIEWMODE_ALL = 'all';
+    const VIEWMODE_DETAIL   = 'detail';
+    const VIEWMODE_ALL      = 'all';
 
     ////////////////////////////////////////////////////////////////////////////
     // Objects
@@ -133,9 +130,9 @@ class Diff
     protected $arrLocalData;
 
     /**
-     * @var array
+     * @var string
      */
-    protected $strContentData;
+    protected string $strContentData = '';
 
     /**
      * Flag to show if we have an error
@@ -159,17 +156,9 @@ class Diff
     protected $arrError = array();
 
     /**
-     * @var SessionInterface
+     * @var string
      */
-    private SessionInterface $session;
-
-    public function __construct()
-    {
-        $container = System::getContainer();
-        /** @var RequestStack $requestStack */
-        $requestStack = $container->get('request_stack');
-        $this->session = $requestStack->getSession();
-    }
+    protected string $template = 'be_syncCtoPro_popup';
 
     ////////////////////////////////////////////////////////////////////////////
     // System
@@ -252,11 +241,11 @@ class Diff
      */
     protected function getAllowedIds($strTable)
     {
-        $user               = BackendUser::getInstance();
-        $allowedPageIds     = $user->syncCto_pagemounts;
+        $user = BackendUser::getInstance();
+        $allowedPageIds = $user->syncCto_pagemounts;
         $allowedNewsArchive = $user->news;
-        $allowedCalendars   = $user->calendars;
-        $allowedModules     = $user->modules;
+        $allowedCalendars = $user->calendars;
+        $allowedModules = $user->modules;
 
         if ($user->isAdmin) {
             return [];
@@ -278,100 +267,109 @@ class Diff
 
             case 'tl_article':
                 return Database::getInstance()
-                    ->prepare(
-                        \sprintf(
-                            'SELECT id FROM tl_article WHERE pid IN (%s)',
-                            \implode(', ', \array_fill(0, \count($allowedPageIds), '?'))
-                        )
-                    )
-                    ->execute($allowedPageIds)
-                    ->fetchEach('id');
+                               ->prepare(
+                                   \sprintf(
+                                       'SELECT id FROM tl_article WHERE pid IN (%s)',
+                                       \implode(', ', \array_fill(0, \count($allowedPageIds), '?'))
+                                   )
+                               )
+                               ->execute($allowedPageIds)
+                               ->fetchEach('id')
+                ;
                 break;
 
             case 'tl_content':
                 // --- Page content
                 $articleIds = Database::getInstance()
-                    ->prepare(
-                        \sprintf(
-                            'SELECT id FROM tl_article WHERE pid IN (%s)',
-                            \implode(', ', \array_fill(0, \count($allowedPageIds), '?'))
-                        )
-                    )
-                    ->execute($allowedPageIds)
-                    ->fetchEach('id');
+                                      ->prepare(
+                                          \sprintf(
+                                              'SELECT id FROM tl_article WHERE pid IN (%s)',
+                                              \implode(', ', \array_fill(0, \count($allowedPageIds), '?'))
+                                          )
+                                      )
+                                      ->execute($allowedPageIds)
+                                      ->fetchEach('id')
+                ;
 
                 $pageContentIds = Database::getInstance()
-                    ->prepare(
-                        \sprintf(
-                            'SELECT id FROM tl_content WHERE pid IN (%s) AND (ptable = "tl_article" OR ptable = "")',
-                            \implode(', ', \array_fill(0, \count($articleIds), '?'))
-                        )
-                    )
-                    ->execute($articleIds)
-                    ->fetchEach('id');
+                                          ->prepare(
+                                              \sprintf(
+                                                  'SELECT id FROM tl_content WHERE pid IN (%s) AND (ptable = "tl_article" OR ptable = "")',
+                                                  \implode(', ', \array_fill(0, \count($articleIds), '?'))
+                                              )
+                                          )
+                                          ->execute($articleIds)
+                                          ->fetchEach('id')
+                ;
 
                 // --- News content
                 $newsContentIds = [];
                 if (!empty($allowedNewsArchive) && \is_array($allowedNewsArchive)) {
                     $newsIds = Database::getInstance()
-                        ->prepare(
-                            \sprintf(
-                                'SELECT id FROM tl_news WHERE pid IN (%s)',
-                                \implode(', ', \array_fill(0, \count($allowedNewsArchive), '?'))
-                            )
-                        )
-                        ->execute($allowedNewsArchive)
-                        ->fetchEach('id');
+                                       ->prepare(
+                                           \sprintf(
+                                               'SELECT id FROM tl_news WHERE pid IN (%s)',
+                                               \implode(', ', \array_fill(0, \count($allowedNewsArchive), '?'))
+                                           )
+                                       )
+                                       ->execute($allowedNewsArchive)
+                                       ->fetchEach('id')
+                    ;
 
                     $newsContentIds = Database::getInstance()
-                        ->prepare(
-                            \sprintf(
-                                'SELECT id FROM tl_content WHERE ptable = "tl_news" AND pid IN (%s)',
-                                \implode(', ', \array_fill(0, \count($newsIds), '?'))
-                            )
-                        )
-                        ->execute($newsIds)
-                        ->fetchEach('id');
+                                              ->prepare(
+                                                  \sprintf(
+                                                      'SELECT id FROM tl_content WHERE ptable = "tl_news" AND pid IN (%s)',
+                                                      \implode(', ', \array_fill(0, \count($newsIds), '?'))
+                                                  )
+                                              )
+                                              ->execute($newsIds)
+                                              ->fetchEach('id')
+                    ;
                 }
 
                 // --- Calendars content
                 $calendarsContentIds = [];
                 if (!empty($allowedCalendars) && \is_array($allowedCalendars)) {
                     $calendarsIds = Database::getInstance()
-                        ->prepare(
-                            \sprintf(
-                                'SELECT id FROM tl_calendar_events WHERE pid IN (%s)',
-                                \implode(', ', \array_fill(0, \count($allowedCalendars), '?'))
-                            )
-                        )
-                        ->execute($allowedCalendars)
-                        ->fetchEach('id');
+                                            ->prepare(
+                                                \sprintf(
+                                                    'SELECT id FROM tl_calendar_events WHERE pid IN (%s)',
+                                                    \implode(', ', \array_fill(0, \count($allowedCalendars), '?'))
+                                                )
+                                            )
+                                            ->execute($allowedCalendars)
+                                            ->fetchEach('id')
+                    ;
 
                     $calendarsContentIds = Database::getInstance()
-                        ->prepare(
-                            \sprintf(
-                                'SELECT id FROM tl_content WHERE ptable = "tl_calendar_events" AND pid IN (%s)',
-                                \implode(', ', \array_fill(0, \count($calendarsIds), '?'))
-                            )
-                        )
-                        ->execute($calendarsIds)
-                        ->fetchEach('id');
+                                                   ->prepare(
+                                                       \sprintf(
+                                                           'SELECT id FROM tl_content WHERE ptable = "tl_calendar_events" AND pid IN (%s)',
+                                                           \implode(', ', \array_fill(0, \count($calendarsIds), '?'))
+                                                       )
+                                                   )
+                                                   ->execute($calendarsIds)
+                                                   ->fetchEach('id')
+                    ;
                 }
 
                 // --- Rocksolid Slider
                 $rocksolidSliderContentIds = [];
                 if (!empty($allowedModules) && \in_array('rocksolid_slider', $allowedModules)) {
                     $rocksolidSliderContentIds = Database::getInstance()
-                        ->prepare('SELECT id FROM tl_content WHERE ptable = "tl_rocksolid_slide"')
-                        ->execute()
-                        ->fetchEach('id');
+                                                         ->prepare('SELECT id FROM tl_content WHERE ptable = "tl_rocksolid_slide"')
+                                                         ->execute()
+                                                         ->fetchEach('id')
+                    ;
                 }
 
                 // --- Unknown
                 $unknownContentIds = Database::getInstance()
-                    ->prepare('SELECT id FROM tl_content WHERE ptable NOT IN ("", "tl_article", "tl_rocksolid_slide", "tl_calendar_events", "tl_news")')
-                    ->execute()
-                    ->fetchEach('id');
+                                             ->prepare('SELECT id FROM tl_content WHERE ptable NOT IN ("", "tl_article", "tl_rocksolid_slide", "tl_calendar_events", "tl_news")')
+                                             ->execute()
+                                             ->fetchEach('id')
+                ;
 
                 return \array_merge(
                     $pageContentIds,
@@ -406,9 +404,10 @@ class Diff
 
         foreach ($ids as $id) {
             $pages = Database::getInstance()
-                ->prepare('SELECT id FROM tl_page WHERE pid = ?')
-                ->execute($id)
-                ->fetchEach('id');
+                             ->prepare('SELECT id FROM tl_page WHERE pid = ?')
+                             ->execute($id)
+                             ->fetchEach('id')
+            ;
 
             if (empty($pages)) {
                 continue;
@@ -419,28 +418,13 @@ class Diff
         }
     }
 
-    /**
-     * Load the template list and go through the steps
-     */
-    public function runAction()
+    protected function doAction(): string
     {
-        // Check user auth
-        if(empty(BackendUser::getInstance()->id)) {
-            throw new \RuntimeException('You are not logged in.');
-        }
-
-        // Set language from get or user
-        if (Input::get('language') != '') {
-            $GLOBALS['TL_LANGUAGE'] = Input::get('language');
-        } else {
-            $GLOBALS['TL_LANGUAGE'] = BackendUser::getInstance()->language;
-        }
-
         // Init Helper
-        $this->objSyncCtoHelper                 = SyncCtoHelper::getInstance();
-        $this->objSyncCtoCommunicationClient    = SyncCtoCommunicationClient::getInstance();
+        $this->objSyncCtoHelper = SyncCtoHelper::getInstance();
+        $this->objSyncCtoCommunicationClient = SyncCtoCommunicationClient::getInstance();
         $this->objSyncCtoProCommunicationClient = SyncCtoProCommunicationClient::getInstance();
-        $this->objSyncCtoProDatabase            = SyncCtoProDatabase::getInstance();
+        $this->objSyncCtoProDatabase = SyncCtoProDatabase::getInstance();
 
         // Load all values from get param
         $this->initGetParams();
@@ -456,6 +440,13 @@ class Diff
         if (!empty($this->strTable)) {
             System::loadLanguageFile($this->strTable);
         }
+
+        // Set stylesheets
+        $GLOBALS['TL_CSS'][] = 'bundles/synccto/css/compare.css';
+        $GLOBALS['TL_CSS'][] = 'bundles/syncctopro/css/diff.css';
+
+        // Set javascript
+        $GLOBALS['TL_JAVASCRIPT'][] = 'bundles/synccto/js/compare.js';
 
         // Run.
         if (Input::post('showall') == self::VIEWMODE_ALL) {
@@ -487,10 +478,10 @@ class Diff
                     $arrLocData = $this->loadLocalDataFor($this->strTable, $this->intRowId);
 
                     if (empty($arrLocData)) {
-                        $arrLocalData  = array();
+                        $arrLocalData = array();
                         $arrExternData = $arrExtData['data'][0]['insert'];
                     } else {
-                        $arrLocalData  = $arrLocData[0];
+                        $arrLocalData = $arrLocData[0];
                         $arrExternData = $arrExtData['data'][0]['insert'];
                     }
 
@@ -503,58 +494,23 @@ class Diff
                     break;
 
                 default:
-                    $this->blnError   = true;
+                    $this->blnError = true;
                     $this->arrError[] = 'Unknown viewmode.';
                     break;
             }
 
             $this->saveSyncSettings();
         } catch (\Exception $exc) {
-            $this->blnError   = true;
+            $this->blnError = true;
             $this->arrError[] = $exc->getMessage();
         }
 
-        return $this->getResponse();
-    }
-
-    /**
-     * Output templates
-     */
-    public function getResponse()
-    {
-        // Clear all we want a clear array for this windows.
-        $GLOBALS['TL_CSS']        = [];
-        $GLOBALS['TL_JAVASCRIPT'] = [];
-
-        // Set stylesheets
-        $GLOBALS['TL_CSS'][] = 'bundles/synccto/css/compare.css';
-        $GLOBALS['TL_CSS'][] = 'bundles/syncctopro/css/diff.css';
-
-        // Set javascript
-        $GLOBALS['TL_JAVASCRIPT'][] = 'bundles/synccto/js/compare.js';
-
-        // Setup.
-        \define('TL_ASSETS_URL', '');
-
-        // Set wrapper template information
-        $this->popupTemplate           = new BackendTemplate('be_syncCtoPro_popup');
-        $this->popupTemplate->theme    = Backend::getTheme();
-        $this->popupTemplate->base     = Environment::get('base');
-        $this->popupTemplate->language = $GLOBALS['TL_LANGUAGE'];
-        $this->popupTemplate->title    = $GLOBALS['TL_CONFIG']['websiteTitle'];
-        $this->popupTemplate->charset  = \Contao\System::getContainer()->getParameter('kernel.charset');
-        $this->popupTemplate->headline = basename($this->strFile);
-
-
         // Set default information
-        $this->popupTemplate->close    = $this->blnClose;
-        $this->popupTemplate->error    = $this->blnError;
-        $this->popupTemplate->arrError = $this->arrError;
+        $this->baseTemplate->close    = $this->blnClose;
+        $this->baseTemplate->error    = $this->blnError;
+        $this->baseTemplate->arrError = $this->arrError;
 
-        // Output template
-        $this->popupTemplate->content = $this->strContentData;
-
-        return $this->popupTemplate->getResponse();
+        return $this->strContentData;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -566,11 +522,11 @@ class Diff
      */
     protected function initGetParams()
     {
-        $this->intClientID  = Input::get('id');
+        $this->intClientID = Input::get('id');
         $this->strDirection = Input::get('direction');
-        $this->strTable     = Input::get('table');
-        $this->intRowId     = Input::get('row_id');
-        $this->strViewMode  = Input::get('view');
+        $this->strTable = Input::get('table');
+        $this->intRowId = Input::get('row_id');
+        $this->strViewMode = Input::get('view');
     }
 
     /**
@@ -593,21 +549,21 @@ class Diff
     protected function renderOverview()
     {
         // Get IDs
-        $arrTransferIds     = Input::post('transfer_ids');
+        $arrTransferIds = Input::post('transfer_ids');
         $arrDeleteClientIds = Input::post('delete_client_ids');
-        $arrDeleteIds       = Input::post('delete_ids');
+        $arrDeleteIds = Input::post('delete_ids');
 
         // Submit with fields
         if (array_key_exists("transfer", $_POST) && !(empty($arrTransferIds) && empty($arrDeleteClientIds))) {
             // Run each field for transfer
-            foreach ((array)$arrTransferIds as $mixTransferId) {
+            foreach ((array) $arrTransferIds as $mixTransferId) {
                 $arrTransferId = explode("::", $mixTransferId);
 
                 $this->arrSyncSettings['syncCtoPro_transfer'][$arrTransferId[0]][$arrTransferId[1]] = $arrTransferId[1];
             }
 
             // Run each field for delete
-            foreach ((array)$arrDeleteClientIds as $mixDeleteId) {
+            foreach ((array) $arrDeleteClientIds as $mixDeleteId) {
                 $arrDeleteId = explode("::", $mixDeleteId);
 
                 $this->arrSyncSettings['syncCtoPro_delete_client'][$arrDeleteId[0]][$arrDeleteId[1]] = $arrDeleteId[1];
@@ -634,11 +590,15 @@ class Diff
         }
 
         // Get all data
-        $arrAllPageValues     = $this->renderElementsPart('tl_page',
-            array('title', 'id', 'pid', 'sorting', 'published', 'start', 'stop', 'type', 'hide', 'protected'));
-        $arrAllArticleValues  = $this->renderElementsPart('tl_article', array('title', 'id', 'sorting', 'pid'));
-        $arrAllContentValues  = $this->renderElementsPart('tl_content',
-            array('type', 'id', 'sorting', 'pid', 'ptable'));
+        $arrAllPageValues = $this->renderElementsPart(
+            'tl_page',
+            array('title', 'id', 'pid', 'sorting', 'published', 'start', 'stop', 'type', 'hide', 'protected')
+        );
+        $arrAllArticleValues = $this->renderElementsPart('tl_article', array('title', 'id', 'sorting', 'pid'));
+        $arrAllContentValues = $this->renderElementsPart(
+            'tl_content',
+            array('type', 'id', 'sorting', 'pid', 'ptable')
+        );
         $arrAdditionalContent = array();
 
         // Get the events and news content
@@ -665,10 +625,10 @@ class Diff
         uasort($arrAllContentValues, array($this, 'sortByPid'));
 
         $arrArticleNeeded = array();
-        $arrPageNeeded    = array();
+        $arrPageNeeded = array();
 
         $arrAllowedTables = $this->arrSyncSettings['syncCtoPro_tables_checked'];
-        if($arrAllowedTables === null) {
+        if ($arrAllowedTables === null) {
             $arrAllowedTables = array();
         }
 
@@ -709,8 +669,10 @@ class Diff
 
         // Clean up article
         foreach ($arrAllArticleValues as $key => $value) {
-            if (in_array($value['state'], array('same', 'ignored')) && !array_key_exists($value['id'],
-                    $arrArticleNeeded)) {
+            if (in_array($value['state'], array('same', 'ignored')) && !array_key_exists(
+                    $value['id'],
+                    $arrArticleNeeded
+                )) {
                 unset($arrAllArticleValues[$key]);
                 continue;
             }
@@ -725,8 +687,10 @@ class Diff
 
         // Clean up pages
         foreach ($arrAllPageValues as $key => $value) {
-            if (in_array($value['state'], array('same', 'ignored')) && !array_key_exists($value['id'],
-                    $arrPageNeeded)) {
+            if (in_array($value['state'], array('same', 'ignored')) && !array_key_exists(
+                    $value['id'],
+                    $arrPageNeeded
+                )) {
                 unset($arrAllPageValues[$key]);
                 continue;
             }
@@ -753,7 +717,7 @@ class Diff
                 // Events or calender
                 if ($strTable == 'tl_calendar_events') {
                     foreach ($arrContentData as $strKey => $arrData) {
-                        $intPid        = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
+                        $intPid = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
                         $arrParentData = $this->getParentData(
                             $intPid,
                             'tl_calendar_events',
@@ -764,8 +728,9 @@ class Diff
 
                         // Get the author.
                         $author = Database::getInstance()
-                            ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_calendar_events WHERE id = ?)')
-                            ->execute($arrParentData['middle_id']);
+                                          ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_calendar_events WHERE id = ?)')
+                                          ->execute($arrParentData['middle_id'])
+                        ;
 
                         // Rebuild array.
                         if (empty($arrParentData)) {
@@ -778,7 +743,7 @@ class Diff
                             $strFullTitle = 'Unknown';
                         }
 
-                        $arrData['parent_information']                                   = $arrParentData;
+                        $arrData['parent_information'] = $arrParentData;
                         $arrAdditionalContentReorder[$strTable][$strFullTitle]['data'][] = $arrData;
 
                         // Add all data.
@@ -791,7 +756,7 @@ class Diff
                 } // News
                 elseif ($strTable == 'tl_news') {
                     foreach ($arrContentData as $strKey => $arrData) {
-                        $intPid        = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
+                        $intPid = ($arrData['source']['pid']) ? $arrData['source']['pid'] : $arrData['target']['pid'];
                         $arrParentData = $this->getParentData(
                             $intPid,
                             'tl_news',
@@ -802,8 +767,9 @@ class Diff
 
                         // Get the author.
                         $author = Database::getInstance()
-                            ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_news WHERE id = ?)')
-                            ->execute($arrParentData['middle_id']);
+                                          ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_news WHERE id = ?)')
+                                          ->execute($arrParentData['middle_id'])
+                        ;
 
                         // Rebuild array.
                         if (empty($arrParentData)) {
@@ -816,7 +782,7 @@ class Diff
                             $strFullTitle = 'Unknown';
                         }
 
-                        $arrData['parent_information']                                   = $arrParentData;
+                        $arrData['parent_information'] = $arrParentData;
                         $arrAdditionalContentReorder[$strTable][$strFullTitle]['data'][] = $arrData;
 
                         // Add all data.
@@ -829,7 +795,7 @@ class Diff
                 } // Unknown
                 else {
                     foreach ($arrContentData as $strKey => $arrData) {
-                        $arrData['parent_information']                               = 'Unknown';
+                        $arrData['parent_information'] = 'Unknown';
                         $arrAdditionalContentReorder[$strTable]['Unknown']['data'][] = $arrData;
                     }
                 }
@@ -840,8 +806,9 @@ class Diff
         foreach ($arrAllArticleValues as $key => $values) {
             // Get the author.
             $author = Database::getInstance()
-                ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_article WHERE id = ?)')
-                ->execute($values['id']);
+                              ->prepare('SELECT username, name, email, id FROM tl_user WHERE id = (SELECT author FROM tl_article WHERE id = ?)')
+                              ->execute($values['id'])
+            ;
 
             $arrAllArticleValues[$key]['author'] = $author->fetchAssoc();
         }
@@ -849,20 +816,20 @@ class Diff
         // Template
         $objOverviewTemplate = new BackendTemplate('be_syncCtoPro_popup_overview');
 
-        $objOverviewTemplate->arrAllPageValues           = $arrAllPageValues;
-        $objOverviewTemplate->arrAllArticleValues        = $arrAllArticleValues;
-        $objOverviewTemplate->arrAllContentValues        = $arrAllContentValues;
+        $objOverviewTemplate->arrAllPageValues = $arrAllPageValues;
+        $objOverviewTemplate->arrAllArticleValues = $arrAllArticleValues;
+        $objOverviewTemplate->arrAllContentValues = $arrAllContentValues;
         $objOverviewTemplate->arrAdditionalContentValues = $arrAdditionalContentReorder;
-        $objOverviewTemplate->arrAllowedTables           = $arrAllowedTables;
-        $objOverviewTemplate->base                       = Environment::get('base');
-        $objOverviewTemplate->path                       = Environment::get('path');
-        $objOverviewTemplate->id                         = $this->intClientID;
-        $objOverviewTemplate->direction                  = $this->strDirection;
-        $objOverviewTemplate->headline                   = $GLOBALS['TL_LANG']['MSC']['show_differences'];
-        $objOverviewTemplate->forwardValue               = $GLOBALS['TL_LANG']['MSC']['apply'];
-        $objOverviewTemplate->helperClass                = $this;
+        $objOverviewTemplate->arrAllowedTables = $arrAllowedTables;
+        $objOverviewTemplate->base = Environment::get('base');
+        $objOverviewTemplate->path = Environment::get('path');
+        $objOverviewTemplate->id = $this->intClientID;
+        $objOverviewTemplate->direction = $this->strDirection;
+        $objOverviewTemplate->headline = $GLOBALS['TL_LANG']['MSC']['show_differences'];
+        $objOverviewTemplate->forwardValue = $GLOBALS['TL_LANG']['MSC']['apply'];
+        $objOverviewTemplate->helperClass = $this;
 
-        $this->strContentData = $objOverviewTemplate->parse();
+        $this->strContentData = $objOverviewTemplate->getResponse()->getContent();
     }
 
 
@@ -872,28 +839,35 @@ class Diff
         $arrFilePathes = $this->arrSyncSettings['syncCtoPro_ExternFile'];
 
         // Read client pages
-        $arrClientElement       = $this->objSyncCtoProDatabase->readXML($arrFilePathes[$strTable]);
+        $arrClientElement = $this->objSyncCtoProDatabase->readXML($arrFilePathes[$strTable]);
         $arrClientElementHashes = $this
             ->objSyncCtoProCommunicationClient
-            ->getHashValueFor($strTable, $this->getAllowedIds($strTable));
+            ->getHashValueFor($strTable, $this->getAllowedIds($strTable))
+        ;
 
         // Get server Pages
         $arrElement = Database::getInstance()
-            ->query('SELECT ' . implode(", ",
-                    $arrFields) . ' FROM ' . $strTable . ' ORDER BY pid, id')
-            ->fetchAllAssoc();
+                              ->query(
+                                  'SELECT ' . implode(
+                                      ", ",
+                                      $arrFields
+                                  ) . ' FROM ' . $strTable . ' ORDER BY pid, id'
+                              )
+                              ->fetchAllAssoc()
+        ;
 
         $arrElementHashes = $this
             ->objSyncCtoProDatabase
-            ->getHashValueFor($strTable, $this->getAllowedIds($strTable));
+            ->getHashValueFor($strTable, $this->getAllowedIds($strTable))
+        ;
 
-        if (array_key_exists($strTable, (array)$this->arrSyncSettings['syncCtoPro_delete'])) {
+        if (array_key_exists($strTable, (array) $this->arrSyncSettings['syncCtoPro_delete'])) {
             return $this->buildTree(
                 $arrElement,
                 $arrElementHashes,
                 $arrClientElement['data'],
                 $arrClientElementHashes,
-                (array)$this->arrSyncSettings['syncCtoPro_delete'][$strTable],
+                (array) $this->arrSyncSettings['syncCtoPro_delete'][$strTable],
                 $strTable
             );
         } else {
@@ -923,7 +897,7 @@ class Diff
         $strTemplate = 'be_syncCtoPro_popup_detail'
     ) {
         $strContent = "";
-        $blnFlip    = false;
+        $blnFlip = false;
 
         // Diff Options
         $arrDiffOptions = array(
@@ -941,9 +915,9 @@ class Diff
         $arrDataForDiff = array();
 
         if (empty($arrLocalData)) {
-            $arrLocalData  = $arrExternData;
+            $arrLocalData = $arrExternData;
             $arrExternData = null;
-            $blnFlip       = true;
+            $blnFlip = true;
         }
 
         // Get fields
@@ -984,11 +958,11 @@ class Diff
 
             // Convert serialized arrays into strings
             if (is_array(($tmp = unserialize($mixValuesServer))) && !is_array($mixValuesServer)) {
-                $mixValuesServer                              = $this->implode($tmp);
+                $mixValuesServer = $this->implode($tmp);
                 $arrDataForDiff[$strField]['server']['array'] = true;
             }
             if (is_array(($tmp = unserialize($mixValuesClient))) && !is_array($mixValuesClient)) {
-                $mixValuesClient                              = $this->implode($tmp);
+                $mixValuesClient = $this->implode($tmp);
                 $arrDataForDiff[$strField]['client']['array'] = true;
             }
             unset($tmp);
@@ -1082,15 +1056,15 @@ class Diff
             // Convert strings into arrays
             if (!is_array($mixValuesServer)) {
 //                $mixValuesServer = explode("\n\t", strip_tags($mixValuesServer));
-                $arrValues['server']['data'] = (array)strip_tags($arrValues['server']['data']);
+                $arrValues['server']['data'] = (array) strip_tags($arrValues['server']['data']);
             }
             if (!is_array($mixValuesClient)) {
 //                $mixValuesClient = explode("\n\t", strip_tags($mixValuesClient));
-                $arrValues['client']['data'] = (array)strip_tags($arrValues['client']['data']);
+                $arrValues['client']['data'] = (array) strip_tags($arrValues['client']['data']);
             }
 
             if ($strField == 'sorting') {
-                $objMovedTemplate           = new BackendTemplate('be_syncCtoPro_popup_detail_moved');
+                $objMovedTemplate = new BackendTemplate('be_syncCtoPro_popup_detail_moved');
                 $objMovedTemplate->strField = $strHumanReadableField;
 
                 $intServerSorting = intval($arrValues['server']['data'][0]);
@@ -1107,7 +1081,7 @@ class Diff
 
                 $strContent .= $objMovedTemplate->parse();
             } elseif ($strField == 'pid') {
-                $objMovedTemplate           = new BackendTemplate('be_syncCtoPro_popup_detail_moved');
+                $objMovedTemplate = new BackendTemplate('be_syncCtoPro_popup_detail_moved');
                 $objMovedTemplate->strField = $strHumanReadableField;
                 $objMovedTemplate->strMoved = 'parent';
 
@@ -1132,13 +1106,15 @@ class Diff
         // Set wrapper template information
         $objDetailsTemplate = new BackendTemplate($strTemplate);
 
-        $objDetailsTemplate->base         = Environment::get('base');
-        $objDetailsTemplate->path         = Environment::get('path');
-        $objDetailsTemplate->id           = $this->intClientID;
-        $objDetailsTemplate->direction    = $this->strDirection;
-        $objDetailsTemplate->content      = $strContent;
-        $objDetailsTemplate->headline     = vsprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail'],
-            array($this->strTable, $this->intRowId));
+        $objDetailsTemplate->base = Environment::get('base');
+        $objDetailsTemplate->path = Environment::get('path');
+        $objDetailsTemplate->id = $this->intClientID;
+        $objDetailsTemplate->direction = $this->strDirection;
+        $objDetailsTemplate->content = $strContent;
+        $objDetailsTemplate->headline = vsprintf(
+            $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_detail'],
+            array($this->strTable, $this->intRowId)
+        );
         $objDetailsTemplate->currentPoint = $this->strCurrentPoint;
 
 
@@ -1158,13 +1134,13 @@ class Diff
      */
     protected function runAllDiff()
     {
-        $arrShowId  = array();
+        $arrShowId = array();
         $arrExtData = array();
         $arrLocData = array();
 
         $arrTransferData = (array) Input::post('transfer_ids');
         $arrTransferData = $this->cleanIds($arrTransferData, '', true);
-        $arrDeleteData   = (array) Input::post('delete_client_ids');
+        $arrDeleteData = (array) Input::post('delete_client_ids');
 
         // Get table and id
         foreach ($arrTransferData as $value) {
@@ -1194,7 +1170,7 @@ class Diff
         $arrRebuildExtData = array();
         foreach ($arrExtData as $strTable => $arrTableValues) {
             foreach ($arrTableValues['data'] as $arrData) {
-                $arrInsert                                      = $arrData['insert'];
+                $arrInsert = $arrData['insert'];
                 $arrRebuildExtData[$strTable][$arrInsert['id']] = $arrInsert;
             }
         }
@@ -1214,42 +1190,63 @@ class Diff
                 $this->intRowId = $arrLocaleData['id'];
 
                 if ($strTableName == 'tl_page') {
-                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
-                        $arrLocaleData['title'], '-');
+                    $this->strCurrentPoint = sprintf(
+                        $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
+                        $arrLocaleData['title'], '-'
+                    );
                 } elseif ($strTableName == 'tl_article') {
                     $arrLookupPage = Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
-                        ->execute($arrLocaleData['pid'])
-                        ->fetchAllAssoc();
+                                             ->execute($arrLocaleData['pid'])
+                                             ->fetchAllAssoc()
+                    ;
 
-                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
-                        $arrLookupPage[0]['title'], '-');
+                    $this->strCurrentPoint = sprintf(
+                        $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
+                        $arrLookupPage[0]['title'], '-'
+                    );
                 } elseif ($strTableName == 'tl_content' && ($arrLocaleData['ptable'] == 'tl_article' || $arrLocaleData['ptable'] == '')) {
                     $arrLookupArticle = Database::getInstance()->prepare('SELECT pid,title FROM tl_article WHERE id =?')
-                        ->execute($arrLocaleData['pid'])
-                        ->fetchAllAssoc();
+                                                ->execute($arrLocaleData['pid'])
+                                                ->fetchAllAssoc()
+                    ;
 
                     $arrLookupPage = Database::getInstance()->prepare('SELECT title FROM tl_page WHERE id =?')
-                        ->execute($arrLookupArticle[0]['pid'])
-                        ->fetchAllAssoc();
+                                             ->execute($arrLookupArticle[0]['pid'])
+                                             ->fetchAllAssoc()
+                    ;
 
-                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
-                        $arrLookupPage[0]['title'], $arrLookupArticle[0]['title']);
+                    $this->strCurrentPoint = sprintf(
+                        $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position'],
+                        $arrLookupPage[0]['title'], $arrLookupArticle[0]['title']
+                    );
                 } elseif ($strTableName == 'tl_content' && $arrLocaleData['ptable'] == 'tl_news') {
-                    $arrParentData         = $this->getParentData($arrLocaleData['pid'], 'tl_news', 'tl_news_archive',
-                        'headline', 'title');
-                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position_news'],
-                        $arrParentData['head'], $arrParentData['middle']);
+                    $arrParentData = $this->getParentData(
+                        $arrLocaleData['pid'], 'tl_news', 'tl_news_archive',
+                        'headline', 'title'
+                    );
+                    $this->strCurrentPoint = sprintf(
+                        $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position_news'],
+                        $arrParentData['head'], $arrParentData['middle']
+                    );
                 } elseif ($strTableName == 'tl_content' && $arrLocaleData['ptable'] == 'tl_calendar_events') {
-                    $arrParentData         = $this->getParentData($arrLocaleData['pid'], 'tl_calendar_events',
-                        'tl_calendar', 'title', 'title');
-                    $this->strCurrentPoint = sprintf($GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position_events'],
-                        $arrParentData['head'], $arrParentData['middle']);
+                    $arrParentData = $this->getParentData(
+                        $arrLocaleData['pid'], 'tl_calendar_events',
+                        'tl_calendar', 'title', 'title'
+                    );
+                    $this->strCurrentPoint = sprintf(
+                        $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['position_events'],
+                        $arrParentData['head'], $arrParentData['middle']
+                    );
                 }
 
-                if (isset($arrExtData[$strTableName]) && array_key_exists($arrLocaleData['id'],
-                        $arrExtData[$strTableName])) {
-                    $strDiffBuffer .= $this->runDiff($arrLocaleData, $arrExtData[$strTableName][$arrLocaleData['id']],
-                        true, 'be_syncCtoPro_popup_detail_small');
+                if (isset($arrExtData[$strTableName]) && array_key_exists(
+                        $arrLocaleData['id'],
+                        $arrExtData[$strTableName]
+                    )) {
+                    $strDiffBuffer .= $this->runDiff(
+                        $arrLocaleData, $arrExtData[$strTableName][$arrLocaleData['id']],
+                        true, 'be_syncCtoPro_popup_detail_small'
+                    );
 
                     // Free up memory
                     unset($arrExtData[$strTableName][$arrLocaleData['id']]);
@@ -1263,9 +1260,9 @@ class Diff
             }
 
             // Read second extern data
-            foreach ((array)$arrExtData[$strTableName] as $mixID => $arrExternData) {
+            foreach ((array) $arrExtData[$strTableName] as $mixID => $arrExternData) {
                 $this->intRowId = $mixID;
-                $strDiffBuffer  .= $this->runDiff(array(), $arrExternData, true, 'be_syncCtoPro_popup_detail_small');
+                $strDiffBuffer .= $this->runDiff(array(), $arrExternData, true, 'be_syncCtoPro_popup_detail_small');
 
                 // Free up memory
                 unset($arrExtData[$strTableName][$mixID]);
@@ -1275,13 +1272,13 @@ class Diff
         // Add Base template
         $objBaseTemplate = new BackendTemplate('be_syncCtoPro_popup_all');
 
-        $objBaseTemplate->base      = Environment::get('base');
-        $objBaseTemplate->path      = Environment::get('path');
-        $objBaseTemplate->id        = $this->intClientID;
+        $objBaseTemplate->base = Environment::get('base');
+        $objBaseTemplate->path = Environment::get('path');
+        $objBaseTemplate->id = $this->intClientID;
         $objBaseTemplate->direction = $this->strDirection;
 
         $objBaseTemplate->headline = $GLOBALS['TL_LANG']['tl_syncCtoPro_steps']['popup']['headline_diff_all'];
-        $objBaseTemplate->strData  = $strDiffBuffer;
+        $objBaseTemplate->strData = $strDiffBuffer;
 
         $this->strContentData = $objBaseTemplate->parse();
     }
@@ -1313,8 +1310,10 @@ class Diff
         }
 
         // Make a lookup in synccto language files
-        if (is_array($GLOBALS['TL_LANG']['tl_syncCto_database']) && array_key_exists($strName,
-                $GLOBALS['TL_LANG']['tl_syncCto_database'])) {
+        if (is_array($GLOBALS['TL_LANG']['tl_syncCto_database']) && array_key_exists(
+                $strName,
+                $GLOBALS['TL_LANG']['tl_syncCto_database']
+            )) {
             if (is_array($GLOBALS['TL_LANG']['tl_syncCto_database'][$strName])) {
                 return $this->formateLookUpName($strName, $GLOBALS['TL_LANG']['tl_syncCto_database'][$strName][0]);
             } else {
@@ -1348,8 +1347,10 @@ class Diff
 //        }
 
         // Little mapping for names
-        if (is_array($GLOBALS['SYC_CONFIG']['database_mapping']) && key_exists($strName,
-                $GLOBALS['SYC_CONFIG']['database_mapping'])) {
+        if (is_array($GLOBALS['SYC_CONFIG']['database_mapping']) && key_exists(
+                $strName,
+                $GLOBALS['SYC_CONFIG']['database_mapping']
+            )) {
             $strRealSystemName = $GLOBALS['SYC_CONFIG']['database_mapping'][$strName];
 
             if (is_array($GLOBALS['TL_LANG']['MOD'][$strRealSystemName])) {
@@ -1421,14 +1422,15 @@ class Diff
 
         // Get the middle table
         $objMiddleTable = Database::getInstance()
-            ->prepare('SELECT id, pid, ' . $strMiddleField . ' FROM ' . $strMiddleTable . ' WHERE id=?')
-            ->execute($intId);
+                                  ->prepare('SELECT id, pid, ' . $strMiddleField . ' FROM ' . $strMiddleTable . ' WHERE id=?')
+                                  ->execute($intId)
+        ;
 
         if ($objMiddleTable->count() == 0) {
             return $arrReturn;
         }
 
-        $arrReturn['middle']    = $objMiddleTable->$strMiddleField;
+        $arrReturn['middle'] = $objMiddleTable->$strMiddleField;
         $arrReturn['middle_id'] = $objMiddleTable->id;
 
         // Check if the head table exists.
@@ -1438,14 +1440,15 @@ class Diff
 
         // Get the main table.
         $objHeadTable = Database::getInstance()
-            ->prepare('SELECT id, ' . $strHeadField . ' FROM ' . $strHeadTable . ' WHERE id=?')
-            ->execute($objMiddleTable->pid);
+                                ->prepare('SELECT id, ' . $strHeadField . ' FROM ' . $strHeadTable . ' WHERE id=?')
+                                ->execute($objMiddleTable->pid)
+        ;
 
         if ($objHeadTable->count() == 0) {
             return $arrReturn;
         }
 
-        $arrReturn['head']    = $objHeadTable->$strHeadField;
+        $arrReturn['head'] = $objHeadTable->$strHeadField;
         $arrReturn['head_id'] = $objHeadTable->id;
 
         return $arrReturn;
@@ -1490,7 +1493,7 @@ class Diff
      */
     protected function loadExternDataFor($strTable, $mixID)
     {
-        $strExportFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', $strTable, (array)$mixID);
+        $strExportFile = $this->objSyncCtoProCommunicationClient->exportDatabaseSE('', $strTable, (array) $mixID);
 
         // Check if we have all files
         if ($strExportFile === false) {
@@ -1524,14 +1527,20 @@ class Diff
     protected function loadLocalDataFor($strTable, $mixID)
     {
         if (is_array($mixID)) {
-            return Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id IN (" . implode(", ",
-                    $mixID) . ")")
-                ->execute()
-                ->fetchAllAssoc();
+            return Database::getInstance()->prepare(
+                "SELECT * FROM $strTable WHERE id IN (" . implode(
+                    ", ",
+                    $mixID
+                ) . ")"
+            )
+                           ->execute()
+                           ->fetchAllAssoc()
+            ;
         } else {
             return Database::getInstance()->prepare("SELECT * FROM $strTable WHERE id = ?")
-                ->execute($mixID)
-                ->fetchAllAssoc();
+                           ->execute($mixID)
+                           ->fetchAllAssoc()
+            ;
         }
     }
 
@@ -1551,7 +1560,7 @@ class Diff
         }
 
         $strReturn = '';
-        $blnFirst  = true;
+        $blnFirst = true;
 
         foreach ($var as $key => $value) {
             if (!$blnFirst) {
@@ -1647,7 +1656,7 @@ class Diff
         $arrReturn = array();
         foreach ($arrSourcePages as $intID => $mixValues) {
             // Set ID
-            $arrReturn[$intID]['id']     = $intID;
+            $arrReturn[$intID]['id'] = $intID;
             $arrReturn[$intID]['delete'] = false;
 
             // Set pid
@@ -1676,27 +1685,29 @@ class Diff
             // Set all other information
             if (!\array_key_exists($intID, $arrTargetHashes) && !\array_key_exists($intID, $arrSourceHashes)) {
                 // Just stop handling it can be a missing data set
-            } else if (
-                array_key_exists($intID, $arrTargetPages)
-                && array_key_exists($intID, $arrTargetHashes)
-            ) {
-                $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
-                $arrReturn[$intID]['target'] = array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID]);
-            } elseif (
-                array_key_exists($intID, $arrTargetPages)
-                && !array_key_exists($intID, $arrTargetHashes)
-            ) {
-                $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
-                $arrReturn[$intID]['target'] = $arrTargetPages[$intID];
-            } elseif (
-                !array_key_exists($intID, $arrTargetPages)
-                && array_key_exists($intID, $arrTargetHashes)
-            ) {
-                $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
-                $arrReturn[$intID]['target'] = $arrTargetHashes[$intID];
             } else {
-                $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
-                $arrReturn[$intID]['target'] = array();
+                if (
+                    array_key_exists($intID, $arrTargetPages)
+                    && array_key_exists($intID, $arrTargetHashes)
+                ) {
+                    $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
+                    $arrReturn[$intID]['target'] = array_merge($arrTargetPages[$intID], $arrTargetHashes[$intID]);
+                } elseif (
+                    array_key_exists($intID, $arrTargetPages)
+                    && !array_key_exists($intID, $arrTargetHashes)
+                ) {
+                    $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
+                    $arrReturn[$intID]['target'] = $arrTargetPages[$intID];
+                } elseif (
+                    !array_key_exists($intID, $arrTargetPages)
+                    && array_key_exists($intID, $arrTargetHashes)
+                ) {
+                    $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
+                    $arrReturn[$intID]['target'] = $arrTargetHashes[$intID];
+                } else {
+                    $arrReturn[$intID]['source'] = array_merge($mixValues, $arrSourceHashes[$intID]);
+                    $arrReturn[$intID]['target'] = array();
+                }
             }
 
             // Set state ignored if in list
@@ -1709,13 +1720,13 @@ class Diff
             $arrReturn[$intID]['target']['site_image'] = $this->getPageIcon($arrReturn[$intID]['target']);
         }
 
-        if(!empty($arrMissingServer)){
-            if ($strTable == 'tl_content'){
+        if (!empty($arrMissingServer)) {
+            if ($strTable == 'tl_content') {
                 // Get a list of allowed ID's
                 $allowedIdsArticle = $this->getAllowedIds('tl_article');
             }
 
-            if ($strTable == 'tl_article'){
+            if ($strTable == 'tl_article') {
                 // Get a list of allowed ID's
                 $allowedIdsPage = $this->getAllowedIds('tl_page');
             }
@@ -1805,8 +1816,10 @@ class Diff
     public function sortByPid($a, $b)
     {
         // Pid + Sorting support
-        if (array_key_exists('sorting', $a) && array_key_exists('sorting', $b) && array_key_exists('pid',
-                $a) && array_key_exists('pid', $b)) {
+        if (array_key_exists('sorting', $a) && array_key_exists('sorting', $b) && array_key_exists(
+                'pid',
+                $a
+            ) && array_key_exists('pid', $b)) {
             if ($a['pid'] == $b['pid']) {
                 if ($a['sorting'] == $b['sorting']) {
                     return 0;
@@ -1846,7 +1859,7 @@ class Diff
      */
     public function getPageIcon($arrPage)
     {
-        $sub   = 0;
+        $sub = 0;
         $image = $arrPage['type'] . '.svg';
 
         // Page not published or not active
@@ -1855,8 +1868,10 @@ class Diff
         }
 
         // Page hidden from menu
-        if ($arrPage['hide'] && !in_array($arrPage['type'],
-                array('redirect', 'forward', 'root', 'error_403', 'error_404'))) {
+        if ($arrPage['hide'] && !in_array(
+                $arrPage['type'],
+                array('redirect', 'forward', 'root', 'error_403', 'error_404')
+            )) {
             $sub += 2;
         }
 
@@ -1882,4 +1897,6 @@ class Diff
 
         return 'system/themes/flexible/icons/regular.svg';
     }
+
+
 }
