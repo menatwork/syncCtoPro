@@ -186,12 +186,7 @@ use MenAtWork\SyncCtoPro\Controller\Diff;
                     <tr>
                         <td class="checkbox"> </td>
                         <td class="page icon">
-                            <?php if (version_compare(VERSION . '.' . BUILD, '3.5.5', '>=')): ?>
-                                <?php $shortTitle = \StringUtil::substr($mixTitle, 50); ?>
-                            <?php else: ?>
-                                <?php $shortTitle = \String::substr($mixTitle, 50); ?>
-                            <?php endif; ?>
-
+                            <?php $shortTitle = \Contao\StringUtil::substr($mixTitle, 50); ?>
                             <?php if($strPTable == 'tl_news' || $strPTable == 'tl_calendar_events' ): ?>
                                 <span title="<?php echo $mixTitle; ?>"><?php echo $shortTitle; ?> (Autor: <?php echo $arrElements['meta']['author']['name']; ?>)</span>
                             <?php else: ?>
