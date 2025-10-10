@@ -1788,7 +1788,7 @@ class Diff extends APopUpController
         }
 
         $arrUserSettings = array();
-        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']) as $key => $value) {
+        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist'] ?? '') as $key => $value) {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }
 
