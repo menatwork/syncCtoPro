@@ -1739,7 +1739,7 @@ class Diff extends APopUpController
                 'state'  => 'diff',
                 'delete' => true,
                 'source' => array(),
-                'target' => array_merge($arrTargetPages[$intID] ?? [], $arrTargetHashes[$intID] ?? [])
+                'target' => array_merge(($arrTargetPages[$intID] ?? []), ($arrTargetHashes[$intID] ?? []))
             );
 
             if (

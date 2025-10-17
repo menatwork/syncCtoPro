@@ -732,8 +732,11 @@ class SyncCtoProDatabase extends Backend
         }
 
         $arrUserSettings = array();
-        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist'] ?? '') as $key => $value) {
-            $arrUserSettings[$value['table']][] = $value['entry'];
+        if(!empty($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist'])){
+            $diffBlacklist = StringUtil::deserialize($GLOBALS['TL_CONFIG']['syncCto_diff_blacklist']);
+            foreach ($diffBlacklist as $value) {
+                $arrUserSettings[$value['table']][] = $value['entry'];
+            }
         }
 
         // Get all Values

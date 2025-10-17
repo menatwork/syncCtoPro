@@ -181,8 +181,11 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         }
 
         // Check if diff is enabeld - DC_Memoery and DC_General
-        if ($this->arrSyncSettings['post_data']['database_pages_check'] == true || $this->arrSyncSettings['post_data']['database_pages_check_b'] == true || $this->arrSyncSettings['automode'] == true)
-        {
+        if (
+            ($this->arrSyncSettings['post_data']['database_pages_check'] ?? false) == true
+            || ($this->arrSyncSettings['post_data']['database_pages_check_b'] ?? false) == true
+            || $this->arrSyncSettings['automode'] == true
+        ) {
             return self::WORKINGMODE_DIFF;
         }
 
@@ -1199,7 +1202,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
         }
 
         $arrUserSettings = array();
-        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_sync_blacklist']) as $key => $value)
+        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_sync_blacklist'] ?? '') as $key => $value)
         {
             $arrUserSettings[$value['table']][] = $value['entry'];
         }

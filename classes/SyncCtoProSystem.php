@@ -2,6 +2,7 @@
 
 use Contao\Backend;
 use Contao\Database;
+use Contao\StringUtil;
 
 /**
  * Contao Open Source CMS
@@ -122,8 +123,11 @@ class SyncCtoProSystem extends Backend
         }
 
         $arrUserSettings = array();
-        foreach ((array) unserialize($GLOBALS['TL_CONFIG']['syncCto_sync_blacklist']) as $key => $value) {
-            $arrUserSettings[$value['table']][] = $value['entry'];
+        if (!empty($GLOBALS['TL_CONFIG']['syncCto_sync_blacklist'])) {
+            $blacklist = StringUtil::deserialize($GLOBALS['TL_CONFIG']['syncCto_blacklist'], true);
+            foreach ($blacklist as $value) {
+                $arrUserSettings[$value['table']][] = $value['entry'];
+            }
         }
 
         // Get all Values

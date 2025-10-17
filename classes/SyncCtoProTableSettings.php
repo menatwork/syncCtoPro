@@ -39,7 +39,7 @@ class SyncCtoProTableSettings extends Backend
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] ?? [] as $strTableName => $arrValues) {
+        foreach (($GLOBALS['SYC_CONFIG']['trigger_blacklist'] ?? []) as $strTableName => $arrValues) {
             foreach ($arrValues as $strField) {
                 $arrReturn[] = array(
                     'table' => $strTableName,
@@ -82,7 +82,7 @@ class SyncCtoProTableSettings extends Backend
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['trigger_blacklist'] ?? [] as $strTableName => $arrValues) {
+        foreach (($GLOBALS['SYC_CONFIG']['trigger_blacklist'] ?? []) as $strTableName => $arrValues) {
             foreach ($arrValues as $strField) {
                 $arrKnownValues[] = $strTableName . '::' . $strField;
             }
@@ -123,7 +123,7 @@ class SyncCtoProTableSettings extends Backend
         $arrKnownValues = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] ?? [] as $strTableName => $arrValues) {
+        foreach (($GLOBALS['SYC_CONFIG']['sync_blacklist'] ?? []) as $strTableName => $arrValues) {
             foreach ($arrValues as $strField) {
                 $arrReturn[] = array(
                     'table' => $strTableName,
@@ -167,7 +167,7 @@ class SyncCtoProTableSettings extends Backend
         $arrReturn = array();
 
         // Get basic settings
-        foreach ($GLOBALS['SYC_CONFIG']['sync_blacklist'] ?? [] as $strTableName => $arrValues) {
+        foreach (($GLOBALS['SYC_CONFIG']['sync_blacklist'] ?? []) as $strTableName => $arrValues) {
             foreach ($arrValues as $strField) {
                 $arrKnownValues[] = $strTableName . '::' . $strField;
             }
