@@ -3,6 +3,7 @@
 use Contao\Backend;
 use Contao\BackendTemplate;
 use Contao\Database;
+use Contao\StringUtil;
 use Contao\System;
 use MenAtWork\SyncCto\Controller\ClientController;
 
@@ -295,7 +296,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
             if (strlen($mixLastTableTimestamp[0][$location . "_timestamp"]) != 0)
             {
-                $arrLastTableTimestamp = deserialize($mixLastTableTimestamp[0][$location . "_timestamp"]);
+                $arrLastTableTimestamp = StringUtil::deserialize($mixLastTableTimestamp[0][$location . "_timestamp"]);
             }
             else
             {
@@ -1101,7 +1102,7 @@ class SyncCtoStepDatabaseDiff extends Backend implements InterfaceSyncCtoStep
 
         foreach ($arrSourcePages as $intID => $mixValues)
         {
-            if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash'])
+            if (($arrSourceHashes[$intID]['hash'] ?? '') == ($arrTargetHashes[$intID]['hash'] ?? ''))
             {
                 continue;
             }

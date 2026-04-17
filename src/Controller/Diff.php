@@ -501,6 +501,7 @@ class Diff extends APopUpController
 
             $this->saveSyncSettings();
         } catch (\Exception $exc) {
+            dd($exc->getMessage(), $exc->getTraceAsString());
             $this->blnError = true;
             $this->arrError[] = $exc->getMessage();
         }
@@ -603,8 +604,8 @@ class Diff extends APopUpController
 
         // Get the events and news content
         foreach ($arrAllContentValues as $strKey => $arrContent) {
-            $strSourcePTable = $arrContent['source']['ptable'];
-            $strTargetPTable = $arrContent['target']['ptable'];
+            $strSourcePTable = ($arrContent['source']['ptable'] ?? '');
+            $strTargetPTable = ($arrContent['target']['ptable'] ?? '');
 
             if ($strSourcePTable != '' && $strSourcePTable != 'tl_article') {
                 $arrAdditionalContent[$strSourcePTable][] = $arrContent;
@@ -618,6 +619,7 @@ class Diff extends APopUpController
                 continue;
             }
         }
+
 
         // Sorting
         uasort($arrAllPageValues, array($this, 'sortByPid'));
@@ -825,8 +827,8 @@ class Diff extends APopUpController
         $objOverviewTemplate->path = Environment::get('path');
         $objOverviewTemplate->id = $this->intClientID;
         $objOverviewTemplate->direction = $this->strDirection;
-        $objOverviewTemplate->headline = $GLOBALS['TL_LANG']['MSC']['show_differences'];
-        $objOverviewTemplate->forwardValue = $GLOBALS['TL_LANG']['MSC']['apply'];
+        $objOverviewTemplate->headline = $GLOBALS['TL_LANG']['MSC']['show_differences'] ?? 'Show differences';
+        $objOverviewTemplate->forwardValue = $GLOBALS['TL_LANG']['MSC']['apply'] ?? 'Apply';
         $objOverviewTemplate->helperClass = $this;
 
         $this->strContentData = $objOverviewTemplate->getResponse()->getContent();
@@ -861,13 +863,13 @@ class Diff extends APopUpController
             ->getHashValueFor($strTable, $this->getAllowedIds($strTable))
         ;
 
-        if (array_key_exists($strTable, (array) $this->arrSyncSettings['syncCtoPro_delete'])) {
+        if (array_key_exists($strTable, ($this->arrSyncSettings['syncCtoPro_delete'] ?? []))) {
             return $this->buildTree(
                 $arrElement,
                 $arrElementHashes,
                 $arrClientElement['data'],
                 $arrClientElementHashes,
-                (array) $this->arrSyncSettings['syncCtoPro_delete'][$strTable],
+                $this->arrSyncSettings['syncCtoPro_delete'][$strTable] ?? [],
                 $strTable
             );
         } else {
@@ -1676,7 +1678,7 @@ class Diff extends APopUpController
             }
 
             // Check Hash
-            if ($arrSourceHashes[$intID]['hash'] == $arrTargetHashes[$intID]['hash']) {
+            if (($arrSourceHashes[$intID]['hash'] ?? '') == ($arrTargetHashes[$intID]['hash'] ?? '')) {
                 $arrReturn[$intID]['state'] = 'same';
             } else {
                 $arrReturn[$intID]['state'] = 'diff';
@@ -1719,7 +1721,6 @@ class Diff extends APopUpController
             $arrReturn[$intID]['source']['site_image'] = $this->getPageIcon($arrReturn[$intID]['source']);
             $arrReturn[$intID]['target']['site_image'] = $this->getPageIcon($arrReturn[$intID]['target']);
         }
-
         if (!empty($arrMissingServer)) {
             if ($strTable == 'tl_content') {
                 // Get a list of allowed ID's
@@ -1859,16 +1860,23 @@ class Diff extends APopUpController
      */
     public function getPageIcon($arrPage)
     {
+        if(empty($arrPage['type'])){
+            return 'system/themes/flexible/icons/regular.svg';
+        }
+
         $sub = 0;
         $image = $arrPage['type'] . '.svg';
 
         // Page not published or not active
-        if (!$arrPage['published'] || $arrPage['start'] && $arrPage['start'] > time() || $arrPage['stop'] && $arrPage['stop'] < time()) {
+        if (!($arrPage['published'] ?? false)
+            || (($arrPage['start'] ?? '') && $arrPage['start'] > time())
+            || (($arrPage['stop'] ?? '') && $arrPage['stop'] < time())
+        ) {
             $sub += 1;
         }
 
         // Page hidden from menu
-        if ($arrPage['hide'] && !in_array(
+        if (($arrPage['hide'] ?? false) && !in_array(
                 $arrPage['type'],
                 array('redirect', 'forward', 'root', 'error_403', 'error_404')
             )) {
@@ -1876,7 +1884,7 @@ class Diff extends APopUpController
         }
 
         // Page protected
-        if ($arrPage['protected'] && !in_array($arrPage['type'], array('root', 'error_403', 'error_404'))) {
+        if (($arrPage['protected'] ?? false) && !in_array($arrPage['type'], array('root', 'error_403', 'error_404'))) {
             $sub += 4;
         }
 
@@ -1897,6 +1905,4 @@ class Diff extends APopUpController
 
         return 'system/themes/flexible/icons/regular.svg';
     }
-
-
 }
