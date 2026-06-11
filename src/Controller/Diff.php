@@ -954,7 +954,10 @@ class Diff extends APopUpController
             }
 
             // Hidden conditions
-            if ($strCurrentFieldSettings['inputType'] == 'password' || $strCurrentFieldSettings['eval']['doNotShow'] || $strCurrentFieldSettings['eval']['hideInput']) {
+            $arrEval = $strCurrentFieldSettings['eval'] ?? [];
+            if (($strCurrentFieldSettings['inputType'] ?? '') == 'password'
+                || ($arrEval['doNotShow'] ?? false)
+                || ($arrEval['hideInput'] ?? false)) {
                 continue;
             }
 
@@ -970,14 +973,14 @@ class Diff extends APopUpController
             unset($tmp);
 
             // Convert date fields
-            if ($strCurrentFieldSettings['eval']['rgxp'] == 'date') {
-
+            $strRgxp = $arrEval['rgxp'] ?? '';
+            if ($strRgxp == 'date') {
                 $mixValuesServer = Date::parse(\Contao\Config::get('dateFormat'), $mixValuesServer ?: '');
                 $mixValuesClient = Date::parse(\Contao\Config::get('dateFormat'), $mixValuesClient ?: '');
-            } elseif ($strCurrentFieldSettings['eval']['rgxp'] == 'time') {
+            } elseif ($strRgxp == 'time') {
                 $mixValuesServer = Date::parse(\Contao\Config::get('timeFormat'), $mixValuesServer ?: '');
                 $mixValuesClient = Date::parse(\Contao\Config::get('timeFormat'), $mixValuesClient ?: '');
-            } elseif ($strCurrentFieldSettings['eval']['rgxp'] == 'datim') {
+            } elseif ($strRgxp == 'datim') {
                 $mixValuesServer = Date::parse(\Contao\Config::get('datimFormat'), $mixValuesServer ?: '');
                 $mixValuesClient = Date::parse(\Contao\Config::get('datimFormat'), $mixValuesClient ?: '');
             }
@@ -1349,7 +1352,7 @@ class Diff extends APopUpController
 //        }
 
         // Little mapping for names
-        if (is_array($GLOBALS['SYC_CONFIG']['database_mapping']) && key_exists(
+        if (is_array($GLOBALS['SYC_CONFIG']['database_mapping'] ?? null) && array_key_exists(
                 $strName,
                 $GLOBALS['SYC_CONFIG']['database_mapping']
             )) {
@@ -1779,13 +1782,14 @@ class Diff extends APopUpController
         $arrReturn = array();
 
         // Get all Values
-        if (array_key_exists('all', $GLOBALS['SYC_CONFIG']['trigger_blacklist'])) {
-            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['trigger_blacklist']['all']);
+        $arrTriggerBlacklist = $GLOBALS['SYC_CONFIG']['trigger_blacklist'] ?? [];
+        if (array_key_exists('all', $arrTriggerBlacklist)) {
+            $arrReturn = array_merge($arrReturn, $arrTriggerBlacklist['all']);
         }
 
         // Get special Values
-        if (array_key_exists($strTable, $GLOBALS['SYC_CONFIG']['trigger_blacklist'])) {
-            $arrReturn = array_merge($arrReturn, $GLOBALS['SYC_CONFIG']['trigger_blacklist'][$strTable]);
+        if (array_key_exists($strTable, $arrTriggerBlacklist)) {
+            $arrReturn = array_merge($arrReturn, $arrTriggerBlacklist[$strTable]);
         }
 
         $arrUserSettings = array();
